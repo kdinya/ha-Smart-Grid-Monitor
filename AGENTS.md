@@ -58,6 +58,13 @@ Also run the ESPHome-secret-aware YAML parser and dashboard/entity coverage chec
 - When the owner requests a release, use the version they specify. If they ask to update or re-create an existing version, replace the existing release/tag for that version instead of minting a new version, unless they explicitly request a different version.
 - Publish a release only after the approved changes are on `main` and the applicable validation checks have passed.
 
+## HACS update delivery
+
+- A merge to `main` alone does not update an existing HACS installation. Because this repository publishes releases, HACS takes the plugin files and remote version from the latest full GitHub Release and its tag; changes only on the branch are not enough.
+- When the owner asks for a card change to be available in Home Assistant through HACS, treat that as authorization to update or replace the existing release/tag after merge so it points to the merged `main` commit. Reuse the owner's specified version; do not mint a new version. If there is no existing release to reuse, ask before creating one. Verify that the latest release contains the updated root `grid-monitor-card.js` and that its tag resolves to the intended merge commit.
+- Do not report HACS delivery complete after merging or refreshing repository metadata alone. Tell the owner to use HACS → repository menu → **Update information**, then **Redownload** the Dashboard repository; metadata refresh does not download the JavaScript. A browser/dashboard refresh may also be needed to load the new card resource.
+- For manual/private testing, add the GitHub repository in HACS as a custom repository of type **Dashboard**. Do not claim that this makes the repository searchable in the default HACS catalog; default-catalog inclusion requires a separate submission and acceptance by `hacs/default`.
+
 ## GitHub workflow
 
 - Inspect `origin/main` and open PRs before changes.
