@@ -1,19 +1,30 @@
 # Home Assistant interface
 
-This folder adds a polished Home Assistant interface for the ESPHome Grid Monitor. It uses native Lovelace cards, so there are no HACS or frontend JavaScript dependencies to install.
+This folder contains the native Lovelace fallback for the ESPHome Grid Monitor. The repository root also contains the recommended HACS frontend card, [`grid-monitor-card.js`](../grid-monitor-card.js).
 
-## Install the dashboard
+## Recommended: install the HACS card
 
-1. Open Home Assistant and create a new dashboard from **Settings → Dashboards → Add dashboard**.
-2. Open the dashboard menu, choose **Edit Dashboard → Raw configuration editor**.
-3. Paste the content of [`lovelace/grid-monitor-dashboard.yaml`](lovelace/grid-monitor-dashboard.yaml).
-4. Save and open the new **Мережа** view.
+Open **HACS → Frontend → Custom repositories**, add `https://github.com/kdinya/ha-Smart-Grid-Monitor` as **Dashboard / Lovelace**, and install **Smart Grid Monitor Card**. HACS registers the root-level `grid-monitor-card.js` resource. After a browser refresh, add:
+
+```yaml
+type: custom:grid-monitor-card
+language: uk
+```
+
+The default entity IDs use the `grid_monitor` prefix. Use `prefix: another_device_slug` if the ESPHome device has a different name. The card supports Ukrainian and English, follows the Home Assistant locale when `language` is omitted, and renders unavailable or missing entities safely.
+
+## Dependency-free dashboard
+
+1. Open Home Assistant and create a dashboard from **Settings → Dashboards → Add dashboard**.
+2. Open the dashboard menu and choose **Edit Dashboard → Raw configuration editor**.
+3. Paste [`lovelace/grid-monitor-dashboard.yaml`](lovelace/grid-monitor-dashboard.yaml).
+4. Save and open the **Мережа** view.
 
 The dashboard assumes the default Home Assistant entity prefix `grid_monitor`. If your device has a different prefix, replace `grid_monitor_` in the YAML with the entity prefix shown under **Developer Tools → States**.
 
 ## Optional source-of-power sensor
 
-The package in [`packages/grid_monitor.yaml`](packages/grid_monitor.yaml) adds a single friendly sensor with four states: `Мережа`, `Інвертор`, `Немає напруги або немає зв'язку з ESP`, and `Визначається`.
+The package in [`packages/grid_monitor.yaml`](packages/grid_monitor.yaml) adds a friendly source sensor with four states: `Мережа`, `Інвертор`, `Немає напруги або немає зв'язку з ESP`, and `Визначається`.
 
 To enable it, add packages to `configuration.yaml`:
 
@@ -26,19 +37,8 @@ Copy the package into the configured packages directory, run **Settings → Syst
 
 ## Entity coverage
 
-The view exposes all entities produced by `esphome/grid-monitor.yaml`:
-
-- live voltage, current, power, frequency and power factor;
-- apparent, reactive and peak power, phase angle and voltage deviation;
-- five-minute average, daily min/max and daily peak values;
-- today/month/total energy and today/month/total cost;
-- current tariff and cost rate;
-- sag, swell and inverter counters and durations;
-- `Mains Present`, `On Inverter`, ESP status and voltage alarm;
-- thresholds, nominal voltage, tariffs and two-zone tariff switch;
-- Wi-Fi, uptime, ESP temperature, IP and SSID diagnostics;
-- reset and restart actions with confirmation prompts.
+The card and native view cover live voltage, current, power, frequency and power factor; apparent and reactive power, phase angle and voltage deviation; five-minute average, daily min/max and daily peak values; today/month/total energy and cost; current tariff and cost rate; sag, swell and inverter counters and durations; mains, inverter, ESP and voltage alarm states; thresholds, nominal voltage, tariffs and two-zone tariff; Wi-Fi, uptime, ESP temperature, IP and SSID diagnostics; and reset/restart actions.
 
 ## Design notes
 
-The layout follows the supplied reference: dark navy surfaces, electric-blue accents, green health state, amber inverter state, a prominent voltage gauge, metric tiles, a history graph and separate energy, event, configuration and diagnostics groups. The implementation intentionally favors stable built-in cards over a custom card dependency, which makes it easier to restore and maintain on a new Home Assistant installation.
+The visual language follows the supplied reference: dark navy surfaces, electric-blue accents, green healthy state, amber inverter state, a prominent voltage gauge, metric tiles and grouped energy, quality, event, settings and diagnostic sections. The native dashboard intentionally remains available because it can be restored without a custom JavaScript resource.
