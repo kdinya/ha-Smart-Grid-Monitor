@@ -93,6 +93,7 @@
       voltage: 'Напруга мережі', current: 'Струм', power: 'Потужність', frequency: 'Частота', pf: 'Коеф. потужності', normal: 'Норма', alarm: 'Поза нормою',
       chart_title: 'Графік потужності', hour: 'Год', day: 'День', week: 'Тиждень', month: 'Місяць', loading: 'Завантаження історії…', no_history: 'Історія потужності поки недоступна',
       mains: 'Мережа', has_voltage: 'Є напруга', no_voltage: 'Немає напруги', source: 'Джерело', from_mains: 'Від мережі', from_inverter: 'Від інвертора', pzem_link: 'Зв’язок з PZEM', active: 'Активний', inactive: 'Немає зв’язку', today_consumption: 'Споживання сьогодні',
+      esp_power_connection: 'Схема живлення ESP', esp_power_shared: 'Від мережі разом із модулем', esp_power_after_avr: 'Після АВР', esp_power_independent: 'Незалежне живлення', esp_power_avr_note: 'ESP може живитися від інвертора', pzem_grid_note: 'PZEM вимірює мережу в усіх режимах',
       params_title: 'Електричні параметри', energy_title: 'Енергія та вартість', settings_title: 'Налаштування та діагностика',
       apparent: 'Повна потужність', reactive: 'Реактивна потужність', phase: 'Кут фази', deviation: 'Відхилення напруги', average: 'Середня напруга за 5 хв', min_voltage: 'Мінімальна напруга сьогодні', max_voltage: 'Максимальна напруга сьогодні', max_current: 'Максимальний струм сьогодні', peak_power: 'Пікова потужність сьогодні', voltage_state: 'Статус напруги',
       today: 'Сьогодні', energy_month: 'Споживання за місяць', energy_total: 'Загальна енергія PZEM', cost_today: 'Вартість сьогодні', cost_month: 'Вартість за місяць', cost_total: 'Загальна розрахована вартість', tariff: 'Поточний тариф', cost_rate: 'Вартість за годину', two_zone: 'Двозонний облік',
@@ -111,6 +112,11 @@
       editor_lang_auto: 'Авто (налаштування Home Assistant)',
       editor_lang_uk: 'Українська',
       editor_lang_en: 'English',
+      editor_power_mode: 'Схема живлення ESP',
+      editor_power_mode_hint: 'PZEM підключений до мережі в усіх режимах.',
+      editor_power_grid_shared: 'Від мережі разом із модулем',
+      editor_power_after_avr: 'Після АВР',
+      editor_power_independent: 'Незалежне живлення',
       editor_entities_detected: 'сенсорів знайдено',
       editor_custom_entities: 'Точне налаштування окремих сенсорів',
       editor_custom_prefix: 'Вказати інший префікс вручну...',
@@ -124,6 +130,7 @@
       voltage: 'Grid voltage', current: 'Current', power: 'Power', frequency: 'Frequency', pf: 'Power factor', normal: 'Normal', alarm: 'Out of range',
       chart_title: 'Power history', hour: 'Hour', day: 'Day', week: 'Week', month: 'Month', loading: 'Loading history…', no_history: 'Power history is not available yet',
       mains: 'Mains', has_voltage: 'Voltage present', no_voltage: 'No voltage', source: 'Source', from_mains: 'From mains', from_inverter: 'From inverter', pzem_link: 'PZEM connection', active: 'Active', inactive: 'No connection', today_consumption: 'Consumption today',
+      esp_power_connection: 'ESP power arrangement', esp_power_shared: 'Mains shared with the module', esp_power_after_avr: 'After AVR', esp_power_independent: 'Independent power', esp_power_avr_note: 'ESP may be powered by the inverter', pzem_grid_note: 'PZEM measures mains in every mode',
       params_title: 'Electrical parameters', energy_title: 'Energy and cost', settings_title: 'Settings and diagnostics',
       apparent: 'Apparent power', reactive: 'Reactive power', phase: 'Phase angle', deviation: 'Voltage deviation', average: '5-minute average voltage', min_voltage: 'Minimum voltage today', max_voltage: 'Maximum voltage today', max_current: 'Maximum current today', peak_power: 'Peak power today', voltage_state: 'Voltage status',
       today: 'Today', energy_month: 'Consumption this month', energy_total: 'Total PZEM energy', cost_today: 'Cost today', cost_month: 'Cost this month', cost_total: 'Total calculated cost', tariff: 'Current tariff', cost_rate: 'Cost per hour', two_zone: 'Two-zone tariff',
@@ -142,6 +149,11 @@
       editor_lang_auto: 'Auto (from Home Assistant)',
       editor_lang_uk: 'Ukrainian',
       editor_lang_en: 'English',
+      editor_power_mode: 'ESP power arrangement',
+      editor_power_mode_hint: 'PZEM remains connected to the mains in every mode.',
+      editor_power_grid_shared: 'Mains shared with the module',
+      editor_power_after_avr: 'After AVR',
+      editor_power_independent: 'Independent power',
       editor_entities_detected: 'sensors detected',
       editor_custom_entities: 'Fine-tune Individual Entities',
       editor_custom_prefix: 'Enter custom prefix manually...',
@@ -311,6 +323,7 @@
       const activeCandidate = candidates.find((c) => c.prefix === currentPrefix) || { prefix: currentPrefix, count: 0, total: Object.keys(DEFAULTS).length };
       const lang = this._config.language || '';
       const name = this._config.name || '';
+      const powerMode = this._config.esp_power_mode || 'after_avr';
 
       const deviceOptions = candidates.map((c) => {
         const isSel = c.prefix === currentPrefix;
@@ -488,6 +501,16 @@
           </select>
         </div>
 
+        <div class="field">
+          <label>${this._t('editor_power_mode')}</label>
+          <select id="sel_power_mode">
+            <option value="grid_shared" ${powerMode === 'grid_shared' ? 'selected' : ''}>${this._t('editor_power_grid_shared')}</option>
+            <option value="after_avr" ${powerMode === 'after_avr' ? 'selected' : ''}>${this._t('editor_power_after_avr')}</option>
+            <option value="independent" ${powerMode === 'independent' ? 'selected' : ''}>${this._t('editor_power_independent')}</option>
+          </select>
+          <div class="hint">${this._t('editor_power_mode_hint')}</div>
+        </div>
+
         <details>
           <summary>${this._t('editor_custom_entities')}</summary>
           <div class="custom-grid">
@@ -543,6 +566,11 @@
         this._fireChanged();
       });
 
+      root.getElementById('sel_power_mode').addEventListener('change', (e) => {
+        this._config.esp_power_mode = e.target.value;
+        this._fireChanged();
+      });
+
       root.querySelectorAll('input[data-entity-key]').forEach((input) => {
         input.addEventListener('change', (e) => {
           const key = e.target.getAttribute('data-entity-key');
@@ -591,6 +619,7 @@
         type: 'custom:grid-monitor-card',
         name: 'Smart Grid Monitor',
         prefix: foundPrefix,
+        esp_power_mode: 'after_avr',
       };
     }
 
@@ -623,7 +652,8 @@
         Object.keys(entities).forEach((key) => { entities[key] = entities[key].replace('grid_monitor', prefix); });
       }
       Object.assign(entities, config.entities || {});
-      this._config = { ...config, entities, name: config.name || null };
+      const powerMode = ['grid_shared', 'after_avr', 'independent'].includes(config.esp_power_mode) ? config.esp_power_mode : 'after_avr';
+      this._config = { ...config, entities, name: config.name || null, esp_power_mode: powerMode };
       this._stateSnapshot = this._captureStateSnapshot();
       this._render();
     }
@@ -755,6 +785,13 @@
       const latest = ['voltage', 'power', 'current'].map((key) => this._state(key)?.last_updated).filter(Boolean).map((value) => new Date(value)).filter((value) => Number.isFinite(value.getTime())).sort((a, b) => b - a)[0];
       return latest ? latest.toLocaleTimeString(this._locale(), { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : this._t('unknown');
     }
+    _espPowerStatus() {
+      const mode = this._config?.esp_power_mode || 'after_avr';
+      const labelKey = mode === 'grid_shared' ? 'esp_power_shared' : mode === 'independent' ? 'esp_power_independent' : 'esp_power_after_avr';
+      const note = mode === 'after_avr' ? `${this._t('esp_power_avr_note')} · ${this._t('pzem_grid_note')}` : this._t('pzem_grid_note');
+      return { label: this._t(labelKey), note };
+    }
+
     _displayStatus() {
       const mains = this._raw('mains');
       const inverter = this._raw('inverter') === 'on';
@@ -778,6 +815,7 @@
       const pzemText = status.mains === 'on' ? this._t('active') : status.inverter ? this._t('inactive') : this._t('detecting');
       const mainsText = status.mains === 'on' ? this._t('has_voltage') : status.inverter ? this._t('no_voltage') : this._t('detecting');
       const sourceText = status.inverter ? this._t('from_inverter') : status.mains === 'on' ? this._t('from_mains') : this._t('detecting');
+      const espPower = this._espPowerStatus();
       const energy = this._formatted('energy_today', 2);
       const cost = this._formatted('cost_today', 2);
       return `<section class="home-view">
@@ -816,6 +854,7 @@
         <div class="bottom-status">
           <div class="card info"><span class="symbol green">${this._svg('home')}</span><div><div class="small">${this._escape(this._t('mains'))}</div><strong data-role="home-mains" class="${status.mains === 'on' ? 'good' : ''}">${this._escape(mainsText)}</strong></div></div>
           <div class="card info"><span class="symbol blue">${this._svg('plug')}</span><div><div class="small">${this._escape(this._t('source'))}</div><strong data-role="home-source">${this._escape(sourceText)}</strong></div></div>
+          <div class="card info"><span class="symbol blue">${this._svg('plug')}</span><div><div class="small">${this._escape(this._t('esp_power_connection'))}</div><strong data-role="esp-power-label">${this._escape(espPower.label)}</strong><div class="small" data-role="esp-power-note">${this._escape(espPower.note)}</div></div></div>
           <div class="card info"><span class="symbol green">${this._svg('shield')}</span><div><div class="small">${this._escape(this._t('pzem_link'))}</div><strong data-role="home-pzem" class="${status.mains === 'on' ? 'good' : ''}">${this._escape(pzemText)}</strong></div></div>
           <div class="card info"><span class="symbol amber">${this._svg('coin')}</span><div><div class="small">${this._escape(this._t('today_consumption'))}</div><strong data-value-key="energy_today" data-value-digits="2">${this._escape(energy)}</strong><div class="small cost-line">≈ <span data-value-key="cost_today" data-value-digits="2">${this._escape(cost)}</span></div></div></div>
         </div>
@@ -1642,7 +1681,7 @@
         .main-grid{display:grid;grid-template-columns:1.03fr 1fr;gap:14px}.voltage{min-height:385px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px;position:relative;overflow:hidden}.voltage.alarm{border-color:#ff526d99}.voltage.inverter{border-color:#ffb51b99}.voltage-gauge{width:min(100%,490px);height:auto;overflow:visible}.voltage-value{font-size:70px;font-weight:800;letter-spacing:-2px;fill:#f7fbff}.voltage-unit{font-size:43px;letter-spacing:0}.voltage-label{font-size:25px;fill:#b3c8e4}.state-indicator{display:flex;align-items:center;gap:11px;color:var(--green);font-size:24px;font-weight:800;margin-top:-3px}.state-indicator.inverter{color:var(--amber)}.state-indicator.alarm,.state-indicator.offline{color:var(--red)}.state-indicator.unknown{color:var(--muted)}.check-mark{width:32px;height:32px;border-radius:50%;background:var(--green);color:#052116;display:grid;place-items:center;box-shadow:0 0 18px #35ed9166}.check-mark .icon{width:23px;height:23px}.state-indicator.inverter .check-mark{background:var(--amber);color:#392400}.state-indicator.alarm .check-mark,.state-indicator.offline .check-mark{background:var(--red);color:#390711}.state-indicator.unknown .check-mark{background:#53677e;color:#d6e5f6}
         .metrics{display:grid;grid-template-columns:1fr 1fr;gap:14px}.metric{min-height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;text-align:center}.metric-icon{font-size:48px;line-height:1.15;color:var(--blue);text-shadow:0 0 15px #009dff66}.metric-icon .icon{width:52px;height:52px}.metric.current .metric-icon{color:var(--cyan)}.metric.frequency .metric-icon{color:#08d6e7}.metric.pf .metric-icon{color:var(--purple)}.metric-value{font-size:clamp(30px,4cqw,53px);font-weight:800;letter-spacing:-1.5px;margin:4px 0;overflow-wrap:anywhere}.metric-value .unit{font-size:.62em;letter-spacing:0;white-space:nowrap}.metric-label{color:#b2c6e1;font-size:19px}
         .chart-card{margin-top:14px;padding:17px 20px 12px}.chart-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px}.chart-head h2{font-size:24px;margin:0;display:flex;align-items:center;gap:12px}.chart-icon{color:var(--blue);font-size:28px}.chart-icon .icon{width:30px;height:30px}.periods{margin-left:auto;display:flex;background:#1a2b42;border-radius:15px;padding:4px;gap:3px}.period-button{border:0;background:transparent;color:#b4c7e0;padding:8px 15px;border-radius:12px;font:inherit;font-size:15px;cursor:pointer}.period-button.active{background:#078de9;color:white;box-shadow:0 3px 12px #008fff55}.chart{width:100%;height:auto;display:block;overflow:visible}.chart-grid{fill:none;stroke:#29415c;stroke-width:1}.chart-grid text{fill:#b7c9df;stroke:none;font-size:14px}.chart-glow{fill:none;stroke:#0aaaff;stroke-width:8;opacity:.55}.chart-line{fill:none;stroke:#16b5ff;stroke-width:3.5;stroke-linejoin:round;stroke-linecap:round}.chart-dot{fill:#18baff;filter:drop-shadow(0 0 7px #18baff)}.chart-tag{fill:#0d2035;stroke:#08aaff}.chart-tag-text{fill:#fff!important;font-size:15px!important;font-weight:bold}.chart-empty{height:205px;display:grid;place-items:center;color:#91a8c3;font-size:14px;text-align:center;padding:20px}
-        .bottom-status{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin-top:14px}.info{padding:17px 12px;min-height:128px;display:flex;align-items:center;justify-content:center;gap:12px;min-width:0}.info .symbol{font-size:38px;flex:none;color:var(--green);filter:drop-shadow(0 0 10px #35ed9166)}.info .symbol .icon{width:42px;height:42px}.info .symbol.blue{color:#91b8e9}.info .symbol.amber{color:var(--amber)}.info .small{color:#b6c9e2;font-size:16px}.info strong{display:block;font-size:20px;margin-top:5px;overflow-wrap:anywhere}.info .good{color:var(--green)}.info .cost-line{margin-top:3px}
+        .bottom-status{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:13px;margin-top:14px}.info{padding:17px 12px;min-height:128px;display:flex;align-items:center;justify-content:center;gap:12px;min-width:0}.info .symbol{font-size:38px;flex:none;color:var(--green);filter:drop-shadow(0 0 10px #35ed9166)}.info .symbol .icon{width:42px;height:42px}.info .symbol.blue{color:#91b8e9}.info .symbol.amber{color:var(--amber)}.info .small{color:#b6c9e2;font-size:16px}.info strong{display:block;font-size:20px;margin-top:5px;overflow-wrap:anywhere}.info .good{color:var(--green)}.info .cost-line{margin-top:3px}
         .banner{margin-top:14px;padding:18px 24px;min-height:88px;display:flex;align-items:center;gap:18px;border:1px solid #39d77e;background:linear-gradient(90deg,#0c302a,#0c2631 68%,#102b42);box-shadow:0 0 24px #28d87920}.banner.inverter{border-color:#ffb51b;background:linear-gradient(90deg,#382711,#18283a 80%);box-shadow:0 0 24px #ffb51b20}.banner.alarm,.banner.offline{border-color:#ff526d;background:linear-gradient(90deg,#3a1420,#18283a 80%);box-shadow:0 0 24px #ff526d20}.banner.unknown{border-color:#53677e;background:linear-gradient(90deg,#1a2939,#101e30)}.banner-check{width:48px;height:48px;border-radius:50%;background:var(--green);color:#052116;display:grid;place-items:center;flex:none;box-shadow:0 0 18px #35ed9166}.banner-check .icon{width:36px;height:36px}.banner.inverter .banner-check{background:var(--amber);color:#392400}.banner.alarm .banner-check,.banner.offline .banner-check{background:var(--red);color:#390711}.banner.unknown .banner-check{background:#53677e;color:#d6e5f6}.banner strong{color:#4df29a;font-size:clamp(17px,2cqw,24px)}.banner.inverter strong{color:#ffd078}.banner.alarm strong,.banner.offline strong{color:#ff8a9a}.banner.unknown strong{color:#b4c7df}.house-art{margin-left:auto;width:130px;max-width:22%;flex:none;filter:drop-shadow(0 0 11px #1b8fff)}.house-art svg{display:block;width:100%;height:auto}
         .detail-panel{padding:22px;margin-top:2px}.detail-panel h2{margin:0 0 18px;font-size:25px}.detail-panel h2.subheading{margin:24px 0 14px;font-size:19px}.detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.detail{padding:16px;border-radius:16px;background:#13243a;border:1px solid #2b4562;min-width:0}.detail>span,.detail label>span{display:block;color:#9fb5d1;font-size:14px;margin-bottom:7px}.detail b{font-size:22px;overflow-wrap:anywhere}.setting{display:flex;align-items:end;gap:10px}.setting label{flex:1;min-width:0}.setting-input{display:flex;align-items:center;gap:8px}.setting-input input{width:100%;min-width:0;background:#091727;border:1px solid #37526f;border-radius:9px;color:var(--text);padding:10px;font:inherit;font-size:18px}.setting-input small{color:#9fb5d1;white-space:nowrap}.save-button,.switch-button,.action-button{border:1px solid #278ed0;background:#092645;color:#d7efff;border-radius:10px;padding:9px 12px;font:inherit;cursor:pointer}.save-button:hover,.switch-button:hover,.action-button:hover{background:#0c3962}.save-button:disabled,.switch-button:disabled,.action-button:disabled{opacity:.45;cursor:not-allowed}.switch-setting{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.switch-setting>span{color:#9fb5d1;font-size:14px}.switch-setting>strong{font-size:16px}.switch-button{grid-column:1/-1;display:flex;align-items:center;gap:8px;justify-content:center}.switch-button .icon{width:20px;height:20px}.switch-button.on{border-color:#35ed91;color:#35ed91}.action-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.action-button{min-height:68px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;font-size:13px;border-color:#2b8ed0}.action-button span{font-size:22px;color:#45bdff}.action-button .icon{width:25px;height:25px}.footer{display:flex;justify-content:space-between;gap:10px;margin:14px 2px 0;color:#6885a2;font-size:11px}.footer span:last-child{max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
         @container (max-width:760px){.shell{padding:12px}.header{gap:11px;padding:5px 2px 14px}.logo{width:58px;height:58px;border-radius:17px}.logo .icon{width:38px;height:38px}.headright{gap:8px}.connection strong{font-size:14px}.connection small{font-size:10px}.wifi-icon{font-size:21px;padding-left:10px}.wifi-icon .icon{width:24px;height:24px}.tabs{margin-bottom:12px}.tab{gap:5px;padding:12px 3px;font-size:12px}.tab .tab-icon{font-size:19px}.tab .icon{width:20px;height:20px}.main-grid{grid-template-columns:1fr;gap:10px}.voltage{min-height:300px}.voltage-gauge{width:min(100%,420px)}.metrics{gap:10px}.metric{min-height:135px}.metric-icon .icon{width:38px;height:38px}.metric-label{font-size:15px}.chart-card{padding:13px 11px}.chart-head h2{font-size:19px}.periods{width:100%;margin:0}.period-button{flex:1;padding:8px 4px;font-size:13px}.bottom-status{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.info{min-height:100px;padding:12px 8px}.info .symbol .icon{width:30px;height:30px}.info .small{font-size:13px}.info strong{font-size:16px}.banner{padding:14px;min-height:70px}.banner-check{width:38px;height:38px}.banner-check .icon{width:28px;height:28px}.house-art{width:80px}.detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.detail-panel{padding:16px}.detail-panel h2{font-size:22px}.action-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
