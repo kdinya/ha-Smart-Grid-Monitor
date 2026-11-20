@@ -1,0 +1,48 @@
+# Optional Home Assistant package.
+# Enable packages in configuration.yaml before using this file:
+# homeassistant:
+#   packages: !include_dir_named packages
+#
+# Entity IDs assume the default ESPHome slug: grid_monitor.
+# Adjust them if Home Assistant generated different IDs.
+
+template:
+  - sensor:
+      - name: "Grid Monitor Power Source"
+        unique_id: grid_monitor_power_source
+        icon: >-
+          {% set mains = states('binary_sensor.grid_monitor_mains_present') %}
+          {% set inverter = states('binary_sensor.grid_monitor_on_inverter') %}
+          {% if mains == 'on' %}mdi:transmission-tower
+          {% elif inverter == 'on' %}mdi:car-battery
+          {% else %}mdi:help-circle-outline{% endif %}
+        state: >-
+          {% set mains = states('binary_sensor.grid_monitor_mains_present') %}
+          {% set inverter = states('binary_sensor.grid_monitor_on_inverter') %}
+          {% if mains in ['unavailable', 'unknown'] and inverter in ['unavailable', 'unknown'] %}
+            Немає напруги або немає зв'язку з ESP
+          {% elif mains == 'on' %}
+            Мережа
+          {% elif inverter == 'on' %}
+            Інвертор
+          {% else %}
+            Визначається
+          {% endif %}
+        attributes:
+          source_state: >-
+            {% set mains = states('binary_sensor.grid_monitor_mains_present') %}
+            {% set inverter = states('binary_sensor.grid_monitor_on_inverter') %}
+            {% if mains == 'on' %}mains{% elif inverter == 'on' %}inverter{% else %}unknown{% endif %}
+
+  - binary_sensor:
+      - name: "Grid Monitor Healthy"
+        unique_id: grid_monitor_healthy
+        device_class: connectivity
+        state: >-
+          {{ is_state('binary_sensor.grid_monitor_esp_status', 'on')
+             and not is_state('binary_sensor.grid_monitor_voltage_out_of_range', 'on') }}
+        attributes:
+          reason: >-
+            {% if not is_state('binary_sensor.grid_monitor_esp_status', 'on') %}ESP недоступна
+            {% elif is_state('binary_sensor.grid_monitor_voltage_out_of_range', 'on') %}Напруга поза діапазоном
+            {% else %}Усі системи працюють нормально{% endif %}
