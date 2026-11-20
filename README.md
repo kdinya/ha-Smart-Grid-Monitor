@@ -23,11 +23,12 @@ type: custom:grid-monitor-card
 language: uk
 name: Електрика будинку
 prefix: grid_monitor
+esp_power_mode: after_avr
 ```
 
-`language` accepts `uk` or `en`. If omitted, the card follows the Home Assistant language when it can detect it. The card safely displays missing, unavailable and unknown entities instead of failing the whole dashboard. Reset and restart actions ask for confirmation before calling the corresponding ESPHome button service.
+`language` accepts `uk` or `en`. If omitted, the card follows the Home Assistant language when it can detect it. `esp_power_mode` accepts `grid_shared`, `after_avr` or `independent` and defaults to `after_avr`. It describes how the ESP is powered; PZEM readings remain measurements of the mains in every mode, and the card does not infer the ESP supply from grid sensors. The card safely displays missing, unavailable and unknown entities instead of failing the whole dashboard. Reset and restart actions ask for confirmation before calling the corresponding ESPHome button service.
 
-Card display options such as the name, ESPHome prefix, language and entity overrides belong to the Lovelace dashboard configuration, not to browser-local storage. Storage-mode dashboards keep that configuration in Home Assistant so the same dashboard uses it on each client; YAML-mode dashboards keep it in the dashboard YAML. ESPHome device settings such as voltage thresholds, tariff values and the two-zone switch are separate device entities and already use ESPHome restore settings, so they persist on the controller across restarts.
+Card display options such as the name, ESPHome prefix, language, ESP power arrangement and entity overrides belong to the Lovelace dashboard configuration, not to browser-local storage. Storage-mode dashboards keep that configuration in Home Assistant so the same dashboard uses it on each client; YAML-mode dashboards keep it in the dashboard YAML. ESPHome device settings such as voltage thresholds, tariff values and the two-zone switch are separate device entities and already use ESPHome restore settings, so they persist on the controller across restarts.
 
 ## Manual card installation
 
