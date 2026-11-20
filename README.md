@@ -27,6 +27,8 @@ prefix: grid_monitor
 
 `language` accepts `uk` or `en`. If omitted, the card follows the Home Assistant language when it can detect it. The card safely displays missing, unavailable and unknown entities instead of failing the whole dashboard. Reset and restart actions ask for confirmation before calling the corresponding ESPHome button service.
 
+Card display options such as the name, ESPHome prefix, language and entity overrides belong to the Lovelace dashboard configuration, not to browser-local storage. Storage-mode dashboards keep that configuration in Home Assistant so the same dashboard uses it on each client; YAML-mode dashboards keep it in the dashboard YAML. ESPHome device settings such as voltage thresholds, tariff values and the two-zone switch are separate device entities and already use ESPHome restore settings, so they persist on the controller across restarts.
+
 ## Manual card installation
 
 Download `grid-monitor-card.js` into `<config>/www/`, add `/local/grid-monitor-card.js` as a **JavaScript module** under **Settings → Dashboards → Resources**, then refresh the browser. HACS is preferred because it manages the resource and updates.
