@@ -1,31 +1,59 @@
 # Smart Grid Monitor
 
-ESPHome firmware and Home Assistant dashboard for an ESP32-C3 + PZEM-004T v3.0 household grid monitor.
+ESPHome firmware and Home Assistant interfaces for an ESP32-C3 + PZEM-004T v3.0 household grid monitor. The project reports live voltage, current, power, frequency, power factor, energy, cost, grid-quality events, inverter periods, diagnostics, configuration controls and safe reset actions.
 
-The project combines reliable local measurements with a polished, Ukrainian-first Home Assistant interface inspired by the supplied dark neon reference. It reports live voltage, current, power, frequency, power factor, energy, cost, grid-quality events, inverter periods, diagnostics, configuration controls and safe reset actions.
+The repository now provides two supported interface paths. The recommended path is the HACS-installable `Smart Grid Monitor Card`, a responsive dark-neon frontend card. The dependency-free native Lovelace dashboard remains available as a fallback for installations where custom frontend resources are not desired.
+
+## HACS installation
+
+1. Open **HACS → Frontend → Custom repositories**.
+2. Add `https://github.com/kdinya/ha-Smart-Grid-Monitor` and select **Dashboard / Lovelace**.
+3. Install **Smart Grid Monitor Card**.
+4. Refresh the Home Assistant browser or companion app. HACS normally registers the JavaScript resource automatically.
+5. Add a manual card with the example below, or use the card picker.
+
+```yaml
+type: custom:grid-monitor-card
+```
+
+The card uses the default ESPHome prefix `grid_monitor`. If the device has another name, set `prefix` or provide explicit entity overrides:
+
+```yaml
+type: custom:grid-monitor-card
+language: uk
+name: Електрика будинку
+prefix: grid_monitor
+```
+
+`language` accepts `uk` or `en`. If omitted, the card follows the Home Assistant language when it can detect it. The card safely displays missing, unavailable and unknown entities instead of failing the whole dashboard. Reset and restart actions ask for confirmation before calling the corresponding ESPHome button service.
+
+## Manual card installation
+
+Download `grid-monitor-card.js` into `<config>/www/`, add `/local/grid-monitor-card.js` as a **JavaScript module** under **Settings → Dashboards → Resources**, then refresh the browser. HACS is preferred because it manages the resource and updates.
+
+## Native dashboard fallback
+
+Copy [`home-assistant/lovelace/grid-monitor-dashboard.yaml`](home-assistant/lovelace/grid-monitor-dashboard.yaml) into a dashboard's raw configuration editor. It uses only built-in Home Assistant cards and has no HACS dependency. Installation details and the optional source-of-power package are in [`home-assistant/README.md`](home-assistant/README.md).
 
 ## Repository layout
 
 ```text
 esphome/
   grid-monitor.yaml       # ESPHome firmware
-  secrets.example.yaml    # secret names and safe placeholders
+  secrets.example.yaml    # safe secret names and placeholders
 home-assistant/
-  lovelace/                # ready-to-paste native Lovelace dashboard
+  lovelace/                # native dependency-free dashboard
   packages/                # optional derived source/health sensors
+grid-monitor-card.js       # HACS Lovelace card
 docs/
   design-grid-monitor.md   # visual sketch and interaction decisions
+AGENTS.md                  # repository contribution and AI rules
+hacs.json                  # HACS frontend metadata
 ```
 
-## Quick start
+## Coverage
 
-1. Copy `esphome/secrets.example.yaml` to `esphome/secrets.yaml` and fill in your local values. Never commit `secrets.yaml`.
-2. Compile and flash `esphome/grid-monitor.yaml` with ESPHome.
-3. Add the ESPHome device to Home Assistant through the native ESPHome integration.
-4. Follow [`home-assistant/README.md`](home-assistant/README.md) to add the dashboard.
-5. Optionally enable the source-of-power package for a single friendly status sensor.
-
-The dashboard uses only built-in Home Assistant Lovelace cards. No HACS dependency, external CDN, custom JavaScript resource or cloud service is required.
+Both interfaces cover the firmware's live electrical values, energy and cost counters, tariff settings, voltage quality and peaks, inverter events and durations, ESP diagnostics, configuration numbers, two-zone tariff switch, reset buttons and restart button. The frontend reads entities exposed by ESPHome; it does not replace firmware outage detection or tariff calculations.
 
 ## Electrical safety
 
@@ -33,7 +61,7 @@ The PZEM module is connected to mains-voltage wiring. Use an enclosed, strain-re
 
 ## Development workflow
 
-Changes are developed on feature branches and reviewed through pull requests. Keep firmware changes, Home Assistant presentation changes and documentation changes independently understandable. Run the ESPHome configuration check before merging firmware edits and use Home Assistant's **Check configuration** before enabling package changes.
+Use focused feature branches and pull requests. Run `node --check grid-monitor-card.js`, validate `hacs.json`, run the ESPHome-secret-aware YAML checks when YAML changes, and run `git diff --check` before pushing. Never commit `esphome/secrets.yaml`, credentials or access tokens.
 
 ## License
 
