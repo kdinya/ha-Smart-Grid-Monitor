@@ -81,6 +81,9 @@
     reset_energy: 'button.grid_monitor_reset_pzem_energy', reset_events: 'button.grid_monitor_reset_event_counters', reset_cost: 'button.grid_monitor_reset_cost_counters', restart: 'button.grid_monitor_restart',
   };
 
+  const SETTING_ENTITY_KEYS = new Set(['sag_threshold', 'swell_threshold', 'nominal_voltage', 'tariff_day', 'tariff_night']);
+  const TIMESTAMP_ENTITY_KEYS = new Set(['voltage', 'power', 'current']);
+
   const TEXT = {
     uk: {
       title: 'Мережева напруга', subtitle: 'PZEM-004T v3.0 · Grid Monitor', online: 'Онлайн', offline: 'Офлайн', updated: 'Оновлено',
@@ -606,6 +609,11 @@
       this._historyLoading = false;
       this._historyError = false;
       this._historyRequest = 0;
+      this._stateSnapshot = null;
+      this._renderedLanguage = null;
+      this._pendingChangedKeys = new Set();
+      this._updateScheduled = false;
+      this.shadowRoot.addEventListener('click', (event) => this._handleCardClick(event));
     }
 
     setConfig(config) {
@@ -616,19 +624,62 @@
       }
       Object.assign(entities, config.entities || {});
       this._config = { ...config, entities, name: config.name || null };
+      this._stateSnapshot = this._captureStateSnapshot();
       this._render();
     }
 
     set hass(value) {
-      const active = this.shadowRoot.activeElement;
-      const edit = active?.dataset?.numberInput ? { key: active.dataset.numberInput, value: active.value } : null;
       this._hass = value;
-      this._render();
-      if (edit) {
-        const input = this.shadowRoot.querySelector(`[data-number-input="${edit.key}"]`);
-        if (input) { input.value = edit.value; input.focus({ preventScroll: true }); }
+      const nextSnapshot = this._captureStateSnapshot();
+      if (!this._config || !this._hasRendered || this._renderedLanguage !== this._lang()) {
+        this._stateSnapshot = nextSnapshot;
+        this._render();
+      } else {
+        const changed = this._diffStateSnapshots(this._stateSnapshot, nextSnapshot);
+        this._stateSnapshot = nextSnapshot;
+        if (changed.size) this._scheduleStateUpdate(changed);
       }
       this._ensureHistory();
+    }
+
+    _captureStateSnapshot() {
+      const snapshot = {};
+      for (const key of Object.keys(DEFAULTS)) {
+        const entityId = this._entity(key);
+        const state = this._hass?.states?.[entityId] || null;
+        const attributes = state?.attributes || {};
+        snapshot[key] = JSON.stringify([
+          entityId,
+          Boolean(state),
+          state?.state ?? null,
+          attributes.unit_of_measurement ?? null,
+          SETTING_ENTITY_KEYS.has(key) ? [attributes.min ?? null, attributes.max ?? null, attributes.step ?? null] : null,
+          TIMESTAMP_ENTITY_KEYS.has(key) ? state?.last_updated ?? null : null,
+        ]);
+      }
+      return snapshot;
+    }
+
+    _diffStateSnapshots(previous, next) {
+      const changed = new Set();
+      for (const key of Object.keys(next)) {
+        if (!previous || previous[key] !== next[key]) changed.add(key);
+      }
+      return changed;
+    }
+
+    _scheduleStateUpdate(changed) {
+      changed.forEach((key) => this._pendingChangedKeys.add(key));
+      if (this._updateScheduled) return;
+      this._updateScheduled = true;
+      const flush = () => {
+        this._updateScheduled = false;
+        const pending = this._pendingChangedKeys;
+        this._pendingChangedKeys = new Set();
+        if (pending.size && this._hasRendered) this._updateChanged(pending);
+      };
+      if (typeof window.requestAnimationFrame === 'function') window.requestAnimationFrame(flush);
+      else window.setTimeout(flush, 0);
     }
 
     _lang() {
@@ -688,8 +739,8 @@
       return `${value}${this._unit(key) ? ` ${this._unit(key)}` : ''}`;
     }
     _svg(name, extra = '') { return `<svg class="icon ${extra}" viewBox="0 0 48 48" aria-hidden="true">${ICONS[name] || ''}</svg>`; }
-    _detail(key, label, digits = 1) { return `<div class="detail"><span>${this._escape(label)}</span><b>${this._escape(this._formatted(key, digits))}</b></div>`; }
-    _row(key, label, icon, digits = 1) { return `<div class="row"><span class="row-label"><span class="row-symbol">${icon}</span>${this._escape(label)}</span><strong>${this._escape(this._formatted(key, digits))}</strong></div>`; }
+    _detail(key, label, digits = 1) { return `<div class="detail"><span>${this._escape(label)}</span><b data-value-key="${key}" data-value-digits="${digits}">${this._escape(this._formatted(key, digits))}</b></div>`; }
+    _row(key, label, icon, digits = 1) { return `<div class="row"><span class="row-label"><span class="row-symbol">${icon}</span>${this._escape(label)}</span><strong data-value-key="${key}" data-value-digits="${digits}">${this._escape(this._formatted(key, digits))}</strong></div>`; }
     _setting(key, label) {
       const entity = this._entity(key);
       const state = this._state(key);
@@ -698,7 +749,7 @@
       const min = Number.isFinite(Number(attrs.min)) ? Number(attrs.min) : '';
       const max = Number.isFinite(Number(attrs.max)) ? Number(attrs.max) : '';
       const step = Number.isFinite(Number(attrs.step)) && Number(attrs.step) > 0 ? Number(attrs.step) : 'any';
-      return `<div class="setting detail"><label><span>${this._escape(label)}</span><div class="setting-input"><input type="text" inputmode="decimal" data-number-input="${key}" value="${value === null ? '' : value}" data-min="${min}" data-max="${max}" data-step="${step}" ${!state ? 'disabled' : ''}><small>${this._escape(this._unit(key))}</small></div></label><button class="save-button" data-number-save="${key}" ${!state ? 'disabled' : ''}>${this._escape(this._t('save'))}</button></div>`;
+      return `<div class="setting detail"><label><span>${this._escape(label)}</span><div class="setting-input"><input type="text" inputmode="decimal" data-number-input="${key}" value="${value === null ? '' : value}" data-min="${min}" data-max="${max}" data-step="${step}" ${!state ? 'disabled' : ''}><small data-unit-key="${key}">${this._escape(this._unit(key))}</small></div></label><button class="save-button" data-number-save="${key}" ${!state ? 'disabled' : ''}>${this._escape(this._t('save'))}</button></div>`;
     }
     _updatedTime() {
       const latest = ['voltage', 'power', 'current'].map((key) => this._state(key)?.last_updated).filter(Boolean).map((value) => new Date(value)).filter((value) => Number.isFinite(value.getTime())).sort((a, b) => b - a)[0];
@@ -723,7 +774,7 @@
       const voltageNumber = voltage === null ? this._formatted('voltage') : voltage.toLocaleString(this._locale(), { maximumFractionDigits: 1 });
       const voltageUnit = voltage === null ? '' : this._unit('voltage') || (this._lang() === 'uk' ? 'В' : 'V');
       const gaugeAngle = (180 + progress * 1.8) * Math.PI / 180;
-      const gaugeDot = voltage === null ? '' : `<circle class="gauge-dot" cx="${(250 + 190 * Math.cos(gaugeAngle)).toFixed(1)}" cy="${(270 + 190 * Math.sin(gaugeAngle)).toFixed(1)}" r="7"/>`;
+      const gaugeDot = `<circle class="gauge-dot" data-role="gauge-dot" cx="${(250 + 190 * Math.cos(gaugeAngle)).toFixed(1)}" cy="${(270 + 190 * Math.sin(gaugeAngle)).toFixed(1)}" r="7" visibility="${voltage === null ? 'hidden' : 'visible'}"/>`;
       const pzemText = status.mains === 'on' ? this._t('active') : status.inverter ? this._t('inactive') : this._t('detecting');
       const mainsText = status.mains === 'on' ? this._t('has_voltage') : status.inverter ? this._t('no_voltage') : this._t('detecting');
       const sourceText = status.inverter ? this._t('from_inverter') : status.mains === 'on' ? this._t('from_mains') : this._t('detecting');
@@ -731,7 +782,7 @@
       const cost = this._formatted('cost_today', 2);
       return `<section class="home-view">
         <div class="main-grid">
-          <div class="card voltage ${status.stateClass}">
+          <div class="card voltage ${status.stateClass}" data-role="voltage-card">
             <svg class="voltage-gauge" viewBox="0 0 500 360" role="img" aria-label="${this._escape(this._t('voltage'))}">
               <defs>
                 <linearGradient id="${this._id('arc')}" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#078bff"/><stop offset=".52" stop-color="#08d6e7"/><stop offset="1" stop-color="#39ef83"/></linearGradient>
@@ -746,13 +797,13 @@
               <path d="M72 270 A190 190 0 1 1 428 270" fill="none" stroke="#19334f" stroke-width="28" stroke-linecap="round" pathLength="100"/>
               <path d="M72 270 A190 190 0 1 1 428 270" fill="none" stroke="#75cfff" stroke-opacity=".16" stroke-width="34" stroke-linecap="round" pathLength="100"/>
               ${this._gaugeTicks(progress)}
-              <path d="M72 270 A190 190 0 1 1 428 270" fill="none" stroke="url(#${this._id('arc')})" stroke-width="28" stroke-linecap="round" stroke-dasharray="${progress} 100" pathLength="100"/>
+              <path data-role="gauge-progress" d="M72 270 A190 190 0 1 1 428 270" fill="none" stroke="url(#${this._id('arc')})" stroke-width="28" stroke-linecap="round" stroke-dasharray="${progress} 100" pathLength="100"/>
               ${gaugeDot}
               ${this._towerArtwork()}
-              <text x="250" y="286" text-anchor="middle" class="voltage-value">${this._escape(voltageNumber)} <tspan class="voltage-unit">${this._escape(voltageUnit)}</tspan></text>
+              <text x="250" y="286" text-anchor="middle" class="voltage-value"><tspan data-role="voltage-number">${this._escape(voltageNumber)}</tspan> <tspan class="voltage-unit" data-role="voltage-unit">${this._escape(voltageUnit)}</tspan></text>
               <text x="250" y="322" text-anchor="middle" class="voltage-label">${this._escape(this._t('voltage'))}</text>
             </svg>
-            <div class="state-indicator ${status.stateClass}"><span class="check-mark">${this._svg('check')}</span>${this._escape(status.status)}</div>
+            <div class="state-indicator ${status.stateClass}" data-role="state-indicator"><span class="check-mark">${this._svg('check')}</span><span data-role="state-label">${this._escape(status.status)}</span></div>
           </div>
           <div class="metrics">
             ${this._heroMetric('power', 'bolt', 0)}
@@ -763,12 +814,12 @@
         </div>
         ${this._chart()}
         <div class="bottom-status">
-          <div class="card info"><span class="symbol green">${this._svg('home')}</span><div><div class="small">${this._escape(this._t('mains'))}</div><strong class="${status.mains === 'on' ? 'good' : ''}">${this._escape(mainsText)}</strong></div></div>
-          <div class="card info"><span class="symbol blue">${this._svg('plug')}</span><div><div class="small">${this._escape(this._t('source'))}</div><strong>${this._escape(sourceText)}</strong></div></div>
-          <div class="card info"><span class="symbol green">${this._svg('shield')}</span><div><div class="small">${this._escape(this._t('pzem_link'))}</div><strong class="${status.mains === 'on' ? 'good' : ''}">${this._escape(pzemText)}</strong></div></div>
-          <div class="card info"><span class="symbol amber">${this._svg('coin')}</span><div><div class="small">${this._escape(this._t('today_consumption'))}</div><strong>${this._escape(energy)}</strong><div class="small cost-line">≈ ${this._escape(cost)}</div></div></div>
+          <div class="card info"><span class="symbol green">${this._svg('home')}</span><div><div class="small">${this._escape(this._t('mains'))}</div><strong data-role="home-mains" class="${status.mains === 'on' ? 'good' : ''}">${this._escape(mainsText)}</strong></div></div>
+          <div class="card info"><span class="symbol blue">${this._svg('plug')}</span><div><div class="small">${this._escape(this._t('source'))}</div><strong data-role="home-source">${this._escape(sourceText)}</strong></div></div>
+          <div class="card info"><span class="symbol green">${this._svg('shield')}</span><div><div class="small">${this._escape(this._t('pzem_link'))}</div><strong data-role="home-pzem" class="${status.mains === 'on' ? 'good' : ''}">${this._escape(pzemText)}</strong></div></div>
+          <div class="card info"><span class="symbol amber">${this._svg('coin')}</span><div><div class="small">${this._escape(this._t('today_consumption'))}</div><strong data-value-key="energy_today" data-value-digits="2">${this._escape(energy)}</strong><div class="small cost-line">≈ <span data-value-key="cost_today" data-value-digits="2">${this._escape(cost)}</span></div></div></div>
         </div>
-        <div class="card banner ${status.stateClass}"><span class="banner-check">${this._svg('check')}</span><strong>${this._escape(status.banner)}</strong><span class="house-art" aria-hidden="true">${this._houseArt()}</span></div>
+        <div class="card banner ${status.stateClass}" data-role="home-banner"><span class="banner-check">${this._svg('check')}</span><strong data-role="home-banner-label">${this._escape(status.banner)}</strong><span class="house-art" aria-hidden="true">${this._houseArt()}</span></div>
       </section>`;
     }
 
@@ -782,7 +833,7 @@
         const x1 = 250 + inner * Math.cos(angle); const y1 = 270 + inner * Math.sin(angle);
         const x2 = 250 + outer * Math.cos(angle); const y2 = 270 + outer * Math.sin(angle);
         const active = index / 24 * 100 <= progress ? ' active' : '';
-        return `<path class="dial-tick${active}" d="M${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}"/>`;
+        return `<path class="dial-tick${active}" data-gauge-tick="${index}" d="M${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}"/>`;
       }).join('');
     }
         _towerArtwork() {
@@ -886,13 +937,13 @@
       const display = value === null ? this._escape(this._formatted(key, digits)) : value.toLocaleString(this._locale(), { maximumFractionDigits: digits });
       const unit = this._unit(key);
       const extraClass = key === 'power_factor' ? 'pf' : key;
-      return `<div class="card metric ${extraClass}"><div class="metric-icon">${this._svg(icon)}</div><div class="metric-value">${display}${unit ? ` <span class="unit">${this._escape(unit)}</span>` : ''}</div><div class="metric-label">${this._escape(this._t(key === 'power_factor' ? 'pf' : key))}</div></div>`;
+      return `<div class="card metric ${extraClass}"><div class="metric-icon">${this._svg(icon)}</div><div class="metric-value" data-metric-key="${key}" data-metric-digits="${digits}"><span data-role="metric-number">${display}</span><span class="unit" data-role="metric-unit" style="${unit ? '' : 'display:none'}">${this._escape(unit)}</span></div><div class="metric-label">${this._escape(this._t(key === 'power_factor' ? 'pf' : key))}</div></div>`;
     }
 
     _chart() {
       const labels = ['hour', 'day', 'week', 'month'];
       const buttons = labels.map((period) => `<button class="period-button ${this._historyRange === period ? 'active' : ''}" data-period="${period}" aria-pressed="${this._historyRange === period}">${this._escape(this._t(period))}</button>`).join('');
-      return `<section class="card chart-card"><div class="chart-head"><h2><span class="chart-icon">${this._svg('chart')}</span>${this._escape(this._t('chart_title'))}</h2><div class="periods" role="group" aria-label="${this._escape(this._t('chart_title'))}">${buttons}</div></div>${this._chartSvg()}</section>`;
+      return `<section class="card chart-card"><div class="chart-head"><h2><span class="chart-icon">${this._svg('chart')}</span>${this._escape(this._t('chart_title'))}</h2><div class="periods" role="group" aria-label="${this._escape(this._t('chart_title'))}">${buttons}</div></div><div class="chart-plot" data-role="chart-plot">${this._chartSvg()}</div></section>`;
     }
 
     _chartSvg() {
@@ -922,7 +973,7 @@
       const current = this._num('power');
       const latest = current === null ? '' : current.toLocaleString(this._locale(), { maximumFractionDigits: 0 });
       const currentY = current === null ? y1 : y1 - (Math.max(0, current) / maximum) * (y1 - y0);
-      return `<svg class="chart" viewBox="0 0 1000 210" role="img" aria-label="${this._escape(this._t('chart_title'))}"><defs><linearGradient id="${this._id('area')}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#078ff0" stop-opacity=".55"/><stop offset="1" stop-color="#078ff0" stop-opacity=".04"/></linearGradient><filter id="${this._id('line-glow')}"><feGaussianBlur stdDeviation="3"/></filter></defs><g class="chart-grid">${horizontal}${vertical}</g><path d="${area}" fill="url(#${this._id('area')})"/><path d="${line}" class="chart-glow" filter="url(#${this._id('line-glow')})"/><path d="${line}" class="chart-line"/><circle cx="${x1}" cy="${currentY.toFixed(1)}" r="7" class="chart-dot"/>${latest ? `<rect x="908" y="${Math.max(4, currentY - 44).toFixed(1)}" width="82" height="30" rx="9" class="chart-tag"/><text x="949" y="${Math.max(24, currentY - 24).toFixed(1)}" text-anchor="middle" class="chart-tag-text">${this._escape(latest)} ${this._lang() === 'uk' ? 'Вт' : 'W'}</text>` : ''}</svg>`;
+      return `<svg class="chart" data-chart-max="${maximum}" viewBox="0 0 1000 210" role="img" aria-label="${this._escape(this._t('chart_title'))}"><defs><linearGradient id="${this._id('area')}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#078ff0" stop-opacity=".55"/><stop offset="1" stop-color="#078ff0" stop-opacity=".04"/></linearGradient><filter id="${this._id('line-glow')}"><feGaussianBlur stdDeviation="3"/></filter></defs><g class="chart-grid">${horizontal}${vertical}</g><path d="${area}" fill="url(#${this._id('area')})"/><path d="${line}" class="chart-glow" filter="url(#${this._id('line-glow')})"/><path d="${line}" class="chart-line"/><circle cx="${x1}" cy="${currentY.toFixed(1)}" r="7" class="chart-dot" data-role="chart-dot" visibility="${current === null ? 'hidden' : 'visible'}"/><rect x="908" y="${Math.max(4, currentY - 44).toFixed(1)}" width="82" height="30" rx="9" class="chart-tag" data-role="chart-tag" visibility="${latest ? 'visible' : 'hidden'}"/><text x="949" y="${Math.max(24, currentY - 24).toFixed(1)}" text-anchor="middle" class="chart-tag-text" data-role="chart-tag-text" visibility="${latest ? 'visible' : 'hidden'}">${this._escape(latest)} ${this._lang() === 'uk' ? 'Вт' : 'W'}</text></svg>`;
     }
 
     _downsample(points, limit) {
@@ -949,7 +1000,7 @@
       const range = this._historyRange;
       const end = new Date();
       const start = new Date(end.getTime() - RANGES[range] * 60 * 60 * 1000);
-      this._render();
+      this._refreshChart();
       try {
         if (typeof hass.callApi !== 'function') throw new Error('History API unavailable');
         const entity = encodeURIComponent(this._entity('power'));
@@ -972,9 +1023,14 @@
       } finally {
         if (request === this._historyRequest) {
           this._historyLoading = false;
-          this._render();
+          this._refreshChart();
         }
       }
+    }
+
+    _refreshChart() {
+      const plot = this.shadowRoot.querySelector('[data-role="chart-plot"]');
+      if (plot) plot.innerHTML = this._chartSvg();
     }
 
     _params() {
@@ -991,18 +1047,18 @@
       const twoZone = this._raw('two_zone') === 'on';
       return `<section class="detail-panel energy-panel"><h2>${this._escape(this._t('energy_title'))}</h2>
         <div class="energy-hero">
-          <article class="energy-visual energy-coin"><span class="eyebrow">${this._escape(this._t('today'))}</span><strong class="hero-number">${this._escape(this._formatted('energy_today', 2))}</strong><small>${this._escape(this._t('estimated_cost'))} · ${this._escape(this._formatted('cost_today', 2))}</small>${this._energyCoinArt()}</article>
-          <article class="energy-visual energy-load"><span class="eyebrow">${this._escape(this._t('current_load'))}</span><strong class="hero-number">${this._escape(this._formatted('power', 0))}</strong><small>${this._escape(this._t('cost_rate'))} · ${this._escape(this._formatted('cost_rate', 2))}</small>${this._plugArt()}</article>
+          <article class="energy-visual energy-coin"><span class="eyebrow">${this._escape(this._t('today'))}</span><strong class="hero-number" data-value-key="energy_today" data-value-digits="2">${this._escape(this._formatted('energy_today', 2))}</strong><small>${this._escape(this._t('estimated_cost'))} · <span data-value-key="cost_today" data-value-digits="2">${this._escape(this._formatted('cost_today', 2))}</span></small>${this._energyCoinArt()}</article>
+          <article class="energy-visual energy-load"><span class="eyebrow">${this._escape(this._t('current_load'))}</span><strong class="hero-number" data-value-key="power" data-value-digits="0">${this._escape(this._formatted('power', 0))}</strong><small>${this._escape(this._t('cost_rate'))} · <span data-value-key="cost_rate" data-value-digits="2">${this._escape(this._formatted('cost_rate', 2))}</span></small>${this._plugArt()}</article>
         </div>
         <div class="detail-grid energy-grid">
           ${this._detail('energy_today', this._t('today'), 3)}${this._detail('energy_month', this._t('energy_month'), 2)}${this._detail('energy_total', this._t('energy_total'), 3)}
           ${this._detail('cost_today', this._t('cost_today'), 2)}${this._detail('cost_month', this._t('cost_month'), 2)}${this._detail('cost_total', this._t('cost_total'), 2)}
           ${this._detail('tariff', this._t('tariff'), 2)}${this._detail('cost_rate', this._t('cost_rate'), 2)}
-          <div class="detail tariff-state"><span>${this._escape(this._t('two_zone'))}</span><b class="${twoZone ? 'good' : ''}">${this._escape(twoZone ? this._t('on') : this._t('off'))}</b><i class="tariff-led ${twoZone ? 'active' : ''}"></i></div>
+          <div class="detail tariff-state"><span>${this._escape(this._t('two_zone'))}</span><b data-role="energy-two-zone-value" class="${twoZone ? 'good' : ''}">${this._escape(twoZone ? this._t('on') : this._t('off'))}</b><i class="tariff-led ${twoZone ? 'active' : ''}" data-role="energy-two-zone-led"></i></div>
         </div>
         <div class="visual-grid energy-visual-grid">
           <section class="visual-card tariff-visual"><h3>${this._escape(this._t('tariff_compare'))}</h3>${this._tariffBars()}</section>
-          <section class="visual-card current-tariff"><h3>${this._escape(this._t('current_rate'))}</h3><strong class="big-number">${this._escape(this._formatted('tariff', 2))}</strong><span class="rate-pulse">${this._svg('energy')} ${this._escape(this._t('two_zone'))}: ${this._escape(twoZone ? this._t('on') : this._t('off'))}</span></section>
+          <section class="visual-card current-tariff"><h3>${this._escape(this._t('current_rate'))}</h3><strong class="big-number" data-value-key="tariff" data-value-digits="2">${this._escape(this._formatted('tariff', 2))}</strong><span class="rate-pulse">${this._svg('energy')} ${this._escape(this._t('two_zone'))}: <span data-role="energy-two-zone-label">${this._escape(twoZone ? this._t('on') : this._t('off'))}</span></span></section>
         </div>
       </section>`;
     }
@@ -1133,7 +1189,7 @@
     _tariffBars() {
       const day = this._num('tariff_day'); const night = this._num('tariff_night');
       const max = Math.max(day || 0, night || 0, 0.01);
-      const row = (key, label, cls, value) => `<div class="bar-row"><span>${this._escape(this._t(label))}</span><div class="bar-track"><i class="${cls}" style="width:${value === null ? 0 : Math.max(0, Math.min(100, value / max * 100)).toFixed(1)}%"></i></div><b>${this._escape(this._formatted(key, 2))}</b></div>`;
+      const row = (key, label, cls, value) => `<div class="bar-row"><span>${this._escape(this._t(label))}</span><div class="bar-track"><i class="${cls}" data-tariff-fill="${key}" style="width:${value === null ? 0 : Math.max(0, Math.min(100, value / max * 100)).toFixed(1)}%"></i></div><b data-value-key="${key}" data-value-digits="2">${this._escape(this._formatted(key, 2))}</b></div>`;
       return `<div class="bar-list">${row('tariff_day', 'day', 'day-rate', day)}${row('tariff_night', 'night', 'night-rate', night)}</div>`;
     }
 
@@ -1143,10 +1199,10 @@
       const deviceState = esp === 'on' ? this._t('online') : esp === 'off' ? this._t('offline') : esp === 'unavailable' ? this._t('unavailable') : this._t('unknown');
       const deviceClass = esp === 'on' ? 'online' : esp === 'off' ? 'offline' : 'unknown';
       return `<section class="detail-panel settings-panel"><h2>${this._escape(this._t('settings_title'))}</h2>
-        <div class="settings-hero">${this._chipArt()}<div class="device-copy"><strong>${this._escape(this._t('device_name'))}</strong><span>${this._escape(this._t('device_description'))}</span></div><div class="device-status ${deviceClass}"><i></i><b>${this._escape(deviceState)}</b></div></div>
+        <div class="settings-hero">${this._chipArt()}<div class="device-copy"><strong>${this._escape(this._t('device_name'))}</strong><span>${this._escape(this._t('device_description'))}</span></div><div class="device-status ${deviceClass}" data-role="device-status"><i></i><b data-role="device-state">${this._escape(deviceState)}</b></div></div>
         <div class="detail-grid settings-grid">
         ${this._setting('sag_threshold', this._t('sag'))}${this._setting('swell_threshold', this._t('swell'))}${this._setting('nominal_voltage', this._t('nominal'))}${this._setting('tariff_day', this._t('tariff_day'))}${this._setting('tariff_night', this._t('tariff_night'))}
-        <div class="detail switch-setting"><span>${this._escape(this._t('two_zone'))}</span><strong>${this._escape(twoZone ? this._t('on') : this._t('off'))}</strong><button class="switch-button ${twoZone ? 'on' : ''}" data-switch="two_zone" aria-pressed="${twoZone}">${this._svg('gear')}<span>${this._escape(twoZone ? this._t('on') : this._t('off'))}</span></button></div>
+        <div class="detail switch-setting"><span>${this._escape(this._t('two_zone'))}</span><strong data-role="switch-value">${this._escape(twoZone ? this._t('on') : this._t('off'))}</strong><button class="switch-button ${twoZone ? 'on' : ''}" data-switch="two_zone" aria-pressed="${twoZone}">${this._svg('gear')}<span data-role="switch-label">${this._escape(twoZone ? this._t('on') : this._t('off'))}</span></button></div>
       </div><h2 class="subheading">${this._escape(this._t('diagnostics'))}</h2><div class="detail-grid">
         ${this._detail('wifi_signal', this._t('wifi'), 0)}${this._detail('esp_temperature', this._t('temperature'), 1)}${this._detail('uptime', this._t('uptime'), 0)}${this._detail('ip_address', this._t('ip'), 0)}${this._detail('ssid', this._t('ssid'), 0)}${this._detail('inverter_events', this._t('inverter_events'), 0)}
       </div><h2 class="subheading">${this._escape(this._t('actions'))}</h2><div class="action-grid">
@@ -1254,31 +1310,276 @@
       const activeContent = this._activeTab === 'home' ? this._home() : this._activeTab === 'params' ? this._params() : this._activeTab === 'energy' ? this._energy() : this._settings();
       this.shadowRoot.innerHTML = `<style>${GridMonitorCard.CSS}</style><main class="shell ${status.stateClass}${readyClass}">
         <header class="header"><div class="logo">${this._svg('bolt')}</div><div class="brand"><h1>${this._escape(this._config.name || this._t('title'))}</h1><p>${this._escape(this._t('subtitle'))}</p></div>
-          <div class="headright"><div class="connection ${online ? 'online' : status.esp === 'off' ? 'offline' : 'unknown'}"><span class="dot"></span><strong>${this._escape(online ? this._t('online') : status.esp === 'off' ? this._t('offline') : this._t('unknown'))}</strong><small>${this._escape(this._t('updated'))}: ${this._escape(this._updatedTime())}</small></div><span class="wifi-icon" title="${this._escape(this._formatted('wifi_signal', 0))}">${this._svg('wifi')}</span></div>
+          <div class="headright"><div class="connection ${online ? 'online' : status.esp === 'off' ? 'offline' : 'unknown'}"><span class="dot"></span><strong>${this._escape(online ? this._t('online') : status.esp === 'off' ? this._t('offline') : this._t('unknown'))}</strong><small data-role="updated-time">${this._escape(this._t('updated'))}: ${this._escape(this._updatedTime())}</small></div><span class="wifi-icon" data-role="wifi-icon" title="${this._escape(this._formatted('wifi_signal', 0))}">${this._svg('wifi')}</span></div>
         </header>
         <nav class="tabs card" aria-label="${this._escape(this._t('home'))}">${tab('home', 'home', 'home')}${tab('params', 'params_tab', 'params')}${tab('energy', 'energy_tab', 'energy')}${tab('settings', 'settings_tab', 'settings')}</nav>
         <div class="view">${activeContent}</div>
-        <footer class="footer"><span>ESPHome · Grid Monitor</span><span>${this._escape(this._formatted('ssid', 0))}</span></footer>
+        <footer class="footer"><span>ESPHome · Grid Monitor</span><span data-value-key="ssid" data-value-digits="0">${this._escape(this._formatted('ssid', 0))}</span></footer>
       </main>`;
       this._hasRendered = true;
-      this.shadowRoot.querySelectorAll('[data-tab]').forEach((button) => button.addEventListener('click', () => {
-        this._activeTab = button.dataset.tab;
-        this._render();
+      this._renderedLanguage = this._lang();
+    }
+
+    _activeContent() {
+      return this._activeTab === 'home' ? this._home() : this._activeTab === 'params' ? this._params() : this._activeTab === 'energy' ? this._energy() : this._settings();
+    }
+
+    _handleCardClick(event) {
+      const target = event.target?.closest?.('[data-tab], [data-period], [data-action], [data-number-save], [data-switch]');
+      if (!target) return;
+      if (target.dataset.tab) {
+        if (target.dataset.tab === this._activeTab) return;
+        this._activeTab = target.dataset.tab;
+        this.shadowRoot.querySelectorAll('[data-tab]').forEach((button) => {
+          const active = button.dataset.tab === this._activeTab;
+          button.classList.toggle('active', active);
+          button.setAttribute('aria-selected', String(active));
+        });
+        const view = this.shadowRoot.querySelector('.view');
+        if (view) view.innerHTML = this._activeContent();
         this._ensureHistory();
-      }));
-      this.shadowRoot.querySelectorAll('[data-period]').forEach((button) => button.addEventListener('click', () => {
-        if (this._historyRange === button.dataset.period) return;
+        return;
+      }
+      if (target.dataset.period) {
+        if (this._historyRange === target.dataset.period) return;
         this._historyRequest += 1;
         this._historyLoading = false;
-        this._historyRange = button.dataset.period;
+        this._historyRange = target.dataset.period;
         this._historyKey = '';
         this._history = [];
-        this._render();
+        this.shadowRoot.querySelectorAll('[data-period]').forEach((button) => {
+          const active = button.dataset.period === this._historyRange;
+          button.classList.toggle('active', active);
+          button.setAttribute('aria-pressed', String(active));
+        });
+        this._refreshChart();
         this._loadHistory();
-      }));
-      this.shadowRoot.querySelectorAll('[data-action]').forEach((button) => button.addEventListener('click', () => this._call(button.dataset.action)));
-      this.shadowRoot.querySelectorAll('[data-number-save]').forEach((button) => button.addEventListener('click', () => this._saveNumber(button.dataset.numberSave)));
-      this.shadowRoot.querySelectorAll('[data-switch]').forEach((button) => button.addEventListener('click', () => this._toggleSwitch(button.dataset.switch)));
+        return;
+      }
+      if (target.dataset.action) this._call(target.dataset.action);
+      else if (target.dataset.numberSave) this._saveNumber(target.dataset.numberSave);
+      else if (target.dataset.switch) this._toggleSwitch(target.dataset.switch);
+    }
+
+    _updateValueBindings(changed) {
+      for (const key of changed) {
+        this.shadowRoot.querySelectorAll(`[data-value-key="${key}"]`).forEach((element) => {
+          const digits = Number(element.dataset.valueDigits ?? 1);
+          element.textContent = this._formatted(key, digits);
+        });
+        this.shadowRoot.querySelectorAll(`[data-unit-key="${key}"]`).forEach((element) => {
+          element.textContent = this._unit(key);
+        });
+      }
+    }
+
+    _updateChanged(changed) {
+      this._updateValueBindings(changed);
+      if (changed.has('esp_status')) this._updateConnectionStatus();
+      if (changed.has('voltage') || changed.has('power') || changed.has('current')) this._updateHeaderTime();
+      if (changed.has('wifi_signal')) this._updateWifiTitle();
+      if (changed.has('mains') || changed.has('inverter') || changed.has('esp_status') || changed.has('voltage_alarm')) {
+        this._updateStatusClasses();
+        if (this._activeTab === 'home') this._updateHomeStatus();
+      }
+      if (this._activeTab === 'home') this._updateHome(changed);
+      if (this._activeTab === 'energy') this._updateEnergy(changed);
+      if (this._activeTab === 'settings') this._updateSettings(changed);
+    }
+
+    _updateConnectionStatus() {
+      const esp = this._raw('esp_status');
+      const connection = this.shadowRoot.querySelector('.connection');
+      const label = connection?.querySelector('strong');
+      if (!connection || !label) return;
+      const online = esp === 'on';
+      connection.className = `connection ${online ? 'online' : esp === 'off' ? 'offline' : 'unknown'}`;
+      label.textContent = online ? this._t('online') : esp === 'off' ? this._t('offline') : this._t('unknown');
+    }
+
+    _updateHeaderTime() {
+      const element = this.shadowRoot.querySelector('[data-role="updated-time"]');
+      if (element) element.textContent = `${this._t('updated')}: ${this._updatedTime()}`;
+    }
+
+    _updateWifiTitle() {
+      const element = this.shadowRoot.querySelector('[data-role="wifi-icon"]');
+      if (element) element.title = this._formatted('wifi_signal', 0);
+    }
+
+    _updateStatusClasses() {
+      const status = this._displayStatus();
+      const shell = this.shadowRoot.querySelector('.shell');
+      const voltage = this.shadowRoot.querySelector('[data-role="voltage-card"]');
+      const indicator = this.shadowRoot.querySelector('[data-role="state-indicator"]');
+      const banner = this.shadowRoot.querySelector('[data-role="home-banner"]');
+      if (shell) shell.className = `shell ${status.stateClass}${this._hasRendered ? ' render-ready' : ''}`;
+      if (voltage) voltage.className = `card voltage ${status.stateClass}`;
+      if (indicator) indicator.className = `state-indicator ${status.stateClass}`;
+      const indicatorLabel = indicator?.querySelector('[data-role="state-label"]');
+      if (indicatorLabel) indicatorLabel.textContent = status.status;
+      if (banner) banner.className = `card banner ${status.stateClass}`;
+      const bannerLabel = banner?.querySelector('[data-role="home-banner-label"]');
+      if (bannerLabel) bannerLabel.textContent = status.banner;
+    }
+
+    _updateGauge() {
+      const voltage = this._num('voltage');
+      const progress = voltage === null ? 0 : Math.max(0, Math.min(100, ((voltage - 150) / 130) * 100));
+      const number = voltage === null ? this._formatted('voltage') : voltage.toLocaleString(this._locale(), { maximumFractionDigits: 1 });
+      const unit = voltage === null ? '' : this._unit('voltage') || (this._lang() === 'uk' ? 'В' : 'V');
+      const numberNode = this.shadowRoot.querySelector('[data-role="voltage-number"]');
+      const unitNode = this.shadowRoot.querySelector('[data-role="voltage-unit"]');
+      if (numberNode) numberNode.textContent = number;
+      if (unitNode) unitNode.textContent = unit;
+      const arc = this.shadowRoot.querySelector('[data-role="gauge-progress"]');
+      if (arc) arc.setAttribute('stroke-dasharray', `${progress} 100`);
+      this.shadowRoot.querySelectorAll('[data-gauge-tick]').forEach((tick) => {
+        tick.classList.toggle('active', voltage !== null && Number(tick.dataset.gaugeTick) / 24 * 100 <= progress);
+      });
+      const dot = this.shadowRoot.querySelector('[data-role="gauge-dot"]');
+      if (dot) {
+        if (voltage === null) dot.setAttribute('visibility', 'hidden');
+        else {
+          const angle = (180 + progress * 1.8) * Math.PI / 180;
+          dot.setAttribute('cx', (250 + 190 * Math.cos(angle)).toFixed(1));
+          dot.setAttribute('cy', (270 + 190 * Math.sin(angle)).toFixed(1));
+          dot.setAttribute('visibility', 'visible');
+        }
+      }
+    }
+
+    _updateMetric(key) {
+      const metric = this.shadowRoot.querySelector(`[data-metric-key="${key}"]`);
+      if (!metric) return;
+      const digits = Number(metric.dataset.metricDigits ?? 1);
+      const value = this._num(key);
+      const number = metric.querySelector('[data-role="metric-number"]');
+      const unitNode = metric.querySelector('[data-role="metric-unit"]');
+      if (number) number.textContent = value === null ? this._formatted(key, digits) : value.toLocaleString(this._locale(), { maximumFractionDigits: digits });
+      if (unitNode) {
+        const unit = this._unit(key);
+        unitNode.textContent = unit;
+        unitNode.style.display = unit ? '' : 'none';
+      }
+    }
+
+    _updateChartCurrent() {
+      const chart = this.shadowRoot.querySelector('.chart');
+      if (!chart) return;
+      const current = this._num('power');
+      const maximum = Math.max(250, Number(chart.dataset.chartMax) || 250);
+      const y = current === null ? 174 : 174 - (Math.max(0, current) / maximum) * (174 - 18);
+      const dot = chart.querySelector('[data-role="chart-dot"]');
+      const tag = chart.querySelector('[data-role="chart-tag"]');
+      const label = chart.querySelector('[data-role="chart-tag-text"]');
+      if (dot) {
+        dot.setAttribute('cy', y.toFixed(1));
+        dot.setAttribute('visibility', current === null ? 'hidden' : 'visible');
+      }
+      if (tag) tag.setAttribute('y', Math.max(4, y - 44).toFixed(1));
+      if (label) {
+        label.setAttribute('y', Math.max(24, y - 24).toFixed(1));
+        label.textContent = current === null ? '' : `${current.toLocaleString(this._locale(), { maximumFractionDigits: 0 })} ${this._lang() === 'uk' ? 'Вт' : 'W'}`;
+        label.setAttribute('visibility', current === null ? 'hidden' : 'visible');
+      }
+      if (tag) tag.setAttribute('visibility', current === null ? 'hidden' : 'visible');
+    }
+
+    _updateHomeStatus() {
+      const status = this._displayStatus();
+      const mainsText = status.mains === 'on' ? this._t('has_voltage') : status.inverter ? this._t('no_voltage') : this._t('detecting');
+      const pzemText = status.mains === 'on' ? this._t('active') : status.inverter ? this._t('inactive') : this._t('detecting');
+      const sourceText = status.inverter ? this._t('from_inverter') : status.mains === 'on' ? this._t('from_mains') : this._t('detecting');
+      const mains = this.shadowRoot.querySelector('[data-role="home-mains"]');
+      const source = this.shadowRoot.querySelector('[data-role="home-source"]');
+      const pzem = this.shadowRoot.querySelector('[data-role="home-pzem"]');
+      if (mains) { mains.textContent = mainsText; mains.classList.toggle('good', status.mains === 'on'); }
+      if (source) source.textContent = sourceText;
+      if (pzem) { pzem.textContent = pzemText; pzem.classList.toggle('good', status.mains === 'on'); }
+    }
+
+    _updateTariffBars() {
+      const day = this._num('tariff_day');
+      const night = this._num('tariff_night');
+      const max = Math.max(day || 0, night || 0, 0.01);
+      this.shadowRoot.querySelectorAll('[data-tariff-fill]').forEach((fill) => {
+        const value = this._num(fill.dataset.tariffFill);
+        fill.style.width = `${value === null ? 0 : Math.max(0, Math.min(100, value / max * 100)).toFixed(1)}%`;
+      });
+    }
+
+    _updateEnergyTwoZone() {
+      const active = this._raw('two_zone') === 'on';
+      const label = this._t(active ? 'on' : 'off');
+      const value = this.shadowRoot.querySelector('[data-role="energy-two-zone-value"]');
+      const led = this.shadowRoot.querySelector('[data-role="energy-two-zone-led"]');
+      const pulse = this.shadowRoot.querySelector('[data-role="energy-two-zone-label"]');
+      if (value) { value.textContent = label; value.classList.toggle('good', active); }
+      if (led) led.classList.toggle('active', active);
+      if (pulse) pulse.textContent = label;
+    }
+
+    _updateSettings(changed) {
+      const settingKeys = ['sag_threshold', 'swell_threshold', 'nominal_voltage', 'tariff_day', 'tariff_night'];
+      for (const key of settingKeys) {
+        if (!changed.has(key)) continue;
+        const state = this._state(key);
+        const input = this.shadowRoot.querySelector(`[data-number-input="${key}"]`);
+        const save = this.shadowRoot.querySelector(`[data-number-save="${key}"]`);
+        if (input) {
+          if (this.shadowRoot.activeElement !== input) {
+            const value = this._num(key);
+            input.value = value === null ? '' : value;
+          }
+          const attributes = state?.attributes || {};
+          input.dataset.min = Number.isFinite(Number(attributes.min)) ? Number(attributes.min) : '';
+          input.dataset.max = Number.isFinite(Number(attributes.max)) ? Number(attributes.max) : '';
+          input.dataset.step = Number.isFinite(Number(attributes.step)) && Number(attributes.step) > 0 ? Number(attributes.step) : 'any';
+          input.disabled = !state;
+        }
+        if (save) save.disabled = !state;
+      }
+      if (changed.has('esp_status')) this._updateDeviceStatus();
+      if (changed.has('two_zone')) this._updateSwitch();
+      for (const key of ['reset_energy', 'reset_events', 'reset_cost', 'restart']) {
+        if (!changed.has(key)) continue;
+        const button = this.shadowRoot.querySelector(`[data-action="${key}"]`);
+        if (button) button.disabled = !this._state(key);
+      }
+    }
+
+    _updateDeviceStatus() {
+      const esp = this._raw('esp_status');
+      const status = this.shadowRoot.querySelector('[data-role="device-status"]');
+      const label = this.shadowRoot.querySelector('[data-role="device-state"]');
+      if (!status || !label) return;
+      status.className = `device-status ${esp === 'on' ? 'online' : esp === 'off' ? 'offline' : 'unknown'}`;
+      label.textContent = esp === 'on' ? this._t('online') : esp === 'off' ? this._t('offline') : esp === 'unavailable' ? this._t('unavailable') : this._t('unknown');
+    }
+
+    _updateSwitch() {
+      const active = this._raw('two_zone') === 'on';
+      const label = this._t(active ? 'on' : 'off');
+      const button = this.shadowRoot.querySelector('[data-switch="two_zone"]');
+      const value = this.shadowRoot.querySelector('[data-role="switch-value"]');
+      const text = button?.querySelector('[data-role="switch-label"]');
+      if (value) value.textContent = label;
+      if (button) { button.classList.toggle('on', active); button.setAttribute('aria-pressed', String(active)); }
+      if (text) text.textContent = label;
+    }
+
+    _updateHome(changed) {
+      if (changed.has('voltage')) this._updateGauge();
+      for (const key of ['power', 'current', 'frequency', 'power_factor']) {
+        if (changed.has(key)) this._updateMetric(key);
+      }
+      if (changed.has('power')) this._updateChartCurrent();
+    }
+
+    _updateEnergy(changed) {
+      if (changed.has('tariff_day') || changed.has('tariff_night')) this._updateTariffBars();
+      if (changed.has('two_zone')) this._updateEnergyTwoZone();
     }
 
     async _saveNumber(key) {
