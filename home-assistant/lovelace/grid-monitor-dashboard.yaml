@@ -1,0 +1,304 @@
+# Smart Grid Monitor — Home Assistant Lovelace dashboard
+# Built with native Home Assistant cards; no frontend dependencies required.
+# Replace entity IDs only if your ESPHome device received a different slug.
+
+views:
+  - title: Мережа
+    path: grid-monitor
+    icon: mdi:transmission-tower
+    type: masonry
+    cards:
+      - type: markdown
+        content: |
+          # ⚡ Мережева напруга
+          **PZEM-004T v3.0 · Grid Monitor**
+        card_mod:
+          style: |
+            ha-card {
+              background: linear-gradient(135deg, rgba(12,28,52,.98), rgba(20,42,70,.88));
+              border: 1px solid rgba(49,178,255,.45);
+              box-shadow: 0 0 28px rgba(0,157,255,.14);
+            }
+            h1 { color: #f5f8ff; letter-spacing: .02em; }
+            ha-markdown { color: #a9c5ef; }
+
+      - type: conditional
+        conditions:
+          - entity: binary_sensor.grid_monitor_on_inverter
+            state: 'on'
+        card:
+          type: markdown
+          content: |
+            ## 🔋 Будинок працює від інвертора
+            PZEM не відповідає, але ESP32 залишається доступною після автомата перемикання.
+          card_mod:
+            style: |
+              ha-card {
+                background: linear-gradient(135deg, rgba(58,34,12,.98), rgba(92,54,15,.8));
+                border: 1px solid #ffb020;
+                color: #ffd67a;
+              }
+
+      - type: grid
+        columns: 1
+        square: false
+        cards:
+          - type: gauge
+            entity: sensor.grid_monitor_voltage
+            name: Напруга мережі
+            unit: В
+            min: 150
+            max: 280
+            needle: true
+            severity:
+              red: 150
+              yellow: 190
+              green: 210
+          - type: entity
+            entity: sensor.grid_monitor_voltage_status
+            name: Статус напруги
+            icon: mdi:sine-wave
+
+      - type: grid
+        columns: 2
+        square: false
+        cards:
+          - type: tile
+            entity: sensor.grid_monitor_power
+            name: Потужність
+            icon: mdi:flash
+            color: blue
+            features_position: bottom
+          - type: tile
+            entity: sensor.grid_monitor_current
+            name: Струм
+            icon: mdi:current-ac
+            color: cyan
+          - type: tile
+            entity: sensor.grid_monitor_frequency
+            name: Частота
+            icon: mdi:sine-wave
+            color: teal
+          - type: tile
+            entity: sensor.grid_monitor_power_factor
+            name: Коеф. потужності
+            icon: mdi:angle-acute
+            color: purple
+
+      - type: grid
+        columns: 2
+        square: false
+        cards:
+          - type: tile
+            entity: binary_sensor.grid_monitor_mains_present
+            name: Мережа
+            icon: mdi:transmission-tower
+            color: green
+          - type: tile
+            entity: binary_sensor.grid_monitor_on_inverter
+            name: Джерело
+            icon: mdi:car-battery
+            color: amber
+          - type: tile
+            entity: binary_sensor.grid_monitor_esp_status
+            name: Зв’язок з ESP
+            icon: mdi:shield-check
+            color: green
+          - type: tile
+            entity: binary_sensor.grid_monitor_voltage_out_of_range
+            name: Якість напруги
+            icon: mdi:alert-circle
+            color: red
+
+      - type: history-graph
+        title: Графік електричних параметрів
+        hours_to_show: 24
+        fit_y_data: false
+        entities:
+          - entity: sensor.grid_monitor_voltage
+            name: Напруга
+          - entity: sensor.grid_monitor_power
+            name: Потужність
+          - entity: sensor.grid_monitor_current
+            name: Струм
+
+      - type: grid
+        columns: 2
+        square: false
+        cards:
+          - type: statistic
+            entity: sensor.grid_monitor_energy_today
+            name: Споживання сьогодні
+            period:
+              calendar:
+                period: day
+            stat_type: change
+          - type: tile
+            entity: sensor.grid_monitor_cost_today
+            name: Вартість сьогодні
+            icon: mdi:cash
+            color: amber
+          - type: tile
+            entity: sensor.grid_monitor_energy_month
+            name: Споживання за місяць
+            icon: mdi:chart-bar
+            color: blue
+          - type: tile
+            entity: sensor.grid_monitor_cost_month
+            name: Вартість за місяць
+            icon: mdi:cash-multiple
+            color: amber
+          - type: tile
+            entity: sensor.grid_monitor_energy_total
+            name: Енергія загалом
+            icon: mdi:counter
+            color: blue
+          - type: tile
+            entity: sensor.grid_monitor_cost_total
+            name: Вартість загалом
+            icon: mdi:cash-register
+            color: amber
+          - type: tile
+            entity: sensor.grid_monitor_current_tariff
+            name: Поточний тариф
+            icon: mdi:cash-clock
+            color: green
+          - type: tile
+            entity: sensor.grid_monitor_cost_rate
+            name: Вартість за годину
+            icon: mdi:cash-fast
+            color: purple
+
+      - type: entities
+        title: Пікові значення сьогодні
+        show_header_toggle: false
+        entities:
+          - entity: sensor.grid_monitor_voltage_min_today
+            name: Мінімальна напруга
+            icon: mdi:arrow-down-bold
+          - entity: sensor.grid_monitor_voltage_max_today
+            name: Максимальна напруга
+            icon: mdi:arrow-up-bold
+          - entity: sensor.grid_monitor_current_max_today
+            name: Максимальний струм
+            icon: mdi:current-ac
+          - entity: sensor.grid_monitor_power_peak_today
+            name: Пікова потужність
+            icon: mdi:flash-alert
+
+      - type: entities
+        title: Інвертор і події
+        show_header_toggle: false
+        entities:
+          - entity: sensor.grid_monitor_inverter_events
+            name: Події інвертора
+            icon: mdi:power-plug-off
+          - entity: sensor.grid_monitor_inverter_current_duration
+            name: Поточна тривалість
+            icon: mdi:timer-play
+          - entity: sensor.grid_monitor_last_inverter_duration
+            name: Остання тривалість
+            icon: mdi:timer-sand
+          - entity: sensor.grid_monitor_total_inverter_time
+            name: Загальний час
+            icon: mdi:timer-off
+
+      - type: entities
+        title: Якість мережі
+        show_header_toggle: false
+        entities:
+          - entity: sensor.grid_monitor_voltage_deviation
+            name: Відхилення напруги
+          - entity: sensor.grid_monitor_voltage_5min_average
+            name: Середня напруга за 5 хв
+          - entity: sensor.grid_monitor_apparent_power
+            name: Повна потужність
+          - entity: sensor.grid_monitor_reactive_power
+            name: Реактивна потужність
+          - entity: sensor.grid_monitor_phase_angle
+            name: Фазовий кут
+          - entity: sensor.grid_monitor_sag_count
+            name: Просідання
+          - entity: sensor.grid_monitor_swell_count
+            name: Перенапруги
+
+      - type: entities
+        title: Налаштування
+        show_header_toggle: false
+        entities:
+          - entity: number.grid_monitor_sag_threshold
+            name: Поріг просідання
+          - entity: number.grid_monitor_swell_threshold
+            name: Поріг перенапруги
+          - entity: number.grid_monitor_nominal_voltage
+            name: Номінальна напруга
+          - entity: switch.grid_monitor_two_zone_tariff
+            name: Двозонний тариф
+          - entity: number.grid_monitor_tariff_day
+            name: Денний тариф
+          - entity: number.grid_monitor_tariff_night
+            name: Нічний тариф
+
+      - type: entities
+        title: Діагностика
+        show_header_toggle: false
+        entities:
+          - entity: sensor.grid_monitor_wifi_signal
+            name: Сигнал Wi-Fi
+          - entity: sensor.grid_monitor_uptime
+            name: Час роботи ESP
+          - entity: sensor.grid_monitor_esp_temperature
+            name: Температура ESP
+          - entity: sensor.grid_monitor_ip_address
+            name: IP-адреса
+          - entity: sensor.grid_monitor_connected_ssid
+            name: SSID
+
+      - type: grid
+        columns: 2
+        square: false
+        cards:
+          - type: button
+            entity: button.grid_monitor_reset_pzem_energy
+            name: Скинути енергію PZEM
+            icon: mdi:counter
+            tap_action:
+              action: call-service
+              service: button.press
+              target:
+                entity_id: button.grid_monitor_reset_pzem_energy
+            confirmation:
+              text: Скинути лічильник енергії PZEM?
+          - type: button
+            entity: button.grid_monitor_reset_event_counters
+            name: Скинути події
+            icon: mdi:restore
+            tap_action:
+              action: call-service
+              service: button.press
+              target:
+                entity_id: button.grid_monitor_reset_event_counters
+            confirmation:
+              text: Скинути лічильники просідань, перенапруг і інвертора?
+          - type: button
+            entity: button.grid_monitor_reset_cost_counters
+            name: Скинути вартість
+            icon: mdi:cash-remove
+            tap_action:
+              action: call-service
+              service: button.press
+              target:
+                entity_id: button.grid_monitor_reset_cost_counters
+            confirmation:
+              text: Скинути лічильники вартості та енергії?
+          - type: button
+            entity: button.grid_monitor_restart
+            name: Перезапустити ESP
+            icon: mdi:restart
+            tap_action:
+              action: call-service
+              service: button.press
+              target:
+                entity_id: button.grid_monitor_restart
+            confirmation:
+              text: Перезапустити Grid Monitor?
