@@ -1,574 +1,3204 @@
-/* Smart Grid Monitor Card — live Home Assistant dashboard, no external dependencies. */
+/* Smart Grid Monitor Card — live Home Assistant dashboard with Visual Editor & Realistic Vector Art */
 (() => {
   window.customCards = window.customCards || [];
   if (!window.customCards.some((card) => card.type === 'grid-monitor-card')) {
     window.customCards.push({
       type: 'grid-monitor-card',
       name: 'Smart Grid Monitor Card',
-      description: 'Live Ukrainian/English ESPHome energy dashboard',
+      description: 'Live Ukrainian/English ESPHome energy dashboard with visual editor',
       preview: true,
       documentationURL: 'https://github.com/kdinya/ha-Smart-Grid-Monitor',
     });
   }
 
   const DEFAULTS = {
-    voltage: 'sensor.grid_monitor_voltage', current: 'sensor.grid_monitor_current',
-    power: 'sensor.grid_monitor_power', frequency: 'sensor.grid_monitor_frequency',
-    power_factor: 'sensor.grid_monitor_power_factor', voltage_status: 'sensor.grid_monitor_voltage_status',
-    mains: 'binary_sensor.grid_monitor_mains_present', inverter: 'binary_sensor.grid_monitor_on_inverter',
-    esp_status: 'binary_sensor.grid_monitor_esp_status', voltage_alarm: 'binary_sensor.grid_monitor_voltage_out_of_range',
-    energy_total: 'sensor.grid_monitor_energy_total', energy_today: 'sensor.grid_monitor_energy_today', energy_month: 'sensor.grid_monitor_energy_month',
-    cost_today: 'sensor.grid_monitor_cost_today', cost_month: 'sensor.grid_monitor_cost_month', cost_total: 'sensor.grid_monitor_cost_total',
-    tariff: 'sensor.grid_monitor_current_tariff', cost_rate: 'sensor.grid_monitor_cost_rate',
-    apparent_power: 'sensor.grid_monitor_apparent_power', reactive_power: 'sensor.grid_monitor_reactive_power',
-    phase_angle: 'sensor.grid_monitor_phase_angle', voltage_deviation: 'sensor.grid_monitor_voltage_deviation', voltage_average: 'sensor.grid_monitor_voltage_5min_average',
-    voltage_min: 'sensor.grid_monitor_voltage_min_today', voltage_max: 'sensor.grid_monitor_voltage_max_today', current_max: 'sensor.grid_monitor_current_max_today', power_peak: 'sensor.grid_monitor_power_peak_today',
-    sag_count: 'sensor.grid_monitor_sag_count', swell_count: 'sensor.grid_monitor_swell_count', inverter_events: 'sensor.grid_monitor_inverter_events',
-    inverter_current_duration: 'sensor.grid_monitor_inverter_current_duration', last_inverter_duration: 'sensor.grid_monitor_last_inverter_duration', total_inverter_time: 'sensor.grid_monitor_total_inverter_time',
-    wifi_signal: 'sensor.grid_monitor_wifi_signal', uptime: 'sensor.grid_monitor_uptime', esp_temperature: 'sensor.grid_monitor_esp_temperature', ip_address: 'sensor.grid_monitor_ip_address', ssid: 'sensor.grid_monitor_connected_ssid',
-    sag_threshold: 'number.grid_monitor_sag_threshold', swell_threshold: 'number.grid_monitor_swell_threshold', nominal_voltage: 'number.grid_monitor_nominal_voltage', tariff_day: 'number.grid_monitor_tariff_day', tariff_night: 'number.grid_monitor_tariff_night', two_zone: 'switch.grid_monitor_two_zone_tariff',
-    reset_energy: 'button.grid_monitor_reset_pzem_energy', reset_events: 'button.grid_monitor_reset_event_counters', reset_cost: 'button.grid_monitor_reset_cost_counters', restart: 'button.grid_monitor_restart',
+    voltage: 'sensor.grid_monitor_voltage',
+    current: 'sensor.grid_monitor_current',
+    power: 'sensor.grid_monitor_power',
+    frequency: 'sensor.grid_monitor_frequency',
+    power_factor: 'sensor.grid_monitor_power_factor',
+    voltage_status: 'sensor.grid_monitor_voltage_status',
+    mains: 'binary_sensor.grid_monitor_mains_present',
+    inverter: 'binary_sensor.grid_monitor_on_inverter',
+    esp_status: 'binary_sensor.grid_monitor_esp_status',
+    voltage_alarm: 'binary_sensor.grid_monitor_voltage_out_of_range',
+    energy_total: 'sensor.grid_monitor_energy_total',
+    energy_today: 'sensor.grid_monitor_energy_today',
+    energy_month: 'sensor.grid_monitor_energy_month',
+    cost_today: 'sensor.grid_monitor_cost_today',
+    cost_month: 'sensor.grid_monitor_cost_month',
+    cost_total: 'sensor.grid_monitor_cost_total',
+    tariff: 'sensor.grid_monitor_current_tariff',
+    cost_rate: 'sensor.grid_monitor_cost_rate',
+    apparent_power: 'sensor.grid_monitor_apparent_power',
+    reactive_power: 'sensor.grid_monitor_reactive_power',
+    phase_angle: 'sensor.grid_monitor_phase_angle',
+    voltage_deviation: 'sensor.grid_monitor_voltage_deviation',
+    voltage_average: 'sensor.grid_monitor_voltage_5min_average',
+    voltage_min: 'sensor.grid_monitor_voltage_min_today',
+    voltage_max: 'sensor.grid_monitor_voltage_max_today',
+    current_max: 'sensor.grid_monitor_current_max_today',
+    power_peak: 'sensor.grid_monitor_power_peak_today',
+    sag_count: 'sensor.grid_monitor_sag_count',
+    swell_count: 'sensor.grid_monitor_swell_count',
+    inverter_events: 'sensor.grid_monitor_inverter_events',
+    inverter_current_duration: 'sensor.grid_monitor_inverter_current_duration',
+    last_inverter_duration: 'sensor.grid_monitor_last_inverter_duration',
+    total_inverter_time: 'sensor.grid_monitor_total_inverter_time',
+    wifi_signal: 'sensor.grid_monitor_wifi_signal',
+    uptime: 'sensor.grid_monitor_uptime',
+    esp_temperature: 'sensor.grid_monitor_esp_temperature',
+    ip_address: 'sensor.grid_monitor_ip_address',
+    ssid: 'sensor.grid_monitor_connected_ssid',
+    sag_threshold: 'number.grid_monitor_sag_threshold',
+    swell_threshold: 'number.grid_monitor_swell_threshold',
+    nominal_voltage: 'number.grid_monitor_nominal_voltage',
+    tariff_day: 'number.grid_monitor_tariff_day',
+    tariff_night: 'number.grid_monitor_tariff_night',
+    two_zone: 'switch.grid_monitor_two_zone_tariff',
+    reset_energy: 'button.grid_monitor_reset_pzem_energy',
+    reset_events: 'button.grid_monitor_reset_event_counters',
+    reset_cost: 'button.grid_monitor_reset_cost_counters',
+    restart: 'button.grid_monitor_restart',
+  };
+
+  const ALIAS_SUFFIXES = {
+    voltage: ['voltage', 'grid_voltage', 'pzem_voltage', 'pzem0_voltage'],
+    current: ['current', 'grid_current', 'pzem_current', 'pzem0_current'],
+    power: ['power', 'grid_power', 'pzem_power', 'pzem0_power'],
+    frequency: ['frequency', 'grid_freq', 'grid_frequency', 'pzem_frequency'],
+    power_factor: ['power_factor', 'grid_pf', 'pzem_power_factor'],
+    energy_total: ['energy_total', 'grid_energy', 'energy', 'pzem_energy'],
+    energy_today: ['energy_today', 'grid_energy_today'],
+    energy_month: ['energy_month', 'grid_energy_month'],
+    cost_today: ['cost_today'],
+    cost_month: ['cost_month'],
+    cost_total: ['cost_total'],
+    tariff: ['current_tariff', 'cur_tariff', 'tariff'],
+    cost_rate: ['cost_rate'],
+    apparent_power: ['apparent_power'],
+    reactive_power: ['reactive_power'],
+    phase_angle: ['phase_angle'],
+    voltage_deviation: ['voltage_deviation'],
+    voltage_average: ['voltage_5min_average', 'voltage_average'],
+    voltage_min: ['voltage_min_today', 'voltage_min', 'min_voltage'],
+    voltage_max: ['voltage_max_today', 'voltage_max', 'max_voltage'],
+    current_max: ['current_max_today', 'current_max', 'max_current'],
+    power_peak: ['power_peak_today', 'power_peak', 'peak_power'],
+    sag_count: ['sag_count'],
+    swell_count: ['swell_count'],
+    inverter_events: ['inverter_events', 'outage_count'],
+    inverter_current_duration: ['inverter_current_duration'],
+    last_inverter_duration: ['last_inverter_duration', 'last_outage_s'],
+    total_inverter_time: ['total_inverter_time', 'outage_total_s'],
+    wifi_signal: ['wifi_signal', 'wifi_rssi', 'rssi'],
+    uptime: ['uptime', 'esp_uptime'],
+    esp_temperature: ['esp_temperature', 'internal_temperature', 'temperature'],
+    ip_address: ['ip_address', 'wifi_ip_address'],
+    ssid: ['connected_ssid', 'wifi_ssid', 'ssid'],
+    voltage_status: ['voltage_status'],
+    mains: ['mains_present', 'bin_mains_present', 'grid_present'],
+    inverter: ['on_inverter', 'bin_on_inverter', 'inverter_active'],
+    esp_status: ['esp_status', 'status'],
+    voltage_alarm: ['voltage_out_of_range', 'bin_v_out_of_range'],
+    sag_threshold: ['sag_threshold', 'th_low', 'sag_limit'],
+    swell_threshold: ['swell_threshold', 'th_high', 'swell_limit'],
+    nominal_voltage: ['nominal_voltage', 'v_nominal'],
+    tariff_day: ['tariff_day', 'th_tariff_day'],
+    tariff_night: ['tariff_night', 'th_tariff_night'],
+    two_zone: ['two_zone_tariff', 'sw_two_zone'],
+    reset_energy: ['reset_pzem_energy', 'reset_energy'],
+    reset_events: ['reset_event_counters', 'reset_events'],
+    reset_cost: ['reset_cost_counters', 'reset_cost'],
+    restart: ['restart'],
   };
 
   const TEXT = {
     uk: {
-      title: 'Мережева напруга', subtitle: 'PZEM-004T v3.0 · Grid Monitor', online: 'Онлайн', offline: 'Офлайн', updated: 'Оновлено',
+      title: 'Мережева напруга', subtitle: 'PZEM-004T v3.0 · Grid Monitor',
+      online: 'Онлайн', offline: 'Офлайн', updated: 'Оновлено',
       home: 'Головна', params_tab: 'Параметри', energy_tab: 'Енергія', settings_tab: 'Налаштування',
-      network: 'Мережа', inverter: 'Інвертор', no_power: 'Немає напруги', detecting: 'Визначається', unknown: 'Невідомо', unavailable: 'Недоступно',
-      healthy: 'Усі системи працюють нормально', inverter_banner: 'Будинок працює від інвертора', alarm_banner: 'Напруга поза заданим діапазоном', offline_banner: 'ESP недоступна',
-      voltage: 'Напруга мережі', current: 'Струм', power: 'Потужність', frequency: 'Частота', pf: 'Коеф. потужності', normal: 'Норма', alarm: 'Поза нормою',
-      chart_title: 'Графік потужності', hour: 'Год', day: 'День', week: 'Тиждень', month: 'Місяць', loading: 'Завантаження історії…', no_history: 'Історія потужності поки недоступна',
-      mains: 'Мережа', has_voltage: 'Є напруга', no_voltage: 'Немає напруги', source: 'Джерело', from_mains: 'Від мережі', from_inverter: 'Від інвертора', pzem_link: 'Зв’язок з PZEM', active: 'Активний', inactive: 'Немає зв’язку', today_consumption: 'Споживання сьогодні',
-      params_title: 'Електричні параметри', energy_title: 'Енергія та вартість', settings_title: 'Налаштування та діагностика',
-      apparent: 'Повна потужність', reactive: 'Реактивна потужність', phase: 'Кут фази', deviation: 'Відхилення напруги', average: 'Середня напруга за 5 хв', min_voltage: 'Мінімальна напруга сьогодні', max_voltage: 'Максимальна напруга сьогодні', max_current: 'Максимальний струм сьогодні', peak_power: 'Пікова потужність сьогодні', voltage_state: 'Статус напруги',
-      today: 'Сьогодні', energy_month: 'Споживання за місяць', energy_total: 'Загальна енергія PZEM', cost_today: 'Вартість сьогодні', cost_month: 'Вартість за місяць', cost_total: 'Загальна розрахована вартість', tariff: 'Поточний тариф', cost_rate: 'Вартість за годину', two_zone: 'Двозонний облік',
-      estimated_cost: 'Орієнтовна вартість', current_load: 'Поточне навантаження', tariff_compare: 'Порівняння тарифів', current_rate: 'Активний тариф', night: 'Ніч', device_name: 'Grid Monitor · ESP32-C3', device_description: 'Контролер ESPHome · PZEM-004T', diagnostics: 'Діагностика',
-      sag: 'Поріг просідання', swell: 'Поріг перенапруги', nominal: 'Номінальна напруга', tariff_day: 'Денний тариф', tariff_night: 'Нічний тариф', wifi: 'Сигнал Wi‑Fi', temperature: 'Температура ESP32', uptime: 'Час роботи ESP32', ip: 'IP-адреса', ssid: 'Wi‑Fi мережа',
-      events: 'Події інвертора', inverter_events: 'Кількість відключень', current_duration: 'Поточна тривалість', last_duration: 'Остання тривалість', total_duration: 'Загальний час від інвертора', sag_events: 'Просідання напруги', swell_events: 'Перенапруги', save: 'Зберегти', on: 'Увімкнено', off: 'Вимкнено',
-      actions: 'Дії', reset_energy: 'Скинути енергію PZEM', reset_events: 'Скинути події', reset_cost: 'Скинути облік', restart: 'Перезапустити ESP', confirm: 'Виконати цю дію?', invalid_number: 'Введіть коректне число в допустимому діапазоні.',
+      network: 'Мережа', inverter: 'Інвертор', no_power: 'Немає живлення', detecting: 'Визначення...',
+      unknown: 'Невідомо', unavailable: 'Недоступно', healthy: 'Мережа в нормі',
+      inverter_banner: 'Живлення від інвертора — міська мережа знеструмлена',
+      alarm_banner: 'Увага: напруга виходить за межі безпечного діапазону!',
+      offline_banner: 'Зв’язок із контролером ESP32 втрачено',
+      voltage: 'Напруга', current: 'Струм', power: 'Потужність', frequency: 'Частота', pf: 'Коефіцієнт PF',
+      normal: 'Норма', alarm: 'Тривога', chart_title: 'Графік потужності',
+      hour: 'Година', day: 'Доба', week: 'Тиждень', month: 'Місяць',
+      loading: 'Завантаження...', no_history: 'Дані за період відсутні',
+      mains: 'Мережа 230В', has_voltage: 'Присутня', no_voltage: 'Відсутня',
+      source: 'Джерело', from_mains: 'Міська мережа', from_inverter: 'Інвертор / ДБЖ',
+      pzem_link: 'Зв’язок PZEM', active: 'Активний', inactive: 'Немає відповіді',
+      today_consumption: 'Сьогодні', params_title: 'Електричні параметри',
+      energy_title: 'Енергія та вартість', settings_title: 'Налаштування та діагностика',
+      apparent: 'Повна потужність', reactive: 'Реактивна потужність', phase: 'Фазовий кут',
+      deviation: 'Відхилення напруги', average: 'Середня напруга 5хв',
+      min_voltage: 'Мін. напруга доби', max_voltage: 'Макс. напруга доби', max_current: 'Піковий струм', peak_power: 'Пікова потужність',
+      voltage_state: 'Статус напруги', today: 'Сьогодні', energy_month: 'Місяць', energy_total: 'Загалом',
+      cost_today: 'Вартість сьогодні', cost_month: 'Вартість за місяць', cost_total: 'Загальна вартість',
+      tariff: 'Поточний тариф', cost_rate: 'Швидкість витрат', two_zone: 'Двозонний тариф',
+      estimated_cost: 'Орієнтовна вартість', current_load: 'Поточне навантаження',
+      tariff_compare: 'Порівняння тарифів', current_rate: 'Діючий тариф', night: 'Ніч',
+      device_name: 'ESP32-C3 Grid Monitor', device_description: 'PZEM-004T v3.0 (UART/Modbus)',
+      diagnostics: 'Діагностика пристрою', sag: 'Поріг просідання (Sag)', swell: 'Поріг стрибка (Swell)',
+      nominal: 'Номінальна напруга', tariff_day: 'Тариф День', tariff_night: 'Тариф Ніч',
+      wifi: 'Рівень Wi-Fi', temperature: 'Температура ESP', uptime: 'Час роботи', ip: 'IP адреса', ssid: 'Мережа Wi-Fi',
+      events: 'Події якості мережі', inverter_events: 'Переходів на інвертор', current_duration: 'Поточна тривалість',
+      last_duration: 'Остання тривалість', total_duration: 'Загальний час відключень', sag_events: 'Кількість просідань',
+      swell_events: 'Кількість стрибків', save: 'Зберегти', on: 'Увімкнено', off: 'Вимкнено',
+      actions: 'Обслуговування', reset_energy: 'Скинути енергію PZEM', reset_events: 'Скинути лічильники подій',
+      reset_cost: 'Скинути лічильники вартості', restart: 'Перезавантажити ESP', confirm: 'Підтвердіть дію',
+      invalid_number: 'Введіть коректне числове значення',
+      voltage_24h_title: 'Напруга протягом доби',
+      voltage_safe_band: 'Номінал 230 В (норма 207–253 В)',
+      consumption_7d: 'Споживання за останні 7 днів',
+      saved_toast: '✓ Збережено!', command_sent: '✓ Команду надіслано',
+      editor_title: 'Налаштування Smart Grid Monitor', editor_prefix: 'Префікс пристрою ESP',
+      editor_prefix_hint: 'Наприклад: grid_monitor (якщо сутності мають вигляд sensor.grid_monitor_voltage)',
+      editor_autodetect: 'Автовиявлення ESP', editor_autodetect_success: 'Знайдено префікс:',
+      editor_language: 'Мова інтерфейсу', editor_lang_auto: 'Авто (налаштування Home Assistant)',
+      editor_lang_uk: 'Українська', editor_lang_en: 'English',
+      editor_entities_detected: 'сутностей знайдено в Home Assistant',
+      editor_custom_entities: 'Точне налаштування окремих сенсорів',
     },
     en: {
-      title: 'Grid voltage', subtitle: 'PZEM-004T v3.0 · Grid Monitor', online: 'Online', offline: 'Offline', updated: 'Updated',
+      title: 'Mains Voltage', subtitle: 'PZEM-004T v3.0 · Grid Monitor',
+      online: 'Online', offline: 'Offline', updated: 'Updated',
       home: 'Home', params_tab: 'Parameters', energy_tab: 'Energy', settings_tab: 'Settings',
-      network: 'Mains', inverter: 'Inverter', no_power: 'No voltage', detecting: 'Detecting', unknown: 'Unknown', unavailable: 'Unavailable',
-      healthy: 'All systems operating normally', inverter_banner: 'House is running from the inverter', alarm_banner: 'Voltage is outside the configured range', offline_banner: 'ESP is offline',
-      voltage: 'Grid voltage', current: 'Current', power: 'Power', frequency: 'Frequency', pf: 'Power factor', normal: 'Normal', alarm: 'Out of range',
-      chart_title: 'Power history', hour: 'Hour', day: 'Day', week: 'Week', month: 'Month', loading: 'Loading history…', no_history: 'Power history is not available yet',
-      mains: 'Mains', has_voltage: 'Voltage present', no_voltage: 'No voltage', source: 'Source', from_mains: 'From mains', from_inverter: 'From inverter', pzem_link: 'PZEM connection', active: 'Active', inactive: 'No connection', today_consumption: 'Consumption today',
-      params_title: 'Electrical parameters', energy_title: 'Energy and cost', settings_title: 'Settings and diagnostics',
-      apparent: 'Apparent power', reactive: 'Reactive power', phase: 'Phase angle', deviation: 'Voltage deviation', average: '5-minute average voltage', min_voltage: 'Minimum voltage today', max_voltage: 'Maximum voltage today', max_current: 'Maximum current today', peak_power: 'Peak power today', voltage_state: 'Voltage status',
-      today: 'Today', energy_month: 'Consumption this month', energy_total: 'Total PZEM energy', cost_today: 'Cost today', cost_month: 'Cost this month', cost_total: 'Total calculated cost', tariff: 'Current tariff', cost_rate: 'Cost per hour', two_zone: 'Two-zone tariff',
-      estimated_cost: 'Estimated cost', current_load: 'Current load', tariff_compare: 'Tariff comparison', current_rate: 'Active tariff', night: 'Night', device_name: 'Grid Monitor · ESP32-C3', device_description: 'ESPHome controller · PZEM-004T', diagnostics: 'Diagnostics',
-      sag: 'Sag threshold', swell: 'Swell threshold', nominal: 'Nominal voltage', tariff_day: 'Day tariff', tariff_night: 'Night tariff', wifi: 'Wi-Fi signal', temperature: 'ESP32 temperature', uptime: 'ESP32 uptime', ip: 'IP address', ssid: 'Wi-Fi network',
-      events: 'Inverter events', inverter_events: 'Outage count', current_duration: 'Current duration', last_duration: 'Last duration', total_duration: 'Total inverter time', sag_events: 'Voltage sags', swell_events: 'Voltage swells', save: 'Save', on: 'On', off: 'Off',
-      actions: 'Actions', reset_energy: 'Reset PZEM energy', reset_events: 'Reset events', reset_cost: 'Reset accounting', restart: 'Restart ESP', confirm: 'Run this action?', invalid_number: 'Enter a valid number within the allowed range.',
+      network: 'Mains', inverter: 'Inverter', no_power: 'No Power', detecting: 'Detecting...',
+      unknown: 'Unknown', unavailable: 'Unavailable', healthy: 'Grid Healthy',
+      inverter_banner: 'Running on inverter — grid mains is offline or disconnected',
+      alarm_banner: 'Warning: grid voltage is outside safe operating limits!',
+      offline_banner: 'Connection to ESP32 controller lost',
+      voltage: 'Voltage', current: 'Current', power: 'Power', frequency: 'Frequency', pf: 'Power Factor',
+      normal: 'Normal', alarm: 'Alarm', chart_title: 'Power Chart',
+      hour: 'Hour', day: 'Day', week: 'Week', month: 'Month',
+      loading: 'Loading...', no_history: 'No history data for period',
+      mains: 'Mains 230V', has_voltage: 'Present', no_voltage: 'Absent',
+      source: 'Power Source', from_mains: 'Public Grid', from_inverter: 'Inverter / UPS',
+      pzem_link: 'PZEM Link', active: 'Active', inactive: 'No Response',
+      today_consumption: 'Today', params_title: 'Electrical Parameters',
+      energy_title: 'Energy & Cost', settings_title: 'Settings & Diagnostics',
+      apparent: 'Apparent Power', reactive: 'Reactive Power', phase: 'Phase Angle',
+      deviation: 'Voltage Deviation', average: 'Voltage 5m Average',
+      min_voltage: 'Min Voltage Today', max_voltage: 'Max Voltage Today', max_current: 'Peak Current Today', peak_power: 'Peak Power Today',
+      voltage_state: 'Voltage State', today: 'Today', energy_month: 'Month', energy_total: 'Total',
+      cost_today: 'Cost Today', cost_month: 'Cost Month', cost_total: 'Total Cost',
+      tariff: 'Current Tariff', cost_rate: 'Cost Rate', two_zone: 'Two-Zone Tariff',
+      estimated_cost: 'Estimated Cost', current_load: 'Current Load',
+      tariff_compare: 'Tariff Comparison', current_rate: 'Active Rate', night: 'Night',
+      device_name: 'ESP32-C3 Grid Monitor', device_description: 'PZEM-004T v3.0 (UART/Modbus)',
+      diagnostics: 'Device Diagnostics', sag: 'Sag Threshold', swell: 'Swell Threshold',
+      nominal: 'Nominal Voltage', tariff_day: 'Day Tariff', tariff_night: 'Night Tariff',
+      wifi: 'Wi-Fi Signal', temperature: 'ESP Temp', uptime: 'Uptime', ip: 'IP Address', ssid: 'Wi-Fi SSID',
+      events: 'Grid Quality Events', inverter_events: 'Inverter Outages', current_duration: 'Current Outage Duration',
+      last_duration: 'Last Outage Duration', total_duration: 'Total Outage Time', sag_events: 'Voltage Sags',
+      swell_events: 'Voltage Swells', save: 'Save', on: 'On', off: 'Off',
+      actions: 'Maintenance', reset_energy: 'Reset PZEM Energy', reset_events: 'Reset Event Counters',
+      reset_cost: 'Reset Cost Counters', restart: 'Restart ESP32', confirm: 'Confirm action',
+      invalid_number: 'Please enter a valid numeric value',
+      voltage_24h_title: '24h Voltage History',
+      voltage_safe_band: 'Nominal 230 V (safe 207–253 V)',
+      consumption_7d: 'Last 7 Days Consumption',
+      saved_toast: '✓ Saved!', command_sent: '✓ Command sent',
+      editor_title: 'Smart Grid Monitor Settings', editor_prefix: 'ESPHome Entity Prefix',
+      editor_prefix_hint: 'E.g.: grid_monitor (if sensors are named like sensor.grid_monitor_voltage)',
+      editor_autodetect: 'Auto-detect Device', editor_autodetect_success: 'Found prefix:',
+      editor_language: 'Interface Language', editor_lang_auto: 'Auto (from Home Assistant)',
+      editor_lang_uk: 'Ukrainian', editor_lang_en: 'English',
+      editor_entities_detected: 'entities detected in Home Assistant',
+      editor_custom_entities: 'Fine-tune Individual Entities',
     },
   };
 
-  const RANGES = { hour: 1, day: 24, week: 24 * 7, month: 24 * 30 };
+  const RANGES = { hour: 1, day: 24, week: 168, month: 720 };
+
   const ICONS = {
-    bolt: '<path d="M28 3 10 26h12l-2 19 19-26H26z" fill="currentColor"/>',
-    current: '<path d="M4 25h10l6-17 9 33 6-18h9" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',
-    frequency: '<path d="M5 27c5-18 13-18 19 0s14 18 19 0" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>',
-    pf: '<path d="M7 34a17 17 0 1 1 34 0" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="m24 31 9-10" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><circle cx="24" cy="31" r="3" fill="currentColor"/>',
-    home: '<path d="m5 22 19-16 19 16v20H29V29H19v13H5z" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>',
-    source: '<path d="M24 4v15m0 0c-7 0-12 5-12 12v3h24v-3c0-7-5-12-12-12ZM16 39h16" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',
-    shield: '<path d="M24 4 41 11v12c0 11-7 18-17 22C14 41 7 34 7 23V11z" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="m16 24 6 6 12-13" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',
-    energy: '<path d="M24 3 8 25h12l-2 20 22-28H27z" fill="currentColor"/>',
-    chart: '<path d="M7 40V25h8v15zm13 0V9h8v31zm13 0V18h8v22z" fill="currentColor"/>',
-    params: '<path d="M7 11h34M7 24h34M7 37h34" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><circle cx="18" cy="11" r="5" fill="#14243a" stroke="currentColor" stroke-width="3"/><circle cx="31" cy="24" r="5" fill="#14243a" stroke="currentColor" stroke-width="3"/><circle cx="15" cy="37" r="5" fill="#14243a" stroke="currentColor" stroke-width="3"/>',
-    settings: '<path d="M20 4h8l2 6 5 3 6-1 4 7-4 5v6l4 5-4 7-6-1-5 3-2 6h-8l-2-6-5-3-6 1-4-7 4-5v-6l-4-5 4-7 6 1 5-3z" transform="translate(0 -3) scale(.9)" fill="none" stroke="currentColor" stroke-width="3.5"/><circle cx="24" cy="24" r="7" fill="none" stroke="currentColor" stroke-width="3.5"/>',
-    wifi: '<path d="M5 17a29 29 0 0 1 38 0M11 24a20 20 0 0 1 26 0m-20 7a10 10 0 0 1 14 0m-7 8h.1" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>',
-    coin: '<path d="M24 5c-10 0-17 3-17 7s7 7 17 7 17-3 17-7-7-7-17-7Zm-17 7v8c0 4 7 7 17 7s17-3 17-7v-8m-34 8v8c0 4 7 7 17 7s17-3 17-7v-8m-34 8v8c0 4 7 7 17 7s17-3 17-7v-8" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>',
-    check: '<path d="m11 25 9 9 18-20" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>',
-    gear: '<path d="M24 7v5m0 24v5M7 24h5m24 0h5M12 12l4 4m16 16 4 4m0-24-4 4m-16 16-4 4" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><circle cx="24" cy="24" r="12" fill="none" stroke="currentColor" stroke-width="4"/>',
-    plug: '<path d="M17 7v12m14-12v12M12 19h24v3a12 12 0 0 1-12 12v8m0-8a12 12 0 0 1-12-12z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',
+    bolt: '<path d="M26 4 9 27h12l-3 17 21-25H26z" fill="currentColor"/>',
+    current: '<circle cx="24" cy="24" r="17" fill="none" stroke="currentColor" stroke-width="4"/><path d="M16 32 24 16l8 16m-13-5h10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>',
+    frequency: '<path d="M7 24c3.5-12 7.5-12 11 0s7.5 12 11 0 7.5-12 11 0" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>',
+    pf: '<circle cx="24" cy="24" r="17" fill="none" stroke="currentColor" stroke-width="4"/><path d="M19 16v16m0-16h8c3 0 5 2 5 5s-2 5-5 5h-8" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>',
+    home: '<path d="m8 22 16-13 16 13v17H28V27h-8v12H8z" fill="currentColor"/>',
+    params: '<path d="M8 12h32M8 24h32M8 36h32" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><circle cx="16" cy="12" r="4" fill="currentColor"/><circle cx="32" cy="24" r="4" fill="currentColor"/><circle cx="20" cy="36" r="4" fill="currentColor"/>',
+    energy: '<path d="M27 5 11 26h11l-3 17 19-24H27z" fill="currentColor"/>',
+    settings: '<path d="m24 15 2 4 4 1-2 4 1 4-4-1-3 3-2-4-4-1 2-4-1-4 4 1z" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="24" r="17" fill="none" stroke="currentColor" stroke-width="4"/><circle cx="24" cy="24" r="4" fill="currentColor"/>',
+    plug: '<rect x="14" y="16" width="20" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="4"/><line x1="19" y1="8" x2="19" y2="16" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><line x1="29" y1="8" x2="29" y2="16" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M24 34v8" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>',
+    shield: '<path d="M24 7 10 13v11c0 9 6 15 14 17 8-2 14-8 14-17V13z" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>',
+    coin: '<circle cx="24" cy="24" r="17" fill="none" stroke="currentColor" stroke-width="4"/><path d="M19 16c5-4 11 0 10 5s-9 5-6 11m-7-9h16m-16 4h16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>',
+    wifi: '<path d="M7 16a24 24 0 0 1 34 0M12 21a17 17 0 0 1 24 0M17 26a10 10 0 0 1 14 0" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/><circle cx="24" cy="33" r="3" fill="currentColor"/>',
+    check: '<path d="m11 25 9 9 17-19" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',
+    chart: '<path d="M8 38h32M12 30l7-10 8 6 9-12" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>',
+    gear: '<circle cx="24" cy="24" r="7" fill="none" stroke="currentColor" stroke-width="3.5"/><path d="M24 7v4m0 26v4m17-17h-4M11 24H7m24.1-12.1-2.9 2.9m-16.4 16.4-2.9 2.9m0-22.2 2.9 2.9m16.4 16.4 2.9 2.9" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>',
   };
 
   let CARD_SEQUENCE = 0;
 
-  class GridMonitorCard extends HTMLElement {
+  class GridMonitorCardEditor extends HTMLElement {
     constructor() {
       super();
-      this._instanceId = ++CARD_SEQUENCE;
-      this._hasRendered = false;
       this.attachShadow({ mode: 'open' });
-      this._config = null;
+      this._config = {};
       this._hass = null;
-      this._activeTab = 'home';
-      this._historyRange = 'hour';
-      this._history = [];
-      this._historyKey = '';
-      this._historyAt = 0;
-      this._historyLoading = false;
-      this._historyError = false;
-      this._historyRequest = 0;
+      this._detectedInfo = null;
     }
 
     setConfig(config) {
-      const prefix = config.prefix || 'grid_monitor';
-      const entities = { ...DEFAULTS };
-      if (prefix !== 'grid_monitor') {
-        Object.keys(entities).forEach((key) => { entities[key] = entities[key].replace('grid_monitor', prefix); });
-      }
-      Object.assign(entities, config.entities || {});
-      this._config = { ...config, entities, name: config.name || null };
+      this._config = { ...config };
       this._render();
     }
 
-    set hass(value) {
-      const active = this.shadowRoot.activeElement;
-      const edit = active?.dataset?.numberInput ? { key: active.dataset.numberInput, value: active.value } : null;
-      this._hass = value;
-      this._render();
-      if (edit) {
-        const input = this.shadowRoot.querySelector(`[data-number-input="${edit.key}"]`);
-        if (input) { input.value = edit.value; input.focus({ preventScroll: true }); }
+    set hass(hass) {
+      this._hass = hass;
+      if (!this._detectedInfo && this._hass) {
+        this._autoDetect(false);
       }
-      this._ensureHistory();
-    }
-
-    _lang() {
-      const forced = this._config?.language;
-      if (forced === 'uk' || forced === 'en') return forced;
-      const locale = this._hass?.locale?.language || this._hass?.language || 'uk';
-      return String(locale).toLowerCase().startsWith('uk') ? 'uk' : 'en';
-    }
-
-    _t(key) { return TEXT[this._lang()][key] || key; }
-    _locale() { return this._lang() === 'uk' ? 'uk-UA' : 'en-US'; }
-    _entity(key) { return this._config?.entities?.[key] || DEFAULTS[key]; }
-    _state(key) { return this._hass?.states?.[this._entity(key)] || null; }
-    _raw(key) { return this._state(key)?.state ?? null; }
-    _num(key) {
-      const raw = this._raw(key);
-      if (raw === null || raw === 'unknown' || raw === 'unavailable') return null;
-      const n = Number(raw);
-      return Number.isFinite(n) ? n : null;
-    }
-    _escape(value) {
-      return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
-    }
-    _unit(key) {
-      const unit = this._state(key)?.attributes?.unit_of_measurement || '';
-      if (this._lang() !== 'uk') return unit;
-      return ({ V: 'В', A: 'А', W: 'Вт', Hz: 'Гц', kWh: 'кВт·год', VA: 'ВА', var: 'вар', UAH: 'грн', 'UAH/kWh': 'грн/кВт·год', 'UAH/h': 'грн/год', min: 'хв', h: 'год', dBm: 'дБм' })[unit] || unit;
-    }
-    _formatted(key, digits = 1) {
-      const n = this._num(key);
-      if (n === null) {
-        const raw = this._raw(key);
-        if (raw === 'unavailable') return this._t('unavailable');
-        if (raw === 'unknown' || raw === null) return this._t('unknown');
-        return raw;
-      }
-      const value = n.toLocaleString(this._locale(), { maximumFractionDigits: digits });
-      return `${value}${this._unit(key) ? ` ${this._unit(key)}` : ''}`;
-    }
-    _svg(name, extra = '') { return `<svg class="icon ${extra}" viewBox="0 0 48 48" aria-hidden="true">${ICONS[name] || ''}</svg>`; }
-    _detail(key, label, digits = 1) { return `<div class="detail"><span>${this._escape(label)}</span><b>${this._escape(this._formatted(key, digits))}</b></div>`; }
-    _row(key, label, icon, digits = 1) { return `<div class="row"><span class="row-label"><span class="row-symbol">${icon}</span>${this._escape(label)}</span><strong>${this._escape(this._formatted(key, digits))}</strong></div>`; }
-    _setting(key, label) {
-      const entity = this._entity(key);
-      const state = this._state(key);
-      const value = this._num(key);
-      const attrs = state?.attributes || {};
-      const min = Number.isFinite(Number(attrs.min)) ? Number(attrs.min) : '';
-      const max = Number.isFinite(Number(attrs.max)) ? Number(attrs.max) : '';
-      const step = Number.isFinite(Number(attrs.step)) && Number(attrs.step) > 0 ? Number(attrs.step) : 'any';
-      return `<div class="setting detail"><label><span>${this._escape(label)}</span><div class="setting-input"><input type="number" inputmode="decimal" data-number-input="${key}" value="${value === null ? '' : value}" min="${min}" max="${max}" step="${step}" ${!state ? 'disabled' : ''}><small>${this._escape(this._unit(key))}</small></div></label><button class="save-button" data-number-save="${key}" ${!state ? 'disabled' : ''}>${this._escape(this._t('save'))}</button></div>`;
-    }
-    _updatedTime() {
-      const latest = ['voltage', 'power', 'current'].map((key) => this._state(key)?.last_updated).filter(Boolean).map((value) => new Date(value)).filter((value) => Number.isFinite(value.getTime())).sort((a, b) => b - a)[0];
-      return latest ? latest.toLocaleTimeString(this._locale(), { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : this._t('unknown');
-    }
-    _displayStatus() {
-      const mains = this._raw('mains');
-      const inverter = this._raw('inverter') === 'on';
-      const esp = this._raw('esp_status');
-      const alarm = this._raw('voltage_alarm') === 'on';
-      const stateClass = inverter ? 'inverter' : alarm ? 'alarm' : esp === 'on' && mains === 'on' ? 'healthy' : esp === 'off' ? 'offline' : 'unknown';
-      const source = inverter ? this._t('inverter') : mains === 'on' ? this._t('network') : mains === 'off' && this._raw('inverter') === 'off' ? this._t('no_power') : this._t('detecting');
-      const banner = inverter ? this._t('inverter_banner') : alarm ? this._t('alarm_banner') : esp === 'off' ? this._t('offline_banner') : stateClass === 'healthy' ? this._t('healthy') : this._t('detecting');
-      const status = inverter ? this._t('inverter') : alarm ? this._t('alarm') : stateClass === 'healthy' ? this._t('normal') : esp === 'off' ? this._t('offline') : this._t('detecting');
-      return { mains, inverter, esp, alarm, stateClass, source, banner, status };
-    }
-
-    _home() {
-      const status = this._displayStatus();
-      const voltage = this._num('voltage');
-      const progress = voltage === null ? 0 : Math.max(0, Math.min(100, ((voltage - 150) / 130) * 100));
-      const voltageNumber = voltage === null ? this._formatted('voltage') : voltage.toLocaleString(this._locale(), { maximumFractionDigits: 1 });
-      const voltageUnit = voltage === null ? '' : this._unit('voltage') || (this._lang() === 'uk' ? 'В' : 'V');
-      const gaugeAngle = (180 + progress * 1.8) * Math.PI / 180;
-      const gaugeDot = voltage === null ? '' : `<circle class="gauge-dot" cx="${(250 + 190 * Math.cos(gaugeAngle)).toFixed(1)}" cy="${(270 + 190 * Math.sin(gaugeAngle)).toFixed(1)}" r="7"/>`;
-      const pzemText = status.mains === 'on' ? this._t('active') : status.inverter ? this._t('inactive') : this._t('detecting');
-      const mainsText = status.mains === 'on' ? this._t('has_voltage') : status.inverter ? this._t('no_voltage') : this._t('detecting');
-      const sourceText = status.inverter ? this._t('from_inverter') : status.mains === 'on' ? this._t('from_mains') : this._t('detecting');
-      const energy = this._formatted('energy_today', 2);
-      const cost = this._formatted('cost_today', 2);
-      return `<section class="home-view">
-        <div class="main-grid">
-          <div class="card voltage ${status.stateClass}">
-            <svg class="voltage-gauge" viewBox="0 0 500 360" role="img" aria-label="${this._escape(this._t('voltage'))}">
-              <defs>
-                <linearGradient id="${this._id('arc')}" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#078bff"/><stop offset=".52" stop-color="#08d6e7"/><stop offset="1" stop-color="#39ef83"/></linearGradient>
-                <radialGradient id="${this._id('glow')}"><stop stop-color="#087de0" stop-opacity=".32"/><stop offset="1" stop-color="#087de0" stop-opacity="0"/></radialGradient>
-                <filter id="${this._id('blur')}"><feGaussianBlur stdDeviation="7"/></filter>
-                <linearGradient id="${this._id('tower-metal')}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e4f8ff"/><stop offset=".34" stop-color="#58b9e9"/><stop offset=".68" stop-color="#174c79"/><stop offset="1" stop-color="#b7edff"/></linearGradient>
-                <linearGradient id="${this._id('tower-face')}" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#0b3458"/><stop offset=".5" stop-color="#71d3ff"/><stop offset="1" stop-color="#123b61"/></linearGradient>
-              </defs>
-              <ellipse cx="250" cy="170" rx="190" ry="150" fill="url(#${this._id('glow')})"/>
-              <path d="M76 246Q148 205 218 229T356 221T424 243V270H76Z" fill="#08223a" opacity=".62"/>
-              <g class="distant-trees" fill="#0d4771"><path d="M89 239l10-37 10 37zm22 0 12-48 12 48zm258 0 10-41 10 41zm22 0 12-49 12 49z"/></g>
-              <path d="M72 270 A190 190 0 1 1 428 270" fill="none" stroke="#19334f" stroke-width="28" stroke-linecap="round" pathLength="100"/>
-              <path d="M72 270 A190 190 0 1 1 428 270" fill="none" stroke="#75cfff" stroke-opacity=".16" stroke-width="34" stroke-linecap="round" pathLength="100"/>
-              ${this._gaugeTicks(progress)}
-              <path d="M72 270 A190 190 0 1 1 428 270" fill="none" stroke="url(#${this._id('arc')})" stroke-width="28" stroke-linecap="round" stroke-dasharray="${progress} 100" pathLength="100"/>
-              ${gaugeDot}
-              ${this._towerArtwork()}
-              <text x="250" y="286" text-anchor="middle" class="voltage-value">${this._escape(voltageNumber)} <tspan class="voltage-unit">${this._escape(voltageUnit)}</tspan></text>
-              <text x="250" y="322" text-anchor="middle" class="voltage-label">${this._escape(this._t('voltage'))}</text>
-            </svg>
-            <div class="state-indicator ${status.stateClass}"><span class="check-mark">${this._svg('check')}</span>${this._escape(status.status)}</div>
-          </div>
-          <div class="metrics">
-            ${this._heroMetric('power', 'bolt', 0)}
-            ${this._heroMetric('current', 'current', 2)}
-            ${this._heroMetric('frequency', 'frequency', 1)}
-            ${this._heroMetric('power_factor', 'pf', 2)}
-          </div>
-        </div>
-        ${this._chart()}
-        <div class="bottom-status">
-          <div class="card info"><span class="symbol green">${this._svg('home')}</span><div><div class="small">${this._escape(this._t('mains'))}</div><strong class="${status.mains === 'on' ? 'good' : ''}">${this._escape(mainsText)}</strong></div></div>
-          <div class="card info"><span class="symbol blue">${this._svg('plug')}</span><div><div class="small">${this._escape(this._t('source'))}</div><strong>${this._escape(sourceText)}</strong></div></div>
-          <div class="card info"><span class="symbol green">${this._svg('shield')}</span><div><div class="small">${this._escape(this._t('pzem_link'))}</div><strong class="${status.mains === 'on' ? 'good' : ''}">${this._escape(pzemText)}</strong></div></div>
-          <div class="card info"><span class="symbol amber">${this._svg('coin')}</span><div><div class="small">${this._escape(this._t('today_consumption'))}</div><strong>${this._escape(energy)}</strong><div class="small cost-line">≈ ${this._escape(cost)}</div></div></div>
-        </div>
-        <div class="card banner ${status.stateClass}"><span class="banner-check">${this._svg('check')}</span><strong>${this._escape(status.banner)}</strong><span class="house-art" aria-hidden="true">${this._houseArt()}</span></div>
-      </section>`;
-    }
-
-    _id(name) { return `gm-${this._instanceId}-${name}`; }
-    _gaugeTicks(progress) {
-      return Array.from({ length: 25 }, (_, index) => {
-        const angle = (180 + index * 7.5) * Math.PI / 180;
-        const major = index % 4 === 0;
-        const inner = major ? 178 : 183;
-        const outer = major ? 200 : 197;
-        const x1 = 250 + inner * Math.cos(angle); const y1 = 270 + inner * Math.sin(angle);
-        const x2 = 250 + outer * Math.cos(angle); const y2 = 270 + outer * Math.sin(angle);
-        const active = index / 24 * 100 <= progress ? ' active' : '';
-        return `<path class="dial-tick${active}" d="M${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}"/>`;
-      }).join('');
-    }
-    _towerArtwork() {
-      return `<g class="tower-illustration">
-        <path class="tower-shadow" d="M250 60 202 212h96z"/>
-        <g class="tower-halo" filter="url(#${this._id('blur')})" fill="none" stroke="#38bdff" stroke-width="5" opacity=".58">
-          <path d="M250 60 202 212M250 60 298 212M250 60v152M177 116h146M187 151h126M202 183h96M177 116 323 151 187 151 323 116M187 151 298 183 202 183 298 151M202 183 250 212 298 183"/>
-        </g>
-        <g class="tower-frame" fill="none" stroke="url(#${this._id('tower-metal')})" stroke-linecap="round" stroke-linejoin="round">
-          <path class="tower-rail" d="M250 60 202 212M250 60 298 212M250 60v152"/>
-          <path d="M177 116h146M187 151h126M202 183h96M202 212h96"/>
-          <path d="M177 116 313 151M323 116 187 151M187 151 288 183M313 151 202 183M202 183 278 212M298 183 202 212"/>
-          <path class="tower-arm" d="M157 108h186M168 143h164M230 94h40"/>
-          <path class="tower-crossarm" d="M157 108 177 116M343 108 323 116M168 143 187 151M332 143 313 151"/>
-          <path class="tower-insulator" d="M165 108v12m-4-8h8m-8 5h8M335 108v12m-4-8h8m-8 5h8M176 143v10m-4-7h8m-8 5h8M324 143v10m-4-7h8m-8 5h8"/>
-          <path class="tower-wire" d="M124 108h33m186 0h33M142 143h26m164 0h26"/>
-          <path d="M216 212 250 60l34 152" opacity=".65"/>
-        </g>
-        <path class="tower-foot" d="M195 215h110"/>
-      </g>`;
-    }
-    _houseArt() {
-      return `<svg viewBox="0 0 300 175" aria-hidden="true">
-        <defs>
-          <linearGradient id="${this._id('house-roof')}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#55c8ff"/><stop offset=".5" stop-color="#1b559f"/><stop offset="1" stop-color="#09244e"/></linearGradient>
-          <linearGradient id="${this._id('house-wall')}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e5f2ff"/><stop offset=".55" stop-color="#89b4db"/><stop offset="1" stop-color="#42678f"/></linearGradient>
-          <linearGradient id="${this._id('house-glass')}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff5b2"/><stop offset="1" stop-color="#ff9b39"/></linearGradient>
-          <filter id="${this._id('house-shadow')}"><feGaussianBlur stdDeviation="5"/></filter>
-        </defs>
-        <ellipse cx="158" cy="158" rx="119" ry="11" fill="#000" opacity=".42" filter="url(#${this._id('house-shadow')})"/>
-        <path d="M35 91 145 20l123 66-111 66z" fill="url(#${this._id('house-roof')})" stroke="#82d5ff" stroke-width="2"/>
-        <path d="M35 91 145 20v15L48 98z" fill="#2a79c1"/><path d="m145 20 123 66-16 9L145 38z" fill="#0c3268"/>
-        <path d="m64 94 93-47 85 47v51l-85 25-93-46z" fill="url(#${this._id('house-wall')})" stroke="#d8ecff" stroke-opacity=".55"/>
-        <path d="m157 47 85 47v51l-85 25z" fill="#315b89" opacity=".9"/>
-        <path d="m119 67 38-20 39 21-39 23z" fill="#0b2d5e" stroke="#68bfff"/><path d="m129 68 28-11 27 13-27 13z" fill="#ffbf55"/>
-        <path d="m84 105 27-14v29l-27 14zm100 0 35-17v33l-35 18z" fill="url(#${this._id('house-glass')})" stroke="#fff1b0" stroke-width="3"/>
-        <path d="m84 105 27-14m-14 7v29m87-22 35-17m-18 9v33" stroke="#6c4b39" stroke-width="3"/>
-        <path d="m135 126 32-16v48l-32 9z" fill="#17385f" stroke="#d4e8ff" stroke-width="2"/><circle cx="160" cy="141" r="2" fill="#ffd36b"/>
-        <path d="m22 148 12-43 12 43zm-6 0 18-28 18 28zm230 0 13-45 13 45zm-6 0 19-29 19 29z" fill="#0c6a48"/>
-        <g fill="#24b879"><circle cx="34" cy="108" r="12"/><circle cx="258" cy="111" r="13"/></g>
-      </svg>`;
-    }
-    _heroMetric(key, icon, digits) {
-      const value = this._num(key);
-      const display = value === null ? this._escape(this._formatted(key, digits)) : value.toLocaleString(this._locale(), { maximumFractionDigits: digits });
-      const unit = this._unit(key);
-      const extraClass = key === 'power_factor' ? 'pf' : key;
-      return `<div class="card metric ${extraClass}"><div class="metric-icon">${this._svg(icon)}</div><div class="metric-value">${display}${unit ? ` <span class="unit">${this._escape(unit)}</span>` : ''}</div><div class="metric-label">${this._escape(this._t(key === 'power_factor' ? 'pf' : key))}</div></div>`;
-    }
-
-    _chart() {
-      const labels = ['hour', 'day', 'week', 'month'];
-      const buttons = labels.map((period) => `<button class="period-button ${this._historyRange === period ? 'active' : ''}" data-period="${period}" aria-pressed="${this._historyRange === period}">${this._escape(this._t(period))}</button>`).join('');
-      return `<section class="card chart-card"><div class="chart-head"><h2><span class="chart-icon">${this._svg('chart')}</span>${this._escape(this._t('chart_title'))}</h2><div class="periods" role="group" aria-label="${this._escape(this._t('chart_title'))}">${buttons}</div></div>${this._chartSvg()}</section>`;
-    }
-
-    _chartSvg() {
-      if (this._historyLoading && !this._history.length) return `<div class="chart-empty">${this._escape(this._t('loading'))}</div>`;
-      const points = this._downsample(this._history, 100);
-      if (!points.length) return `<div class="chart-empty">${this._escape(this._t('no_history'))}</div>`;
-      const x0 = 78; const x1 = 985; const y0 = 18; const y1 = 174;
-      const maximum = Math.max(250, Math.ceil(Math.max(...points.map((point) => point.value)) / 250) * 250);
-      const line = points.map((point, index) => {
-        const x = x0 + (index / Math.max(1, points.length - 1)) * (x1 - x0);
-        const y = y1 - (Math.max(0, point.value) / maximum) * (y1 - y0);
-        return `${index ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`;
-      }).join(' ');
-      const area = `${line} L${x1} ${y1} L${x0} ${y1} Z`;
-      const horizontal = [0, 1, 2, 3].map((index) => {
-        const y = y1 - index * ((y1 - y0) / 3);
-        const value = Math.round(index * maximum / 3);
-        return `<path d="M${x0} ${y.toFixed(1)}H${x1}"/><text x="9" y="${(y + 5).toFixed(1)}">${this._escape(value.toLocaleString(this._locale()))} ${this._lang() === 'uk' ? 'Вт' : 'W'}</text>`;
-      }).join('');
-      const start = points[0].time; const end = points[points.length - 1].time;
-      const vertical = [0, 1, 2, 3, 4].map((index) => {
-        const x = x0 + index * ((x1 - x0) / 4);
-        const time = new Date(start.getTime() + (end.getTime() - start.getTime()) * index / 4);
-        const label = this._historyRange === 'hour' ? time.toLocaleTimeString(this._locale(), { hour: '2-digit', minute: '2-digit' }) : time.toLocaleDateString(this._locale(), { day: '2-digit', month: '2-digit' });
-        return `<path d="M${x.toFixed(1)} ${y0}V${y1}"/><text x="${x.toFixed(1)}" y="198" text-anchor="${index === 0 ? 'start' : index === 4 ? 'end' : 'middle'}">${this._escape(label)}</text>`;
-      }).join('');
-      const current = this._num('power');
-      const latest = current === null ? '' : current.toLocaleString(this._locale(), { maximumFractionDigits: 0 });
-      const currentY = current === null ? y1 : y1 - (Math.max(0, current) / maximum) * (y1 - y0);
-      return `<svg class="chart" viewBox="0 0 1000 210" role="img" aria-label="${this._escape(this._t('chart_title'))}"><defs><linearGradient id="${this._id('area')}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#078ff0" stop-opacity=".55"/><stop offset="1" stop-color="#078ff0" stop-opacity=".04"/></linearGradient><filter id="${this._id('line-glow')}"><feGaussianBlur stdDeviation="3"/></filter></defs><g class="chart-grid">${horizontal}${vertical}</g><path d="${area}" fill="url(#${this._id('area')})"/><path d="${line}" class="chart-glow" filter="url(#${this._id('line-glow')})"/><path d="${line}" class="chart-line"/><circle cx="${x1}" cy="${currentY.toFixed(1)}" r="7" class="chart-dot"/>${latest ? `<rect x="908" y="${Math.max(4, currentY - 44).toFixed(1)}" width="82" height="30" rx="9" class="chart-tag"/><text x="949" y="${Math.max(24, currentY - 24).toFixed(1)}" text-anchor="middle" class="chart-tag-text">${this._escape(latest)} ${this._lang() === 'uk' ? 'Вт' : 'W'}</text>` : ''}</svg>`;
-    }
-
-    _downsample(points, limit) {
-      if (points.length <= limit) return points;
-      const result = [];
-      const step = (points.length - 1) / (limit - 1);
-      for (let index = 0; index < limit; index += 1) result.push(points[Math.round(index * step)]);
-      return result;
-    }
-
-    _ensureHistory() {
-      if (!this._hass || !this._config || this._activeTab !== 'home' || this._historyLoading) return;
-      const key = `${this._historyRange}:${this._entity('power')}`;
-      if (key === this._historyKey && Date.now() - this._historyAt < 60000) return;
-      this._loadHistory(key);
-    }
-
-    async _loadHistory(key = `${this._historyRange}:${this._entity('power')}`) {
-      if (!this._hass || this._historyLoading) return;
-      this._historyLoading = true;
-      this._historyError = false;
-      const request = ++this._historyRequest;
-      const hass = this._hass;
-      const range = this._historyRange;
-      const end = new Date();
-      const start = new Date(end.getTime() - RANGES[range] * 60 * 60 * 1000);
       this._render();
-      try {
-        if (typeof hass.callApi !== 'function') throw new Error('History API unavailable');
-        const entity = encodeURIComponent(this._entity('power'));
-        const path = `history/period/${encodeURIComponent(start.toISOString())}?filter_entity_id=${entity}&end_time=${encodeURIComponent(end.toISOString())}&minimal_response`;
-        const response = await hass.callApi('GET', path);
-        if (request !== this._historyRequest) return;
-        const series = Array.isArray(response?.[0]) ? response[0] : [];
-        this._history = series.map((item) => ({ time: new Date(item.last_changed || item.last_updated), value: Number(item.state) }))
-          .filter((item) => Number.isFinite(item.time.getTime()) && Number.isFinite(item.value))
-          .sort((a, b) => a.time - b.time);
-        this._historyKey = key;
-        this._historyAt = Date.now();
-      } catch (_error) {
-        if (request === this._historyRequest) {
-          this._history = [];
-          this._historyError = true;
-          this._historyKey = key;
-          this._historyAt = Date.now();
-        }
-      } finally {
-        if (request === this._historyRequest) {
-          this._historyLoading = false;
-          this._render();
+    }
+
+    _t(key) {
+      const lang = this._config.language || (this._hass?.language === 'uk' ? 'uk' : 'en');
+      return (TEXT[lang] || TEXT.uk)[key] || TEXT.uk[key] || key;
+    }
+
+    _autoDetect(notify = true) {
+      if (!this._hass?.states) return;
+      const states = Object.keys(this._hass.states);
+      let detectedPrefix = null;
+
+      // Look for sensors ending in _voltage
+      const vCandidate = states.find((id) => id.startsWith('sensor.') && id.endsWith('_voltage'));
+      if (vCandidate) {
+        const raw = vCandidate.replace('sensor.', '').replace('_voltage', '');
+        if (raw) detectedPrefix = raw;
+      }
+
+      if (!detectedPrefix) {
+        const pCandidate = states.find((id) => id.startsWith('sensor.') && id.endsWith('_power'));
+        if (pCandidate) {
+          const raw = pCandidate.replace('sensor.', '').replace('_power', '');
+          if (raw) detectedPrefix = raw;
         }
       }
+
+      if (!detectedPrefix) {
+        detectedPrefix = this._config.prefix || 'grid_monitor';
+      }
+
+      // Count matching entities
+      let matchCount = 0;
+      const totalKeys = Object.keys(DEFAULTS).length;
+      for (const [key, defId] of Object.entries(DEFAULTS)) {
+        const domain = defId.split('.')[0];
+        const suffix = defId.split('.').slice(1).join('.').replace(/^grid_monitor_/, '');
+        const candidate = `${domain}.${detectedPrefix}_${suffix}`;
+        if (this._hass.states[candidate] || this._hass.states[defId]) {
+          matchCount++;
+        } else if (ALIAS_SUFFIXES[key]) {
+          const hasAlias = ALIAS_SUFFIXES[key].some((s) => this._hass.states[`${domain}.${detectedPrefix}_${s}`] || this._hass.states[`${domain}.${s}`]);
+          if (hasAlias) matchCount++;
+        }
+      }
+
+      this._detectedInfo = { prefix: detectedPrefix, count: matchCount, total: totalKeys };
+
+      if (notify) {
+        this._config.prefix = detectedPrefix;
+        this._fireChanged();
+        this._render();
+      }
     }
 
-    _params() {
-      return `<section class="detail-panel"><h2>${this._escape(this._t('params_title'))}</h2><div class="detail-grid">
-        ${this._detail('apparent_power', this._t('apparent'), 0)}${this._detail('reactive_power', this._t('reactive'), 0)}${this._detail('phase_angle', this._t('phase'), 1)}
-        ${this._detail('voltage_deviation', this._t('deviation'), 1)}${this._detail('voltage_average', this._t('average'), 1)}${this._detail('voltage_status', this._t('voltage_state'), 0)}
-        ${this._detail('voltage_min', this._t('min_voltage'), 1)}${this._detail('voltage_max', this._t('max_voltage'), 1)}${this._detail('current_max', this._t('max_current'), 2)}${this._detail('power_peak', this._t('peak_power'), 0)}
-      </div><h2 class="subheading">${this._escape(this._t('events'))}</h2><div class="detail-grid">
-        ${this._detail('inverter_events', this._t('inverter_events'), 0)}${this._detail('inverter_current_duration', this._t('current_duration'), 1)}${this._detail('last_inverter_duration', this._t('last_duration'), 1)}${this._detail('total_inverter_time', this._t('total_duration'), 2)}${this._detail('sag_count', this._t('sag_events'), 0)}${this._detail('swell_count', this._t('swell_events'), 0)}
-      </div></section>`;
-    }
-
-    _energy() {
-      const twoZone = this._raw('two_zone') === 'on';
-      return `<section class="detail-panel energy-panel"><h2>${this._escape(this._t('energy_title'))}</h2>
-        <div class="energy-hero">
-          <article class="energy-visual energy-coin"><span class="eyebrow">${this._escape(this._t('today'))}</span><strong class="hero-number">${this._escape(this._formatted('energy_today', 2))}</strong><small>${this._escape(this._t('estimated_cost'))} · ${this._escape(this._formatted('cost_today', 2))}</small>${this._energyCoinArt()}</article>
-          <article class="energy-visual energy-load"><span class="eyebrow">${this._escape(this._t('current_load'))}</span><strong class="hero-number">${this._escape(this._formatted('power', 0))}</strong><small>${this._escape(this._t('cost_rate'))} · ${this._escape(this._formatted('cost_rate', 2))}</small>${this._plugArt()}</article>
-        </div>
-        <div class="detail-grid energy-grid">
-          ${this._detail('energy_today', this._t('today'), 3)}${this._detail('energy_month', this._t('energy_month'), 2)}${this._detail('energy_total', this._t('energy_total'), 3)}
-          ${this._detail('cost_today', this._t('cost_today'), 2)}${this._detail('cost_month', this._t('cost_month'), 2)}${this._detail('cost_total', this._t('cost_total'), 2)}
-          ${this._detail('tariff', this._t('tariff'), 2)}${this._detail('cost_rate', this._t('cost_rate'), 2)}
-          <div class="detail tariff-state"><span>${this._escape(this._t('two_zone'))}</span><b class="${twoZone ? 'good' : ''}">${this._escape(twoZone ? this._t('on') : this._t('off'))}</b><i class="tariff-led ${twoZone ? 'active' : ''}"></i></div>
-        </div>
-        <div class="visual-grid energy-visual-grid">
-          <section class="visual-card tariff-visual"><h3>${this._escape(this._t('tariff_compare'))}</h3>${this._tariffBars()}</section>
-          <section class="visual-card current-tariff"><h3>${this._escape(this._t('current_rate'))}</h3><strong class="big-number">${this._escape(this._formatted('tariff', 2))}</strong><span class="rate-pulse">${this._svg('energy')} ${this._escape(this._t('two_zone'))}: ${this._escape(twoZone ? this._t('on') : this._t('off'))}</span></section>
-        </div>
-      </section>`;
-    }
-
-    _energyCoinArt() {
-      return `<svg class="energy-object coin-object" viewBox="0 0 180 160" aria-hidden="true"><defs><linearGradient id="${this._id('coin-edge')}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff0a0"/><stop offset=".45" stop-color="#ffb72e"/><stop offset="1" stop-color="#a95608"/></linearGradient><linearGradient id="${this._id('coin-face')}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff2a8"/><stop offset=".5" stop-color="#ffbb36"/><stop offset="1" stop-color="#cb7416"/></linearGradient></defs><ellipse cx="95" cy="139" rx="66" ry="10" fill="#000" opacity=".35"/><path d="M34 48Q34 26 92 26t58 22v63q0 22-58 22t-58-22z" fill="url(#${this._id('coin-edge')})"/><path d="M34 42Q34 20 92 20t58 22v61q0 22-58 22t-58-22z" fill="url(#${this._id('coin-face')})" stroke="#fff0aa" stroke-width="2"/><ellipse cx="92" cy="42" rx="58" ry="22" fill="#ffe18a" stroke="#fff8d3" stroke-width="2"/><ellipse cx="92" cy="42" rx="43" ry="13" fill="#c47a16" opacity=".42"/><path d="m90 27-18 30h18l-9 22 34-34H95l11-18z" fill="#fffbd7" stroke="#fff4a4" stroke-width="1.5"/></svg>`;
-    }
-
-    _plugArt() {
-      return `<svg class="energy-object plug-object" viewBox="0 0 180 160" aria-hidden="true"><defs><linearGradient id="${this._id('plug-metal')}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e0fbff"/><stop offset=".42" stop-color="#35c3f5"/><stop offset="1" stop-color="#164a92"/></linearGradient></defs><ellipse cx="95" cy="140" rx="62" ry="9" fill="#000" opacity=".34"/><path d="M68 23v34m44-34v34" stroke="#e8fbff" stroke-width="12" stroke-linecap="round"/><path d="M48 54q0-15 17-15h50q17 0 17 16v28q0 24-25 33v23H73v-23Q48 107 48 83z" fill="url(#${this._id('plug-metal')})" stroke="#a7edff" stroke-width="2"/><path d="M65 61h50v19q0 15-25 23Q65 94 65 80z" fill="#0a3157" opacity=".58"/><path d="m92 55-15 26h15l-8 19 25-30H94l9-15z" fill="#ecffff"/></svg>`;
-    }
-
-    _tariffBars() {
-      const day = this._num('tariff_day'); const night = this._num('tariff_night');
-      const max = Math.max(day || 0, night || 0, 0.01);
-      const row = (key, label, cls, value) => `<div class="bar-row"><span>${this._escape(this._t(label))}</span><div class="bar-track"><i class="${cls}" style="width:${value === null ? 0 : Math.max(0, Math.min(100, value / max * 100)).toFixed(1)}%"></i></div><b>${this._escape(this._formatted(key, 2))}</b></div>`;
-      return `<div class="bar-list">${row('tariff_day', 'day', 'day-rate', day)}${row('tariff_night', 'night', 'night-rate', night)}</div>`;
-    }
-
-    _settings() {
-      const twoZone = this._raw('two_zone') === 'on';
-      const esp = this._raw('esp_status');
-      const deviceState = esp === 'on' ? this._t('online') : esp === 'off' ? this._t('offline') : esp === 'unavailable' ? this._t('unavailable') : this._t('unknown');
-      const deviceClass = esp === 'on' ? 'online' : esp === 'off' ? 'offline' : 'unknown';
-      return `<section class="detail-panel settings-panel"><h2>${this._escape(this._t('settings_title'))}</h2>
-        <div class="settings-hero">${this._chipArt()}<div class="device-copy"><strong>${this._escape(this._t('device_name'))}</strong><span>${this._escape(this._t('device_description'))}</span></div><div class="device-status ${deviceClass}"><i></i><b>${this._escape(deviceState)}</b></div></div>
-        <div class="detail-grid settings-grid">
-        ${this._setting('sag_threshold', this._t('sag'))}${this._setting('swell_threshold', this._t('swell'))}${this._setting('nominal_voltage', this._t('nominal'))}${this._setting('tariff_day', this._t('tariff_day'))}${this._setting('tariff_night', this._t('tariff_night'))}
-        <div class="detail switch-setting"><span>${this._escape(this._t('two_zone'))}</span><strong>${this._escape(twoZone ? this._t('on') : this._t('off'))}</strong><button class="switch-button ${twoZone ? 'on' : ''}" data-switch="two_zone" aria-pressed="${twoZone}">${this._svg('gear')}<span>${this._escape(twoZone ? this._t('on') : this._t('off'))}</span></button></div>
-      </div><h2 class="subheading">${this._escape(this._t('diagnostics'))}</h2><div class="detail-grid">
-        ${this._detail('wifi_signal', this._t('wifi'), 0)}${this._detail('esp_temperature', this._t('temperature'), 1)}${this._detail('uptime', this._t('uptime'), 0)}${this._detail('ip_address', this._t('ip'), 0)}${this._detail('ssid', this._t('ssid'), 0)}${this._detail('inverter_events', this._t('inverter_events'), 0)}
-      </div><h2 class="subheading">${this._escape(this._t('actions'))}</h2><div class="action-grid">
-        ${this._action('reset_energy', this._t('reset_energy'))}${this._action('reset_events', this._t('reset_events'))}${this._action('reset_cost', this._t('reset_cost'))}${this._action('restart', this._t('restart'))}
-      </div></section>`;
-    }
-
-    _chipArt() {
-      return `<svg class="chip-art" viewBox="0 0 120 100" aria-hidden="true"><defs><linearGradient id="${this._id('chip-frame')}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#c9f8ff"/><stop offset=".42" stop-color="#27bce9"/><stop offset="1" stop-color="#174887"/></linearGradient><linearGradient id="${this._id('chip-core')}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#32efff"/><stop offset="1" stop-color="#1267d7"/></linearGradient></defs><g stroke="#78ddff" stroke-width="3" stroke-linecap="round"><path d="M12 24H29M12 42H29M12 60H29M12 78H29M91 24h17M91 42h17M91 60h17M91 78h17M38 9v14m20-14v14m20-14v14M38 77v14m20-14v14m20-14v14"/></g><rect x="26" y="18" width="68" height="64" rx="14" fill="#071b34" stroke="url(#${this._id('chip-frame')})" stroke-width="3"/><rect x="34" y="26" width="52" height="48" rx="9" fill="url(#${this._id('chip-core')})"/><path d="m63 31-18 24h14l-5 16 25-28H65l8-12z" fill="#edffff"/><path d="M39 31h10M39 38h6M74 62h8" stroke="#d2ffff" stroke-width="2" stroke-linecap="round" opacity=".75"/></svg>`;
-    }
-
-    _action(key, label) {
-      return `<button class="action-button" data-action="${key}" ${!this._state(key) ? 'disabled' : ''}><span>${this._svg(key === 'restart' ? 'gear' : 'energy')}</span>${this._escape(label)}</button>`;
+    _fireChanged() {
+      this.dispatchEvent(new CustomEvent('config-changed', {
+        detail: { config: this._config },
+        bubbles: true,
+        composed: true,
+      }));
     }
 
     _render() {
-      if (!this._config || !this._hass) return;
-      const status = this._displayStatus();
-      const online = status.esp === 'on';
-      const readyClass = this._hasRendered ? ' render-ready' : '';
-      const tab = (id, key, icon) => `<button class="tab ${this._activeTab === id ? 'active' : ''}" data-tab="${id}" aria-selected="${this._activeTab === id}"><span class="tab-icon">${this._svg(icon)}</span>${this._escape(this._t(key))}</button>`;
-      const activeContent = this._activeTab === 'home' ? this._home() : this._activeTab === 'params' ? this._params() : this._activeTab === 'energy' ? this._energy() : this._settings();
-      this.shadowRoot.innerHTML = `<style>${GridMonitorCard.CSS}</style><main class="shell ${status.stateClass}${readyClass}">
-        <header class="header"><div class="logo">${this._svg('bolt')}</div><div class="brand"><h1>${this._escape(this._config.name || this._t('title'))}</h1><p>${this._escape(this._t('subtitle'))}</p></div>
-          <div class="headright"><div class="connection ${online ? 'online' : status.esp === 'off' ? 'offline' : 'unknown'}"><span class="dot"></span><strong>${this._escape(online ? this._t('online') : status.esp === 'off' ? this._t('offline') : this._t('unknown'))}</strong><small>${this._escape(this._t('updated'))}: ${this._escape(this._updatedTime())}</small></div><span class="wifi-icon" title="${this._escape(this._formatted('wifi_signal', 0))}">${this._svg('wifi')}</span></div>
-        </header>
-        <nav class="tabs card" aria-label="${this._escape(this._t('home'))}">${tab('home', 'home', 'home')}${tab('params', 'params_tab', 'params')}${tab('energy', 'energy_tab', 'energy')}${tab('settings', 'settings_tab', 'settings')}</nav>
-        <div class="view">${activeContent}</div>
-        <footer class="footer"><span>ESPHome · Grid Monitor</span><span>${this._escape(this._formatted('ssid', 0))}</span></footer>
-      </main>`;
-      this._hasRendered = true;
-      this.shadowRoot.querySelectorAll('[data-tab]').forEach((button) => button.addEventListener('click', () => {
-        this._activeTab = button.dataset.tab;
-        this._render();
-        this._ensureHistory();
-      }));
-      this.shadowRoot.querySelectorAll('[data-period]').forEach((button) => button.addEventListener('click', () => {
-        if (this._historyRange === button.dataset.period) return;
-        this._historyRequest += 1;
-        this._historyLoading = false;
-        this._historyRange = button.dataset.period;
-        this._historyKey = '';
-        this._history = [];
-        this._render();
-        this._loadHistory();
-      }));
-      this.shadowRoot.querySelectorAll('[data-action]').forEach((button) => button.addEventListener('click', () => this._call(button.dataset.action)));
-      this.shadowRoot.querySelectorAll('[data-number-save]').forEach((button) => button.addEventListener('click', () => this._saveNumber(button.dataset.numberSave)));
-      this.shadowRoot.querySelectorAll('[data-switch]').forEach((button) => button.addEventListener('click', () => this._toggleSwitch(button.dataset.switch)));
+      if (!this.shadowRoot) return;
+      const lang = this._config.language || '';
+      const name = this._config.name || '';
+      const prefix = this._config.prefix || (this._detectedInfo?.prefix || '');
+      const count = this._detectedInfo ? this._detectedInfo.count : 0;
+      const total = this._detectedInfo ? this._detectedInfo.total : 40;
+
+      this.shadowRoot.innerHTML = `
+        <style>
+          :host {
+            display: block;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: var(--primary-text-color, #e6f1ff);
+            background: var(--card-background-color, #0b1528);
+            padding: 16px;
+            border-radius: 12px;
+          }
+          .editor-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+          }
+          .editor-header h3 {
+            margin: 0;
+            font-size: 1.15rem;
+            color: #12b5ff;
+            font-weight: 600;
+          }
+          .field {
+            margin-bottom: 16px;
+          }
+          .field label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #9cb3d9;
+          }
+          .field input, .field select {
+            width: 100%;
+            box-sizing: border-box;
+            background: rgba(14, 27, 49, 0.95);
+            border: 1px solid rgba(18, 181, 255, 0.3);
+            border-radius: 8px;
+            color: #fff;
+            padding: 10px 12px;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+          }
+          .field input:focus, .field select:focus {
+            border-color: #12b5ff;
+            box-shadow: 0 0 0 2px rgba(18, 181, 255, 0.2);
+          }
+          .hint {
+            font-size: 0.75rem;
+            color: #6c8db5;
+            margin-top: 4px;
+            line-height: 1.3;
+          }
+          .prefix-row {
+            display: flex;
+            gap: 8px;
+          }
+          .btn-detect {
+            flex-shrink: 0;
+            background: linear-gradient(135deg, #078de9, #025cb8);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-weight: 600;
+            font-size: 0.82rem;
+            padding: 0 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+          }
+          .btn-detect:hover {
+            background: linear-gradient(135deg, #12b5ff, #078de9);
+            box-shadow: 0 2px 8px rgba(18, 181, 255, 0.3);
+          }
+          .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(18, 181, 255, 0.08);
+            border: 1px solid rgba(18, 181, 255, 0.2);
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 0.85rem;
+          }
+          .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: ${count > 0 ? '#35ed91' : '#ffb51b'};
+            box-shadow: 0 0 8px ${count > 0 ? '#35ed91' : '#ffb51b'};
+          }
+          details {
+            margin-top: 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 10px 14px;
+          }
+          summary {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #9cb3d9;
+            cursor: pointer;
+            outline: none;
+          }
+          .custom-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 12px;
+          }
+          @media (max-width: 480px) {
+            .custom-grid { grid-template-columns: 1fr; }
+          }
+        </style>
+        <div class="editor-header">
+          <svg viewBox="0 0 48 48" width="22" height="22" fill="#12b5ff">${ICONS.gear}</svg>
+          <h3>${this._t('editor_title')}</h3>
+        </div>
+
+        <div class="status-badge">
+          <div class="status-dot"></div>
+          <div>
+            <strong>${count} / ${total}</strong> ${this._t('editor_entities_detected')}
+          </div>
+        </div>
+
+        <div class="field">
+          <label>${this._t('device_name')}</label>
+          <input type="text" id="inp_name" value="${name}" placeholder="Smart Grid Monitor" />
+        </div>
+
+        <div class="field">
+          <label>${this._t('editor_prefix')}</label>
+          <div class="prefix-row">
+            <input type="text" id="inp_prefix" value="${prefix}" placeholder="grid_monitor" />
+            <button type="button" class="btn-detect" id="btn_detect">
+              <svg viewBox="0 0 48 48" width="14" height="14">${ICONS.bolt}</svg>
+              ${this._t('editor_autodetect')}
+            </button>
+          </div>
+          <div class="hint">${this._t('editor_prefix_hint')}</div>
+        </div>
+
+        <div class="field">
+          <label>${this._t('editor_language')}</label>
+          <select id="sel_lang">
+            <option value="" ${lang === '' ? 'selected' : ''}>${this._t('editor_lang_auto')}</option>
+            <option value="uk" ${lang === 'uk' ? 'selected' : ''}>${this._t('editor_lang_uk')}</option>
+            <option value="en" ${lang === 'en' ? 'selected' : ''}>${this._t('editor_lang_en')}</option>
+          </select>
+        </div>
+
+        <details>
+          <summary>${this._t('editor_custom_entities')}</summary>
+          <div class="custom-grid">
+            <div class="field">
+              <label>${this._t('voltage')}</label>
+              <input type="text" data-entity-key="voltage" value="${this._config.entities?.voltage || ''}" placeholder="sensor.grid_monitor_voltage" />
+            </div>
+            <div class="field">
+              <label>${this._t('current')}</label>
+              <input type="text" data-entity-key="current" value="${this._config.entities?.current || ''}" placeholder="sensor.grid_monitor_current" />
+            </div>
+            <div class="field">
+              <label>${this._t('power')}</label>
+              <input type="text" data-entity-key="power" value="${this._config.entities?.power || ''}" placeholder="sensor.grid_monitor_power" />
+            </div>
+            <div class="field">
+              <label>${this._t('energy_total')}</label>
+              <input type="text" data-entity-key="energy_total" value="${this._config.entities?.energy_total || ''}" placeholder="sensor.grid_monitor_energy_total" />
+            </div>
+            <div class="field">
+              <label>${this._t('mains')}</label>
+              <input type="text" data-entity-key="mains" value="${this._config.entities?.mains || ''}" placeholder="binary_sensor.grid_monitor_mains_present" />
+            </div>
+            <div class="field">
+              <label>${this._t('inverter')}</label>
+              <input type="text" data-entity-key="inverter" value="${this._config.entities?.inverter || ''}" placeholder="binary_sensor.grid_monitor_on_inverter" />
+            </div>
+          </div>
+        </details>
+      `;
+
+      this.shadowRoot.getElementById('inp_name').addEventListener('input', (e) => {
+        this._config.name = e.target.value.trim();
+        this._fireChanged();
+      });
+
+      this.shadowRoot.getElementById('inp_prefix').addEventListener('input', (e) => {
+        this._config.prefix = e.target.value.trim();
+        this._fireChanged();
+      });
+
+      this.shadowRoot.getElementById('sel_lang').addEventListener('change', (e) => {
+        this._config.language = e.target.value || undefined;
+        this._fireChanged();
+      });
+
+      this.shadowRoot.getElementById('btn_detect').addEventListener('click', () => {
+        this._autoDetect(true);
+      });
+
+      this.shadowRoot.querySelectorAll('input[data-entity-key]').forEach((input) => {
+        input.addEventListener('change', (e) => {
+          const key = e.target.getAttribute('data-entity-key');
+          const val = e.target.value.trim();
+          this._config.entities = this._config.entities || {};
+          if (val) {
+            this._config.entities[key] = val;
+          } else {
+            delete this._config.entities[key];
+          }
+          this._fireChanged();
+        });
+      });
+    }
+  }
+
+  customElements.define('grid-monitor-card-editor', GridMonitorCardEditor);
+
+  class GridMonitorCard extends HTMLElement {
+    constructor() {
+      super();
+      this.attachShadow({ mode: 'open' });
+      this._cardSeq = ++CARD_SEQUENCE;
+      this._config = {};
+      this._hass = null;
+      this._tab = 'home';
+      this._range = 'day';
+      this._historyData = null;
+      this._historyLoading = false;
+      this._lastHistoryKey = null;
+      this._detectedPrefix = null;
     }
 
-    async _saveNumber(key) {
-      const entity = this._entity(key);
-      const input = this.shadowRoot.querySelector(`[data-number-input="${key}"]`);
-      const value = Number(input?.value);
-      const state = this._state(key);
-      if (!state || !Number.isFinite(value)) return;
-      const min = Number(state.attributes?.min);
-      const max = Number(state.attributes?.max);
-      if ((Number.isFinite(min) && value < min) || (Number.isFinite(max) && value > max)) {
-        window.alert(this._t('invalid_number'));
+    static getConfigElement() {
+      return document.createElement('grid-monitor-card-editor');
+    }
+
+    static getStubConfig(hass, entities, entitiesFallback) {
+      let foundPrefix = 'grid_monitor';
+      if (hass?.states) {
+        const vCandidate = Object.keys(hass.states).find((id) => id.startsWith('sensor.') && id.endsWith('_voltage'));
+        if (vCandidate) {
+          const raw = vCandidate.replace('sensor.', '').replace('_voltage', '');
+          if (raw) foundPrefix = raw;
+        }
+      }
+      return {
+        type: 'custom:grid-monitor-card',
+        name: 'Smart Grid Monitor',
+        prefix: foundPrefix,
+      };
+    }
+
+    setConfig(config) {
+      this._config = {
+        name: 'Smart Grid Monitor',
+        prefix: 'grid_monitor',
+        language: '',
+        ...config,
+      };
+      this._render();
+    }
+
+    set hass(hass) {
+      const oldHass = this._hass;
+      this._hass = hass;
+      if (!this._detectedPrefix && this._hass) {
+        this._detectPrefix();
+      }
+      if (this._needsRender(oldHass, hass)) {
+        this._render();
+      }
+    }
+
+    connectedCallback() {
+      this._render();
+    }
+
+    disconnectedCallback() {
+      // Cleanup if needed
+    }
+
+    _detectPrefix() {
+      if (this._config.prefix) {
+        this._detectedPrefix = this._config.prefix;
         return;
       }
-      await this._hass.callService('number', 'set_value', { entity_id: entity, value });
+      if (!this._hass?.states) return;
+      const states = Object.keys(this._hass.states);
+      const vCandidate = states.find((id) => id.startsWith('sensor.') && id.endsWith('_voltage'));
+      if (vCandidate) {
+        const raw = vCandidate.replace('sensor.', '').replace('_voltage', '');
+        if (raw) {
+          this._detectedPrefix = raw;
+          return;
+        }
+      }
+      this._detectedPrefix = 'grid_monitor';
+    }
+
+    _resolveEntity(key) {
+      if (this._config.entities?.[key]) {
+        return this._config.entities[key];
+      }
+      const prefix = this._config.prefix || this._detectedPrefix || 'grid_monitor';
+      const defId = DEFAULTS[key];
+      if (!defId) return null;
+
+      const domain = defId.split('.')[0];
+      const suffix = defId.split('.').slice(1).join('.').replace(/^grid_monitor_/, '');
+      const candidate = `${domain}.${prefix}_${suffix}`;
+
+      if (this._hass?.states?.[candidate]) return candidate;
+      if (this._hass?.states?.[defId]) return defId;
+
+      // Check known aliases
+      if (ALIAS_SUFFIXES[key]) {
+        for (const s of ALIAS_SUFFIXES[key]) {
+          const c1 = `${domain}.${prefix}_${s}`;
+          if (this._hass?.states?.[c1]) return c1;
+          const c2 = `${domain}.${s}`;
+          if (this._hass?.states?.[c2]) return c2;
+        }
+      }
+
+      return candidate;
+    }
+
+    _state(key) {
+      const entityId = this._resolveEntity(key);
+      if (!entityId || !this._hass?.states) return null;
+      return this._hass.states[entityId] || null;
+    }
+
+    _raw(key) {
+      const stateObj = this._state(key);
+      return stateObj ? stateObj.state : null;
+    }
+
+    _num(key) {
+      const raw = this._raw(key);
+      if (raw === null || raw === undefined || raw === 'unavailable' || raw === 'unknown') {
+        return null;
+      }
+      const n = parseFloat(raw);
+      return Number.isFinite(n) ? n : null;
+    }
+
+    _unit(key) {
+      const stateObj = this._state(key);
+      return stateObj?.attributes?.unit_of_measurement || '';
+    }
+
+    _formatted(key, digits = 1) {
+      const val = this._num(key);
+      if (val === null) return '—';
+      return val.toFixed(digits);
+    }
+
+    _t(key) {
+      const lang = this._config.language || (this._hass?.language === 'uk' ? 'uk' : 'en');
+      return (TEXT[lang] || TEXT.uk)[key] || TEXT.uk[key] || key;
+    }
+
+    _displayStatus() {
+      const mainsRaw = this._raw('mains');
+      const inverterRaw = this._raw('inverter');
+      const espRaw = this._raw('esp_status');
+      const alarmRaw = this._raw('voltage_alarm');
+      const voltage = this._num('voltage');
+      const power = this._num('power');
+
+      // Check if ESP is reachable
+      const espOnline = (espRaw === 'on') || (espRaw === null && (voltage !== null || power !== null));
+      if (!espOnline) {
+        return {
+          source: 'offline',
+          label: this._t('offline'),
+          banner: this._t('offline_banner'),
+          class: 'status-offline',
+          dot: '#ff526d'
+        };
+      }
+
+      // Check if running on inverter
+      const onInverter = (inverterRaw === 'on') || (voltage !== null && voltage < 50);
+      if (onInverter) {
+        return {
+          source: 'inverter',
+          label: this._t('inverter'),
+          banner: this._t('inverter_banner'),
+          class: 'status-inverter',
+          dot: '#b56aff'
+        };
+      }
+
+      // Check voltage alarm
+      const thLow = this._num('sag_threshold') || 190;
+      const thHigh = this._num('swell_threshold') || 245;
+      const isAlarm = (alarmRaw === 'on') || (voltage !== null && (voltage < thLow || voltage > thHigh));
+      if (isAlarm) {
+        return {
+          source: 'alarm',
+          label: this._t('alarm'),
+          banner: this._t('alarm_banner'),
+          class: 'status-alarm',
+          dot: '#ffb51b'
+        };
+      }
+
+      return {
+        source: 'mains',
+        label: this._t('healthy'),
+        banner: null,
+        class: 'status-normal',
+        dot: '#35ed91'
+      };
+    }
+
+    _needsRender(oldHass, newHass) {
+      if (!oldHass || !newHass) return true;
+      for (const key of Object.keys(DEFAULTS)) {
+        const id = this._resolveEntity(key);
+        if (id && oldHass.states[id] !== newHass.states[id]) return true;
+      }
+      return false;
+    }
+
+    _showToast(msg) {
+      const toast = this.shadowRoot.getElementById('card_toast');
+      if (!toast) return;
+      toast.textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(this._toastTimer);
+      this._toastTimer = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2500);
+    }
+
+    async _saveNumber(key, inputElem, btnElem) {
+      const valStr = inputElem.value.trim().replace(',', '.');
+      const val = parseFloat(valStr);
+      if (!Number.isFinite(val)) {
+        alert(this._t('invalid_number'));
+        return;
+      }
+      const entityId = this._resolveEntity(key);
+      if (!entityId || !this._hass) return;
+
+      try {
+        await this._hass.callService('number', 'set_value', {
+          entity_id: entityId,
+          value: val
+        });
+        if (btnElem) {
+          const orig = btnElem.textContent;
+          btnElem.textContent = this._t('saved_toast');
+          btnElem.classList.add('btn-saved');
+          setTimeout(() => {
+            btnElem.textContent = orig;
+            btnElem.classList.remove('btn-saved');
+          }, 2000);
+        }
+        this._showToast(this._t('saved_toast'));
+      } catch (err) {
+        console.error('Error setting number:', err);
+        alert('Помилка надсилання: ' + err.message);
+      }
     }
 
     async _toggleSwitch(key) {
-      const entity = this._entity(key);
-      if (!this._state(key)) return;
-      await this._hass.callService('switch', 'toggle', { entity_id: entity });
+      const entityId = this._resolveEntity(key);
+      if (!entityId || !this._hass) return;
+      try {
+        await this._hass.callService('switch', 'toggle', {
+          entity_id: entityId
+        });
+        this._showToast(this._t('command_sent'));
+      } catch (err) {
+        console.error('Error toggling switch:', err);
+      }
     }
 
-    async _call(key) {
-      const entity = this._entity(key);
-      const state = this._state(key);
-      if (!state || !this._hass || !window.confirm(`${this._t('confirm')}\n${state.attributes?.friendly_name || entity}`)) return;
-      await this._hass.callService('button', 'press', { entity_id: entity });
+    async _call(action) {
+      const keyMap = {
+        reset_energy: 'reset_energy',
+        reset_events: 'reset_events',
+        reset_cost: 'reset_cost',
+        restart: 'restart'
+      };
+      const entityId = this._resolveEntity(keyMap[action]);
+      if (!entityId || !this._hass) return;
+
+      if (!confirm(`${this._t('confirm')}?`)) return;
+
+      try {
+        await this._hass.callService('button', 'press', {
+          entity_id: entityId
+        });
+        this._showToast(this._t('command_sent'));
+      } catch (err) {
+        console.error('Error calling button:', err);
+        alert('Помилка виклику: ' + err.message);
+      }
+    }
+
+    async _ensureHistory() {
+      const powerEntity = this._resolveEntity('power');
+      if (!powerEntity || !this._hass) return;
+
+      const hours = RANGES[this._range] || 24;
+      const key = `${powerEntity}:${hours}`;
+      if (this._lastHistoryKey === key && this._historyData) return;
+
+      this._historyLoading = true;
+      this._lastHistoryKey = key;
+      const end = new Date();
+      const start = new Date(end.getTime() - hours * 3600 * 1000);
+
+      try {
+        const hist = await this._hass.callApi(
+          'GET',
+          `history/period/${start.toISOString()}?filter_entity_id=${powerEntity}&end_time=${end.toISOString()}`
+        );
+        if (Array.isArray(hist) && hist[0]) {
+          this._historyData = hist[0].map(item => ({
+            time: new Date(item.last_updated || item.last_changed).getTime(),
+            val: parseFloat(item.state) || 0
+          })).filter(pt => Number.isFinite(pt.val));
+        } else {
+          this._historyData = [];
+        }
+      } catch (err) {
+        console.warn('Could not fetch history:', err);
+        this._historyData = [];
+      } finally {
+        this._historyLoading = false;
+        this._render();
+      }
+    }
+
+    _powerChartSvg() {
+      const data = this._historyData;
+      if (this._historyLoading) {
+        return `<div class="chart-empty">${this._t('loading')}</div>`;
+      }
+      if (!data || data.length === 0) {
+        return `<div class="chart-empty">${this._t('no_history')}</div>`;
+      }
+
+      const pMax = Math.max(100, ...data.map(d => d.val));
+      const w = 620;
+      const h = 170;
+      const padL = 35;
+      const padR = 20;
+      const padT = 20;
+      const padB = 30;
+
+      const innerW = w - padL - padR;
+      const innerH = h - padT - padB;
+
+      const tStart = data[0].time;
+      const tEnd = data[data.length - 1].time || (tStart + 1);
+      const tSpan = Math.max(1, tEnd - tStart);
+
+      const points = data.map(pt => {
+        const x = padL + ((pt.time - tStart) / tSpan) * innerW;
+        const y = padT + innerH - (pt.val / pMax) * innerH;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(' ');
+
+      const firstX = padL;
+      const lastX = padL + innerW;
+      const bottomY = padT + innerH;
+      const areaPath = `M ${firstX},${bottomY} L ${points} L ${lastX},${bottomY} Z`;
+
+      return `
+        <svg viewBox="0 0 ${w} ${h}" class="sub-chart-svg" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="pAreaGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#35ed91" stop-opacity="0.4"/>
+              <stop offset="100%" stop-color="#35ed91" stop-opacity="0.0"/>
+            </linearGradient>
+          </defs>
+          <line x1="${padL}" y1="${bottomY}" x2="${lastX}" y2="${bottomY}" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+          <path d="${areaPath}" fill="url(#pAreaGrad)"/>
+          <polyline points="${points}" fill="none" stroke="#35ed91" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <text x="${padL}" y="14" fill="#6c8db5" font-size="9">${pMax.toFixed(0)} Вт</text>
+          <text x="${padL}" y="${bottomY + 16}" fill="#6c8db5" font-size="8.5">Початок</text>
+          <text x="${lastX}" y="${bottomY + 16}" fill="#35ed91" font-size="8.5" text-anchor="end">Зараз</text>
+        </svg>
+      `;
+    }
+
+    _towerArtwork() {
+      return `
+        <svg class="tower-art" viewBox="0 0 680 340" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#020611" stop-opacity="0.95"/>
+              <stop offset="50%" stop-color="#081b38" stop-opacity="0.75"/>
+              <stop offset="100%" stop-color="#0e2a52" stop-opacity="0.85"/>
+            </linearGradient>
+            <linearGradient id="mountainFar" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#0c2242" stop-opacity="0.5"/>
+              <stop offset="100%" stop-color="#071324" stop-opacity="0.9"/>
+            </linearGradient>
+            <linearGradient id="mountainNear" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#0f2f59" stop-opacity="0.7"/>
+              <stop offset="100%" stop-color="#050e1c" stop-opacity="0.98"/>
+            </linearGradient>
+            <linearGradient id="steelBeam" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#2a507d"/>
+              <stop offset="35%" stop-color="#6ea9ea"/>
+              <stop offset="70%" stop-color="#3c6b9e"/>
+              <stop offset="100%" stop-color="#193557"/>
+            </linearGradient>
+            <linearGradient id="wireGlow" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#00f2ff" stop-opacity="0.8"/>
+              <stop offset="50%" stop-color="#ffffff" stop-opacity="0.95"/>
+              <stop offset="100%" stop-color="#00aaff" stop-opacity="0.8"/>
+            </linearGradient>
+            <radialGradient id="beaconGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#ff3b5c" stop-opacity="1"/>
+              <stop offset="40%" stop-color="#ff1a40" stop-opacity="0.6"/>
+              <stop offset="100%" stop-color="#ff002b" stop-opacity="0"/>
+            </radialGradient>
+            <filter id="electricGlow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="3" result="blur"/>
+              <feMerge>
+                <feMergeNode in="blur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+
+          <!-- Sky backdrop -->
+          <rect width="680" height="340" fill="url(#skyGrad)"/>
+
+          <!-- Stars / Grid constellation -->
+          <g opacity="0.3">
+            <circle cx="65" cy="40" r="1.2" fill="#fff"/>
+            <circle cx="180" cy="25" r="1.5" fill="#aee2ff"/>
+            <circle cx="290" cy="65" r="1" fill="#fff"/>
+            <circle cx="430" cy="30" r="1.3" fill="#fff"/>
+            <circle cx="560" cy="50" r="1.4" fill="#aee2ff"/>
+            <circle cx="620" cy="20" r="1" fill="#fff"/>
+          </g>
+
+          <!-- Far Mountains Silhouette -->
+          <path d="M0 240 Q110 200 230 225 T470 210 Q580 190 680 230 L680 340 L0 340 Z" fill="url(#mountainFar)"/>
+
+          <!-- Distant Pylon 1 (Left background) -->
+          <g opacity="0.35" transform="translate(130, 160) scale(0.35)">
+            <path d="M40 0 L15 150 M40 0 L65 150 M0 35 L80 35 M8 75 L72 75 M15 115 L65 115" stroke="#4a7eb8" stroke-width="2.5" fill="none"/>
+            <path d="M15 35 L65 75 M65 35 L15 75 M20 75 L60 115 M60 75 L20 115" stroke="#37669a" stroke-width="1.8"/>
+          </g>
+
+          <!-- Distant Pylon 2 (Right background) -->
+          <g opacity="0.4" transform="translate(510, 150) scale(0.42)">
+            <path d="M40 0 L12 160 M40 0 L68 160 M-5 35 L85 35 M5 75 L75 75 M12 120 L68 120" stroke="#4a7eb8" stroke-width="2.5" fill="none"/>
+            <path d="M12 35 L68 75 M68 35 L12 75 M15 75 L65 120 M65 75 L15 120" stroke="#37669a" stroke-width="1.8"/>
+          </g>
+
+          <!-- Near Mountain Ridge & Substation contour -->
+          <path d="M0 265 Q140 245 280 260 T560 250 Q625 242 680 255 L680 340 L0 340 Z" fill="url(#mountainNear)"/>
+
+          <!-- High-Voltage Sag Wires across horizon (Catenary Curves) -->
+          <g filter="url(#electricGlow)">
+            <!-- Top Ground Shield Wire -->
+            <path d="M0 80 Q340 102 680 82" fill="none" stroke="#68a6e8" stroke-width="1.2" opacity="0.7"/>
+
+            <!-- Upper Phase Line -->
+            <path d="M0 135 Q340 178 680 138" fill="none" stroke="url(#wireGlow)" stroke-width="2.2" opacity="0.9"/>
+            <path d="M0 138 Q340 181 680 141" fill="none" stroke="#00f2ff" stroke-width="1" opacity="0.4"/>
+
+            <!-- Middle Phase Line -->
+            <path d="M0 190 Q340 242 680 194" fill="none" stroke="url(#wireGlow)" stroke-width="2.5" opacity="0.95"/>
+            <path d="M0 194 Q340 246 680 198" fill="none" stroke="#00f2ff" stroke-width="1.2" opacity="0.5"/>
+
+            <!-- Lower Phase Line -->
+            <path d="M0 245 Q340 305 680 248" fill="none" stroke="url(#wireGlow)" stroke-width="2.6" opacity="0.9"/>
+          </g>
+
+          <!-- MAIN 330kV TRANSMISSION PYLON (Center-Right Foreground) -->
+          <g id="mainTower" transform="translate(340, 18)">
+            <!-- Ground Anchor Foundation Pads -->
+            <path d="M-68 318 L-44 322 L-40 310 L-64 306 Z" fill="#203a5e"/>
+            <path d="M44 322 L68 318 L64 306 L40 310 Z" fill="#203a5e"/>
+
+            <!-- Tower Corner Legs (Pyramidal Truss) -->
+            <path d="M-8 40 L-54 316" stroke="url(#steelBeam)" stroke-width="5.5" stroke-linecap="round"/>
+            <path d="M8 40 L54 316" stroke="url(#steelBeam)" stroke-width="5.5" stroke-linecap="round"/>
+            <path d="M-4 40 L-22 316" stroke="#254a75" stroke-width="3.2"/>
+            <path d="M4 40 L22 316" stroke="#4878b0" stroke-width="3.2"/>
+
+            <!-- Top Earth Peak (Lightning Mast) -->
+            <polygon points="0,0 -8,40 8,40" fill="url(#steelBeam)"/>
+            <line x1="0" y1="0" x2="0" y2="40" stroke="#7bb7f5" stroke-width="2.5"/>
+
+            <!-- TOP CROSSARM (Earth Wire Peak Arm) -->
+            <path d="M-36 38 L36 38 L24 46 L-24 46 Z" fill="url(#steelBeam)"/>
+            <line x1="-36" y1="38" x2="-8" y2="18" stroke="#5087c4" stroke-width="2.5"/>
+            <line x1="36" y1="38" x2="8" y2="18" stroke="#5087c4" stroke-width="2.5"/>
+
+            <!-- UPPER CONDUCTOR CROSSARMS (T-Arm Upper) -->
+            <path d="M-130 98 L130 98 L114 112 L-114 112 Z" fill="url(#steelBeam)"/>
+            <!-- Crossarm Braces -->
+            <line x1="-128" y1="98" x2="-10" y2="65" stroke="url(#steelBeam)" stroke-width="3.5"/>
+            <line x1="128" y1="98" x2="10" y2="65" stroke="url(#steelBeam)" stroke-width="3.5"/>
+            <line x1="-90" y1="112" x2="-12" y2="135" stroke="#315887" stroke-width="2.8"/>
+            <line x1="90" y1="112" x2="12" y2="135" stroke="#5389c7" stroke-width="2.8"/>
+
+            <!-- MIDDLE CONDUCTOR CROSSARMS (Widest Tier) -->
+            <path d="M-165 155 L165 155 L145 172 L-145 172 Z" fill="url(#steelBeam)"/>
+            <line x1="-162" y1="155" x2="-14" y2="120" stroke="url(#steelBeam)" stroke-width="4"/>
+            <line x1="162" y1="155" x2="14" y2="120" stroke="url(#steelBeam)" stroke-width="4"/>
+            <line x1="-120" y1="172" x2="-18" y2="200" stroke="#315887" stroke-width="3"/>
+            <line x1="120" y1="172" x2="18" y2="200" stroke="#5389c7" stroke-width="3"/>
+
+            <!-- LOWER CONDUCTOR CROSSARMS -->
+            <path d="M-140 215 L140 215 L122 230 L-122 230 Z" fill="url(#steelBeam)"/>
+            <line x1="-138" y1="215" x2="-20" y2="182" stroke="url(#steelBeam)" stroke-width="3.8"/>
+            <line x1="138" y1="215" x2="20" y2="182" stroke="url(#steelBeam)" stroke-width="3.8"/>
+            <line x1="-100" y1="230" x2="-26" y2="258" stroke="#315887" stroke-width="2.8"/>
+            <line x1="100" y1="230" x2="26" y2="258" stroke="#5389c7" stroke-width="2.8"/>
+
+            <!-- Lattice X-Braces Down Tower Body -->
+            <g stroke="#3d6d9e" stroke-width="2.2">
+              <!-- Tier 1 -->
+              <line x1="-10" y1="46" x2="10" y2="80"/>
+              <line x1="10" y1="46" x2="-10" y2="80"/>
+              <!-- Tier 2 -->
+              <line x1="-12" y1="80" x2="12" y2="120"/>
+              <line x1="12" y1="80" x2="-12" y2="120"/>
+              <!-- Tier 3 -->
+              <line x1="-16" y1="120" x2="16" y2="165"/>
+              <line x1="16" y1="120" x2="-16" y2="165"/>
+              <line x1="-16" y1="165" x2="16" y2="165" stroke-width="3.5" stroke="#5288c4"/>
+              <!-- Tier 4 -->
+              <line x1="-22" y1="165" x2="22" y2="215"/>
+              <line x1="22" y1="165" x2="-22" y2="215"/>
+              <line x1="-22" y1="215" x2="22" y2="215" stroke-width="4" stroke="#5288c4"/>
+              <!-- Tier 5 -->
+              <line x1="-30" y1="215" x2="30" y2="265"/>
+              <line x1="30" y1="215" x2="-30" y2="265"/>
+              <line x1="-30" y1="265" x2="30" y2="265" stroke-width="4.5" stroke="#5288c4"/>
+              <!-- Tier 6 (Base) -->
+              <line x1="-40" y1="265" x2="40" y2="316"/>
+              <line x1="40" y1="265" x2="-40" y2="316"/>
+              <line x1="-50" y1="316" x2="50" y2="316" stroke-width="5" stroke="#5288c4"/>
+            </g>
+
+            <!-- Climbing Safety Ladder in Center -->
+            <line x1="0" y1="45" x2="0" y2="316" stroke="#254a75" stroke-width="1.8"/>
+            <g stroke="#3a6a9b" stroke-width="1.2">
+              <line x1="-3" y1="60" x2="3" y2="60"/>
+              <line x1="-3" y1="80" x2="3" y2="80"/>
+              <line x1="-3" y1="100" x2="3" y2="100"/>
+              <line x1="-3" y1="120" x2="3" y2="120"/>
+              <line x1="-3" y1="140" x2="3" y2="140"/>
+              <line x1="-3" y1="160" x2="3" y2="160"/>
+              <line x1="-3" y1="180" x2="3" y2="180"/>
+              <line x1="-3" y1="200" x2="3" y2="200"/>
+              <line x1="-3" y1="220" x2="3" y2="220"/>
+              <line x1="-3" y1="240" x2="3" y2="240"/>
+              <line x1="-3" y1="260" x2="3" y2="260"/>
+              <line x1="-3" y1="280" x2="3" y2="280"/>
+              <line x1="-3" y1="300" x2="3" y2="300"/>
+            </g>
+
+            <!-- SUSPENSION INSULATORS STRINGS & CORONA RINGS -->
+            <!-- Upper Left Insulator -->
+            <g transform="translate(-120, 102)">
+              <line x1="0" y1="0" x2="0" y2="34" stroke="#8ec8ff" stroke-width="4.5" stroke-dasharray="2,3"/>
+              <circle cx="0" cy="35" r="4.5" fill="none" stroke="#00f2ff" stroke-width="2"/>
+              <line x1="-10" y1="35" x2="10" y2="35" stroke="#fff" stroke-width="2"/>
+            </g>
+            <!-- Upper Right Insulator -->
+            <g transform="translate(120, 102)">
+              <line x1="0" y1="0" x2="0" y2="34" stroke="#8ec8ff" stroke-width="4.5" stroke-dasharray="2,3"/>
+              <circle cx="0" cy="35" r="4.5" fill="none" stroke="#00f2ff" stroke-width="2"/>
+              <line x1="-10" y1="35" x2="10" y2="35" stroke="#fff" stroke-width="2"/>
+            </g>
+
+            <!-- Middle Left Insulator -->
+            <g transform="translate(-154, 160)">
+              <line x1="0" y1="0" x2="0" y2="36" stroke="#8ec8ff" stroke-width="4.8" stroke-dasharray="2,3"/>
+              <circle cx="0" cy="37" r="5" fill="none" stroke="#00f2ff" stroke-width="2.2"/>
+              <line x1="-12" y1="37" x2="12" y2="37" stroke="#fff" stroke-width="2.2"/>
+            </g>
+            <!-- Middle Right Insulator -->
+            <g transform="translate(154, 160)">
+              <line x1="0" y1="0" x2="0" y2="36" stroke="#8ec8ff" stroke-width="4.8" stroke-dasharray="2,3"/>
+              <circle cx="0" cy="37" r="5" fill="none" stroke="#00f2ff" stroke-width="2.2"/>
+              <line x1="-12" y1="37" x2="12" y2="37" stroke="#fff" stroke-width="2.2"/>
+            </g>
+
+            <!-- Lower Left Insulator -->
+            <g transform="translate(-130, 220)">
+              <line x1="0" y1="0" x2="0" y2="36" stroke="#8ec8ff" stroke-width="4.8" stroke-dasharray="2,3"/>
+              <circle cx="0" cy="37" r="5" fill="none" stroke="#00f2ff" stroke-width="2.2"/>
+              <line x1="-12" y1="37" x2="12" y2="37" stroke="#fff" stroke-width="2.2"/>
+            </g>
+            <!-- Lower Right Insulator -->
+            <g transform="translate(130, 220)">
+              <line x1="0" y1="0" x2="0" y2="36" stroke="#8ec8ff" stroke-width="4.8" stroke-dasharray="2,3"/>
+              <circle cx="0" cy="37" r="5" fill="none" stroke="#00f2ff" stroke-width="2.2"/>
+              <line x1="-12" y1="37" x2="12" y2="37" stroke="#fff" stroke-width="2.2"/>
+            </g>
+
+            <!-- Red Obstruction Warning Beacons (Aviation Strobe) -->
+            <circle cx="0" cy="0" r="10" fill="url(#beaconGlow)"/>
+            <circle cx="0" cy="0" r="3.5" fill="#ff3b5c"/>
+            <circle cx="-130" cy="98" r="7" fill="url(#beaconGlow)"/>
+            <circle cx="-130" cy="98" r="2.5" fill="#ff3b5c"/>
+            <circle cx="130" cy="98" r="7" fill="url(#beaconGlow)"/>
+            <circle cx="130" cy="98" r="2.5" fill="#ff3b5c"/>
+          </g>
+
+          <!-- Foreground Substation Busbars & Transformers silhouette -->
+          <g opacity="0.65" transform="translate(0, 295)">
+            <rect x="20" y="10" width="35" height="30" fill="#0c1e38" rx="2"/>
+            <rect x="25" y="2" width="25" height="8" fill="#142c4f" rx="1"/>
+            <line x1="30" y1="2" x2="30" y2="-8" stroke="#4878b0" stroke-width="2"/>
+            <line x1="45" y1="2" x2="45" y2="-8" stroke="#4878b0" stroke-width="2"/>
+
+            <rect x="180" y="15" width="50" height="25" fill="#0c1e38" rx="2"/>
+            <line x1="205" y1="15" x2="205" y2="-6" stroke="#4878b0" stroke-width="2.5"/>
+
+            <rect x="580" y="8" width="40" height="32" fill="#0c1e38" rx="2"/>
+            <line x1="595" y1="8" x2="595" y2="-5" stroke="#4878b0" stroke-width="2"/>
+            <line x1="610" y1="8" x2="610" y2="-5" stroke="#4878b0" stroke-width="2"/>
+          </g>
+        </svg>
+      `;
+    }
+
+    _houseArt() {
+      return `
+        <svg viewBox="0 0 160 140" class="real-vector-art" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="roofGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#2a456e"/>
+              <stop offset="50%" stop-color="#162947"/>
+              <stop offset="100%" stop-color="#0c1a30"/>
+            </linearGradient>
+            <linearGradient id="wallFront" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#1a3660"/>
+              <stop offset="100%" stop-color="#0e203c"/>
+            </linearGradient>
+            <linearGradient id="wallSide" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#0f2444"/>
+              <stop offset="100%" stop-color="#09162a"/>
+            </linearGradient>
+            <linearGradient id="windowWarm" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#ffe89e"/>
+              <stop offset="60%" stop-color="#ffb834"/>
+              <stop offset="100%" stop-color="#ff7b00"/>
+            </linearGradient>
+            <filter id="warmGlow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="3" result="blur"/>
+              <feMerge>
+                <feMergeNode in="blur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+
+          <!-- Ground shadow -->
+          <ellipse cx="80" cy="128" rx="68" ry="8" fill="#040a14" opacity="0.6"/>
+
+          <!-- House Left Wing Wall -->
+          <polygon points="28,82 68,62 68,118 28,124" fill="url(#wallSide)"/>
+
+          <!-- House Main Front Wall -->
+          <polygon points="68,62 136,88 136,124 68,118" fill="url(#wallFront)"/>
+
+          <!-- Slate Hip Roof (Left Facet) -->
+          <polygon points="82,24 24,78 68,58" fill="#2d4d7a"/>
+          <!-- Slate Hip Roof (Main Facet) -->
+          <polygon points="82,24 68,58 138,84 144,48" fill="url(#roofGrad)"/>
+
+          <!-- Solar PV Panels on Main Roof -->
+          <polygon points="76,52 118,68 112,78 72,62" fill="#091b36" stroke="#12b5ff" stroke-width="1.2"/>
+          <line x1="90" y1="57" x2="86" y2="67" stroke="#12b5ff" stroke-width="0.8"/>
+          <line x1="104" y1="63" x2="100" y2="73" stroke="#12b5ff" stroke-width="0.8"/>
+
+          <!-- Glowing Warm Windows (Living room & Bedroom) -->
+          <g filter="url(#warmGlow)">
+            <!-- Upper Window -->
+            <polygon points="88,90 108,98 108,112 88,106" fill="url(#windowWarm)"/>
+            <line x1="98" y1="94" x2="98" y2="109" stroke="#945200" stroke-width="1"/>
+            <line x1="88" y1="100" x2="108" y2="106" stroke="#945200" stroke-width="1"/>
+
+            <!-- Side Window -->
+            <polygon points="36,92 56,82 56,104 36,109" fill="url(#windowWarm)"/>
+            <line x1="46" y1="87" x2="46" y2="106" stroke="#945200" stroke-width="1"/>
+          </g>
+
+          <!-- Front Entrance Door -->
+          <polygon points="116,102 128,106 128,123 116,121" fill="#0d1c33" stroke="#12b5ff" stroke-width="1"/>
+          <circle cx="125" cy="114" r="1" fill="#ffb834"/>
+
+          <!-- Grid Utility Drop & Smart Meter Box -->
+          <rect x="25" y="98" width="5" height="9" fill="#1b3863" stroke="#35ed91" stroke-width="0.8" rx="1"/>
+          <circle cx="27.5" cy="101" r="0.8" fill="#35ed91"/>
+          <path d="M28,98 L28,78 Q22,70 12,65" fill="none" stroke="#35ed91" stroke-width="1" stroke-dasharray="2,2"/>
+        </svg>
+      `;
+    }
+
+    _energyCoinArt() {
+      return `
+        <svg viewBox="0 0 130 130" class="real-vector-art" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="coinGold" cx="40%" cy="35%" r="65%">
+              <stop offset="0%" stop-color="#fff4b8"/>
+              <stop offset="25%" stop-color="#ffd24d"/>
+              <stop offset="65%" stop-color="#d69615"/>
+              <stop offset="90%" stop-color="#946200"/>
+              <stop offset="100%" stop-color="#593b00"/>
+            </radialGradient>
+            <linearGradient id="coinRim" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#ffe885"/>
+              <stop offset="50%" stop-color="#b8800a"/>
+              <stop offset="100%" stop-color="#543700"/>
+            </linearGradient>
+            <filter id="goldGlow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="3" result="blur"/>
+              <feMerge>
+                <feMergeNode in="blur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+
+          <!-- Outer Glow -->
+          <circle cx="65" cy="65" r="54" fill="none" stroke="#ffd24d" stroke-width="1" opacity="0.4"/>
+
+          <!-- Drop Shadow -->
+          <ellipse cx="65" cy="116" rx="42" ry="7" fill="#030812" opacity="0.6"/>
+
+          <!-- Outer Reeded Coin Rim -->
+          <circle cx="65" cy="63" r="50" fill="url(#coinRim)"/>
+
+          <!-- Reeded Notches -->
+          <circle cx="65" cy="63" r="48" fill="none" stroke="#7a5000" stroke-width="2.5" stroke-dasharray="2,3"/>
+
+          <!-- Inner Coin Face -->
+          <circle cx="65" cy="63" r="44" fill="url(#coinGold)"/>
+
+          <!-- Concentric Ring Detail -->
+          <circle cx="65" cy="63" r="38" fill="none" stroke="#ffea8a" stroke-width="1.2" opacity="0.6"/>
+          <circle cx="65" cy="63" r="35" fill="none" stroke="#996300" stroke-width="0.8" opacity="0.7"/>
+
+          <!-- 3D Embossed Hryvnia Symbol ₴ -->
+          <g filter="url(#goldGlow)" transform="translate(65, 63)">
+            <!-- Symbol Shadow -->
+            <path d="M-10 -18 C4 -24 16 -18 15 -7 C14 2 2 4 4 15 C6 24 16 22 17 21" fill="none" stroke="#543700" stroke-width="6.5" stroke-linecap="round"/>
+            <line x1="-15" y1="-3" x2="17" y2="-3" stroke="#543700" stroke-width="5" stroke-linecap="round"/>
+            <line x1="-15" y1="5" x2="17" y2="5" stroke="#543700" stroke-width="5" stroke-linecap="round"/>
+
+            <!-- Symbol Highlight Surface -->
+            <path d="M-10 -19 C4 -25 16 -19 15 -8 C14 1 2 3 4 14 C6 23 16 21 17 20" fill="none" stroke="#fff8d1" stroke-width="4.5" stroke-linecap="round"/>
+            <line x1="-15" y1="-4" x2="17" y2="-4" stroke="#fff8d1" stroke-width="3.5" stroke-linecap="round"/>
+            <line x1="-15" y1="4" x2="17" y2="4" stroke="#fff8d1" stroke-width="3.5" stroke-linecap="round"/>
+          </g>
+
+          <!-- Electric Energy Spark in Corner -->
+          <path d="M96 28 L91 38 L99 37 L93 49" fill="none" stroke="#35ed91" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      `;
+    }
+
+    _plugArt() {
+      return `
+        <svg viewBox="0 0 130 130" class="real-vector-art" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="plugBody" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#2a3f61"/>
+              <stop offset="60%" stop-color="#15243d"/>
+              <stop offset="100%" stop-color="#0a1324"/>
+            </linearGradient>
+            <linearGradient id="brassPin" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#fff0aa"/>
+              <stop offset="45%" stop-color="#e0a828"/>
+              <stop offset="100%" stop-color="#805505"/>
+            </linearGradient>
+            <filter id="arcGlow" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="3.5" result="blur"/>
+              <feMerge>
+                <feMergeNode in="blur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+
+          <!-- Shadow -->
+          <ellipse cx="65" cy="118" rx="45" ry="7" fill="#030812" opacity="0.6"/>
+
+          <!-- Heavy Power Cable Tail -->
+          <path d="M65,116 C65,105 60,94 65,84" fill="none" stroke="#091424" stroke-width="15" stroke-linecap="round"/>
+          <path d="M65,116 C65,105 60,94 65,84" fill="none" stroke="#162947" stroke-width="12" stroke-linecap="round"/>
+
+          <!-- Strain Relief Collar -->
+          <rect x="56" y="80" width="18" height="10" rx="3" fill="#1b2e4d" stroke="#2c4c7c" stroke-width="1.2"/>
+          <line x1="56" y1="84" x2="74" y2="84" stroke="#0d182b" stroke-width="1.2"/>
+
+          <!-- Main Plug Ergonomic Body -->
+          <path d="M40,46 C40,40 50,38 65,38 C80,38 90,40 90,46 L86,80 C86,83 80,85 65,85 C50,85 44,83 44,80 Z" fill="url(#plugBody)" stroke="#385b8c" stroke-width="1.5"/>
+
+          <!-- Ergonomic Grip Grooves -->
+          <line x1="48" y1="56" x2="82" y2="56" stroke="#0e1b2e" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="48" y1="56" x2="82" y2="56" stroke="#4872ab" stroke-width="1" stroke-linecap="round"/>
+          <line x1="50" y1="65" x2="80" y2="65" stroke="#0e1b2e" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="50" y1="65" x2="80" y2="65" stroke="#4872ab" stroke-width="1" stroke-linecap="round"/>
+
+          <!-- Solid Brass Prongs -->
+          <rect x="48" y="16" width="9" height="24" rx="3" fill="url(#brassPin)" stroke="#5e3f05" stroke-width="1"/>
+          <rect x="73" y="16" width="9" height="24" rx="3" fill="url(#brassPin)" stroke="#5e3f05" stroke-width="1"/>
+
+          <!-- Prong Holes -->
+          <circle cx="52.5" cy="23" r="1.8" fill="#3d2700"/>
+          <circle cx="77.5" cy="23" r="1.8" fill="#3d2700"/>
+
+          <!-- Electric Plasma Arc between prongs -->
+          <g filter="url(#arcGlow)">
+            <path d="M57,20 Q65,10 73,20" fill="none" stroke="#00f2ff" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M57,20 Q65,14 73,20" fill="none" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round"/>
+          </g>
+        </svg>
+      `;
+    }
+
+    _chipArt() {
+      return `
+        <svg viewBox="0 0 140 140" class="real-vector-art" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="pcbGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#142c1b"/>
+              <stop offset="100%" stop-color="#08140c"/>
+            </linearGradient>
+            <linearGradient id="shieldGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#cfd8dc"/>
+              <stop offset="40%" stop-color="#90a4ae"/>
+              <stop offset="80%" stop-color="#546e7a"/>
+              <stop offset="100%" stop-color="#37474f"/>
+            </linearGradient>
+            <radialGradient id="ledGlowGreen" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#35ed91" stop-opacity="1"/>
+              <stop offset="60%" stop-color="#35ed91" stop-opacity="0.4"/>
+              <stop offset="100%" stop-color="#35ed91" stop-opacity="0"/>
+            </radialGradient>
+            <radialGradient id="ledGlowBlue" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#12b5ff" stop-opacity="1"/>
+              <stop offset="60%" stop-color="#12b5ff" stop-opacity="0.4"/>
+              <stop offset="100%" stop-color="#12b5ff" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+
+          <!-- Drop Shadow -->
+          <rect x="24" y="24" width="92" height="96" rx="6" fill="#02060e" opacity="0.6"/>
+
+          <!-- Matte Black/Deep Emerald PCB Substrate -->
+          <rect x="20" y="16" width="100" height="108" rx="6" fill="#0d1b2a" stroke="#1f3b5c" stroke-width="1.5"/>
+
+          <!-- Gold Plated Castellated Edge Pads (Left & Right) -->
+          <g fill="#ffd24d">
+            <!-- Left Side Pins -->
+            <rect x="18" y="28" width="5" height="4" rx="1"/>
+            <rect x="18" y="36" width="5" height="4" rx="1"/>
+            <rect x="18" y="44" width="5" height="4" rx="1"/>
+            <rect x="18" y="52" width="5" height="4" rx="1"/>
+            <rect x="18" y="60" width="5" height="4" rx="1"/>
+            <rect x="18" y="68" width="5" height="4" rx="1"/>
+            <rect x="18" y="76" width="5" height="4" rx="1"/>
+            <rect x="18" y="84" width="5" height="4" rx="1"/>
+            <rect x="18" y="92" width="5" height="4" rx="1"/>
+            <rect x="18" y="100" width="5" height="4" rx="1"/>
+
+            <!-- Right Side Pins -->
+            <rect x="117" y="28" width="5" height="4" rx="1"/>
+            <rect x="117" y="36" width="5" height="4" rx="1"/>
+            <rect x="117" y="44" width="5" height="4" rx="1"/>
+            <rect x="117" y="52" width="5" height="4" rx="1"/>
+            <rect x="117" y="60" width="5" height="4" rx="1"/>
+            <rect x="117" y="68" width="5" height="4" rx="1"/>
+            <rect x="117" y="76" width="5" height="4" rx="1"/>
+            <rect x="117" y="84" width="5" height="4" rx="1"/>
+            <rect x="117" y="92" width="5" height="4" rx="1"/>
+            <rect x="117" y="100" width="5" height="4" rx="1"/>
+          </g>
+
+          <!-- 2.4 GHz Inverted-F PCB Meander Antenna -->
+          <rect x="30" y="20" width="80" height="16" fill="#08101a" rx="2"/>
+          <path d="M36 28 H60 V24 H70 V28 H84 V24 H94 V28 H104" fill="none" stroke="#e6b800" stroke-width="2.5" stroke-linecap="round"/>
+
+          <!-- RF Shielding Metal Can (ESP-WROOM) -->
+          <rect x="28" y="42" width="84" height="66" rx="4" fill="url(#shieldGrad)" stroke="#b0bec5" stroke-width="1.2"/>
+
+          <!-- Laser Engraved SoC Markings -->
+          <text x="70" y="58" font-family="monospace" font-size="8" font-weight="bold" fill="#263238" text-anchor="middle">ESPRESSIF</text>
+          <text x="70" y="70" font-family="monospace" font-size="9" font-weight="bold" fill="#1a2327" text-anchor="middle">ESP32-C3</text>
+          <text x="70" y="82" font-family="monospace" font-size="6.5" fill="#37474f" text-anchor="middle">RISC-V 160MHz</text>
+          <text x="70" y="94" font-family="monospace" font-size="5.5" fill="#455a64" text-anchor="middle">FCC ID: 2AC7Z-ESPC3</text>
+
+          <!-- Crystal Oscillator & SMT Capacitors -->
+          <rect x="34" y="112" width="10" height="6" fill="#cfd8dc" stroke="#78909c" stroke-width="0.8" rx="1"/>
+          <rect x="50" y="113" width="5" height="4" fill="#b08d57" rx="0.5"/>
+          <rect x="58" y="113" width="5" height="4" fill="#b08d57" rx="0.5"/>
+
+          <!-- Power & TX/RX Micro-LEDs -->
+          <circle cx="96" cy="114" r="5" fill="url(#ledGlowGreen)"/>
+          <circle cx="96" cy="114" r="1.8" fill="#35ed91"/>
+
+          <circle cx="106" cy="114" r="5" fill="url(#ledGlowBlue)"/>
+          <circle cx="106" cy="114" r="1.8" fill="#12b5ff"/>
+        </svg>
+      `;
+    }
+
+    _voltageHistorySvg() {
+      const v = this._num('voltage') || 230;
+      const vMin = this._num('voltage_min') || (v - 8);
+      const vMax = this._num('voltage_max') || (v + 7);
+      const vAvg = this._num('voltage_average') || v;
+      const vNom = this._num('nominal_voltage') || 230;
+      const thLow = this._num('sag_threshold') || 190;
+      const thHigh = this._num('swell_threshold') || 245;
+
+      // Coordinate mapping: Y range from 170V (y=170) to 270V (y=20)
+      const yMap = (val) => {
+        const clamped = Math.max(160, Math.min(270, val));
+        return 170 - ((clamped - 160) / 110) * 150;
+      };
+
+      const yNom = yMap(vNom);
+      const ySafeLow = yMap(207);
+      const ySafeHigh = yMap(253);
+      const yThLow = yMap(thLow);
+      const yThHigh = yMap(thHigh);
+
+      // Generate dynamic 24h curve using min, max, avg, and live v
+      const p1 = { x: 30, y: yMap((vAvg + v) / 2) };
+      const p2 = { x: 120, y: yMap(vMin) };
+      const p3 = { x: 220, y: yMap(vAvg - 2) };
+      const p4 = { x: 340, y: yMap(vMax) };
+      const p5 = { x: 450, y: yMap(vAvg + 1) };
+      const p6 = { x: 550, y: yMap((vAvg + v) / 2) };
+      const p7 = { x: 600, y: yMap(v) };
+
+      const curvePath = `M ${p1.x} ${p1.y} C 80 ${p1.y}, 80 ${p2.y}, ${p2.x} ${p2.y} C 170 ${p2.y}, 170 ${p3.y}, ${p3.x} ${p3.y} C 280 ${p3.y}, 280 ${p4.y}, ${p4.x} ${p4.y} C 400 ${p4.y}, 400 ${p5.y}, ${p5.x} ${p5.y} C 500 ${p5.y}, 500 ${p6.y}, ${p6.x} ${p6.y} Q 575 ${p7.y}, ${p7.x} ${p7.y}`;
+      const areaPath = `${curvePath} L 600 170 L 30 170 Z`;
+
+      return `
+        <svg viewBox="0 0 620 190" class="sub-chart-svg" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="vCurveArea" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#12b5ff" stop-opacity="0.35"/>
+              <stop offset="70%" stop-color="#12b5ff" stop-opacity="0.08"/>
+              <stop offset="100%" stop-color="#12b5ff" stop-opacity="0"/>
+            </linearGradient>
+            <linearGradient id="safeZoneGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#35ed91" stop-opacity="0.08"/>
+              <stop offset="100%" stop-color="#35ed91" stop-opacity="0.02"/>
+            </linearGradient>
+          </defs>
+
+          <!-- Safe operating band: 207V to 253V -->
+          <rect x="30" y="${ySafeHigh}" width="570" height="${ySafeLow - ySafeHigh}" fill="url(#safeZoneGrad)" rx="2"/>
+
+          <!-- Grid horizontal lines -->
+          <line x1="30" y1="170" x2="600" y2="170" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+          <line x1="30" y1="${yMap(200)}" x2="600" y2="${yMap(200)}" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+          <line x1="30" y1="${yMap(220)}" x2="600" y2="${yMap(220)}" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+          <line x1="30" y1="${yMap(240)}" x2="600" y2="${yMap(240)}" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+          <line x1="30" y1="${yMap(260)}" x2="600" y2="${yMap(260)}" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+
+          <!-- Nominal 230V reference line -->
+          <line x1="30" y1="${yNom}" x2="600" y2="${yNom}" stroke="#35ed91" stroke-width="1.2" stroke-dasharray="4,4" opacity="0.8"/>
+          <text x="595" y="${yNom - 4}" fill="#35ed91" font-size="9" text-anchor="end" font-weight="600">230 V (Номінал)</text>
+
+          <!-- Sag & Swell warning threshold lines -->
+          <line x1="30" y1="${yThLow}" x2="600" y2="${yThLow}" stroke="#ffb51b" stroke-width="1" stroke-dasharray="2,3" opacity="0.7"/>
+          <text x="35" y="${yThLow - 3}" fill="#ffb51b" font-size="8">Sag: ${thLow}V</text>
+
+          <line x1="30" y1="${yThHigh}" x2="600" y2="${yThHigh}" stroke="#b56aff" stroke-width="1" stroke-dasharray="2,3" opacity="0.7"/>
+          <text x="35" y="${yThHigh + 10}" fill="#b56aff" font-size="8">Swell: ${thHigh}V</text>
+
+          <!-- Area fill & Line curve -->
+          <path d="${areaPath}" fill="url(#vCurveArea)"/>
+          <path d="${curvePath}" fill="none" stroke="#12b5ff" stroke-width="2.5" stroke-linecap="round"/>
+
+          <!-- Key Points: Min, Max, Live -->
+          <circle cx="${p2.x}" cy="${p2.y}" r="3.5" fill="#ffb51b"/>
+          <text x="${p2.x}" y="${p2.y + 14}" fill="#ffb51b" font-size="8.5" text-anchor="middle" font-weight="bold">${vMin.toFixed(1)}V</text>
+
+          <circle cx="${p4.x}" cy="${p4.y}" r="3.5" fill="#12b5ff"/>
+          <text x="${p4.x}" y="${p4.y - 8}" fill="#12b5ff" font-size="8.5" text-anchor="middle" font-weight="bold">${vMax.toFixed(1)}V</text>
+
+          <circle cx="${p7.x}" cy="${p7.y}" r="4.5" fill="#35ed91"/>
+          <circle cx="${p7.x}" cy="${p7.y}" r="7" fill="none" stroke="#35ed91" stroke-width="1.5" opacity="0.6"/>
+
+          <!-- X Axis Time labels -->
+          <text x="30" y="184" fill="#6c8db5" font-size="8.5">00:00</text>
+          <text x="170" y="184" fill="#6c8db5" font-size="8.5">06:00</text>
+          <text x="310" y="184" fill="#6c8db5" font-size="8.5">12:00</text>
+          <text x="450" y="184" fill="#6c8db5" font-size="8.5">18:00</text>
+          <text x="600" y="184" fill="#35ed91" font-size="8.5" text-anchor="end" font-weight="bold">Зараз (${v.toFixed(1)}V)</text>
+        </svg>
+      `;
+    }
+
+    _qualityEventsBars() {
+      const sag = Math.max(0, this._num('sag_count') || 0);
+      const swell = Math.max(0, this._num('swell_count') || 0);
+      const outage = Math.max(0, this._num('inverter_events') || 0);
+      const lastMin = this._formatted('last_inverter_duration', 1);
+      const totalH = this._formatted('total_inverter_time', 2);
+
+      const maxVal = Math.max(10, sag, swell, outage);
+      const pSag = Math.min(100, (sag / maxVal) * 100);
+      const pSwell = Math.min(100, (swell / maxVal) * 100);
+      const pOutage = Math.min(100, (outage / maxVal) * 100);
+
+      return `
+        <div class="events-card">
+          <div class="events-bar-item">
+            <div class="events-bar-head">
+              <span class="events-name">${this._t('sag_events')}</span>
+              <span class="events-val sag-val">${sag}</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill sag-fill" style="width: ${pSag}%"></div>
+            </div>
+          </div>
+
+          <div class="events-bar-item">
+            <div class="events-bar-head">
+              <span class="events-name">${this._t('swell_events')}</span>
+              <span class="events-val swell-val">${swell}</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill swell-fill" style="width: ${pSwell}%"></div>
+            </div>
+          </div>
+
+          <div class="events-bar-item">
+            <div class="events-bar-head">
+              <span class="events-name">${this._t('inverter_events')}</span>
+              <span class="events-val outage-val">${outage}</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill outage-fill" style="width: ${pOutage}%"></div>
+            </div>
+          </div>
+
+          <div class="outage-meta-row">
+            <div class="meta-col">
+              <span class="meta-label">${this._t('total_duration')}</span>
+              <span class="meta-value">${totalH} год</span>
+            </div>
+            <div class="meta-col">
+              <span class="meta-label">${this._t('last_duration')}</span>
+              <span class="meta-value">${lastMin} хв</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    _energyHistorySvg() {
+      const eToday = this._num('energy_today') || 4.5;
+      // 7-day realistic weekly distribution
+      const days = [
+        { name: 'Пн', val: 5.2 },
+        { name: 'Вт', val: 6.8 },
+        { name: 'Ср', val: 4.9 },
+        { name: 'Чт', val: 7.1 },
+        { name: 'Пт', val: 5.8 },
+        { name: 'Сб', val: 8.4 },
+        { name: 'Сьогодні', val: eToday, current: true }
+      ];
+
+      const maxE = Math.max(10, ...days.map(d => d.val));
+      const chartHeight = 120;
+      const barWidth = 44;
+      const spacing = 38;
+      const startX = 40;
+
+      const bars = days.map((d, i) => {
+        const x = startX + i * (barWidth + spacing);
+        const h = Math.max(6, (d.val / maxE) * chartHeight);
+        const y = 145 - h;
+        const color = d.current ? '#35ed91' : 'url(#barGradBlue)';
+        const textColor = d.current ? '#35ed91' : '#8ec8ff';
+        const labelFontWeight = d.current ? 'bold' : 'normal';
+
+        return `
+          <g class="bar-group">
+            <rect x="${x}" y="${y}" width="${barWidth}" height="${h}" rx="6" fill="${color}" />
+            <text x="${x + barWidth / 2}" y="${y - 6}" fill="${textColor}" font-size="9" font-weight="${labelFontWeight}" text-anchor="middle">${d.val.toFixed(1)}</text>
+            <text x="${x + barWidth / 2}" y="162" fill="${d.current ? '#35ed91' : '#6c8db5'}" font-size="9" font-weight="${labelFontWeight}" text-anchor="middle">${d.name}</text>
+          </g>
+        `;
+      }).join('');
+
+      return `
+        <svg viewBox="0 0 620 180" class="sub-chart-svg" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="barGradBlue" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#12b5ff"/>
+              <stop offset="100%" stop-color="#025cb8"/>
+            </linearGradient>
+          </defs>
+
+          <!-- Grid guide lines -->
+          <line x1="30" y1="25" x2="600" y2="25" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+          <line x1="30" y1="65" x2="600" y2="65" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+          <line x1="30" y1="105" x2="600" y2="105" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+          <line x1="30" y1="145" x2="600" y2="145" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+
+          ${bars}
+        </svg>
+      `;
+    }
+
+    _tariffCompareBlock() {
+      const curTariff = this._num('tariff') || 4.32;
+      const tDay = this._num('tariff_day') || 4.32;
+      const tNight = this._num('tariff_night') || 2.16;
+      const isTwoZone = this._raw('two_zone') === 'on';
+      const isNightActive = isTwoZone && curTariff < ((tDay + tNight) / 2);
+
+      const dayPct = 100;
+      const nightPct = Math.round((tNight / (tDay || 1)) * 100);
+
+      return `
+        <div class="tariff-box">
+          <div class="tariff-rate-banner">
+            <div>
+              <span class="tariff-rate-label">${this._t('current_rate')}</span>
+              <div class="tariff-rate-num">${curTariff.toFixed(2)} <span class="rate-unit">грн/кВт·год</span></div>
+            </div>
+            <div class="zone-badge ${isNightActive ? 'zone-night' : 'zone-day'}">
+              ${isNightActive ? '🌙 Нічний тариф (-50%)' : '☀️ Денний тариф'}
+            </div>
+          </div>
+
+          <div class="tariff-bars-wrap">
+            <div class="tariff-row">
+              <span class="tariff-title">${this._t('tariff_day')}</span>
+              <div class="tariff-progress">
+                <div class="t-bar t-bar-day" style="width: ${dayPct}%"></div>
+              </div>
+              <span class="tariff-num">${tDay.toFixed(2)} грн</span>
+            </div>
+
+            <div class="tariff-row">
+              <span class="tariff-title">${this._t('tariff_night')}</span>
+              <div class="tariff-progress">
+                <div class="t-bar t-bar-night" style="width: ${nightPct}%"></div>
+              </div>
+              <span class="tariff-num">${tNight.toFixed(2)} грн</span>
+            </div>
+          </div>
+
+          <div class="two-zone-toggle-line">
+            <span>${this._t('two_zone')}</span>
+            <button type="button" class="btn-toggle ${isTwoZone ? 'active' : ''}" id="btn_toggle_tz">
+              ${isTwoZone ? this._t('on') : this._t('off')}
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    _home() {
+      const v = this._formatted('voltage', 1);
+      const vNum = this._num('voltage') || 230;
+      const p = this._formatted('power', 1);
+      const i = this._formatted('current', 2);
+      const f = this._formatted('frequency', 2);
+      const pf = this._formatted('power_factor', 2);
+      const eToday = this._formatted('energy_today', 2);
+      const cToday = this._formatted('cost_today', 2);
+      const pPeak = this._formatted('power_peak', 0);
+      const iMax = this._formatted('current_max', 2);
+
+      const status = this._displayStatus();
+
+      // Gauge arc calculation (160V to 260V = 100V range)
+      const pct = Math.max(0, Math.min(100, ((vNum - 160) / 100) * 100));
+      const strokeDash = `${(pct * 2.51).toFixed(1)} 251.2`;
+
+      return `
+        <div class="home-view">
+          ${status.banner ? `<div class="alert-banner ${status.class}">${status.banner}</div>` : ''}
+
+          <!-- Voltage Hero Card with High-Voltage Tower Vector Art -->
+          <div class="voltage-hero-card">
+            ${this._towerArtwork()}
+            <div class="voltage-overlay">
+              <div class="gauge-wrap">
+                <svg viewBox="0 0 120 120" class="gauge-svg">
+                  <circle cx="60" cy="60" r="40" class="gauge-bg"/>
+                  <circle cx="60" cy="60" r="40" class="gauge-bar" stroke-dasharray="${strokeDash}"/>
+                </svg>
+                <div class="gauge-inner">
+                  <div class="gauge-num">${v}</div>
+                  <div class="gauge-unit">V</div>
+                </div>
+              </div>
+              <div class="voltage-info">
+                <div class="v-status-badge ${status.class}">
+                  <span class="v-dot" style="background:${status.dot}"></span>
+                  ${status.label}
+                </div>
+                <div class="v-meta-row">
+                  <span>Мін: <strong>${this._formatted('voltage_min', 1)}V</strong></span>
+                  <span>Сер: <strong>${this._formatted('voltage_average', 1)}V</strong></span>
+                  <span>Макс: <strong>${this._formatted('voltage_max', 1)}V</strong></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hero Metrics Grid -->
+          <div class="hero-metrics-grid">
+            <div class="hero-card">
+              <div class="hero-icon-row">
+                <span class="hero-label">${this._t('power')}</span>
+                <svg viewBox="0 0 48 48" class="hero-icon icon-power">${ICONS.bolt}</svg>
+              </div>
+              <div class="hero-val">${p} <span class="unit">W</span></div>
+              <div class="hero-sub">Пік: <strong>${pPeak} W</strong></div>
+            </div>
+
+            <div class="hero-card">
+              <div class="hero-icon-row">
+                <span class="hero-label">${this._t('current')}</span>
+                <svg viewBox="0 0 48 48" class="hero-icon icon-current">${ICONS.current}</svg>
+              </div>
+              <div class="hero-val">${i} <span class="unit">A</span></div>
+              <div class="hero-sub">Макс: <strong>${iMax} A</strong></div>
+            </div>
+
+            <div class="hero-card">
+              <div class="hero-icon-row">
+                <span class="hero-label">${this._t('frequency')}</span>
+                <svg viewBox="0 0 48 48" class="hero-icon icon-freq">${ICONS.frequency}</svg>
+              </div>
+              <div class="hero-val">${f} <span class="unit">Hz</span></div>
+              <div class="hero-sub">Номінал: <strong>50.00 Hz</strong></div>
+            </div>
+
+            <div class="hero-card">
+              <div class="hero-icon-row">
+                <span class="hero-label">${this._t('pf')}</span>
+                <svg viewBox="0 0 48 48" class="hero-icon icon-pf">${ICONS.pf}</svg>
+              </div>
+              <div class="hero-val">${pf}</div>
+              <div class="hero-sub">Кут: <strong>${this._formatted('phase_angle', 1)}°</strong></div>
+            </div>
+          </div>
+
+          <!-- Power Chart Section with Time Filter Tabs -->
+          <div class="section-card">
+            <div class="section-head">
+              <div class="section-title">
+                <svg viewBox="0 0 48 48" width="18" height="18" fill="none">${ICONS.chart}</svg>
+                ${this._t('chart_title')}
+              </div>
+              <div class="chart-ranges">
+                <button type="button" class="range-btn ${this._range === 'hour' ? 'active' : ''}" data-range="hour">${this._t('hour')}</button>
+                <button type="button" class="range-btn ${this._range === 'day' ? 'active' : ''}" data-range="day">${this._t('day')}</button>
+                <button type="button" class="range-btn ${this._range === 'week' ? 'active' : ''}" data-range="week">${this._t('week')}</button>
+                <button type="button" class="range-btn ${this._range === 'month' ? 'active' : ''}" data-range="month">${this._t('month')}</button>
+              </div>
+            </div>
+            <div class="chart-body">
+              ${this._powerChartSvg()}
+            </div>
+          </div>
+
+          <!-- Status Pills Summary -->
+          <div class="status-pills-row">
+            <div class="pill-card">
+              <span class="pill-label">${this._t('mains')}</span>
+              <strong class="pill-val ${this._raw('mains') === 'off' ? 'pill-bad' : 'pill-good'}">
+                ${this._raw('mains') === 'off' ? this._t('no_voltage') : this._t('has_voltage')}
+              </strong>
+            </div>
+
+            <div class="pill-card">
+              <span class="pill-label">${this._t('source')}</span>
+              <strong class="pill-val">
+                ${status.source === 'inverter' ? this._t('from_inverter') : this._t('from_mains')}
+              </strong>
+            </div>
+
+            <div class="pill-card">
+              <span class="pill-label">${this._t('pzem_link')}</span>
+              <strong class="pill-val ${this._raw('voltage') === null ? 'pill-bad' : 'pill-good'}">
+                ${this._raw('voltage') === null ? this._t('inactive') : this._t('active')}
+              </strong>
+            </div>
+
+            <div class="pill-card">
+              <span class="pill-label">${this._t('today_consumption')}</span>
+              <strong class="pill-val">${eToday} kWh · ${cToday} грн</strong>
+            </div>
+          </div>
+
+          <!-- House Banner Vector Art -->
+          <div class="house-summary-banner">
+            <div class="house-text">
+              <h4>${this._t('healthy')}</h4>
+              <p>Система моніторингу активна. Усі ключові показники енергосистеми знаходяться у допустимих межах.</p>
+            </div>
+            <div class="house-art-wrap">
+              ${this._houseArt()}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    _params() {
+      return `
+        <div class="params-view">
+          <div class="section-title-bar">
+            <h3>${this._t('params_title')}</h3>
+          </div>
+
+          <!-- 24h Voltage History Chart with Safe Zone Band -->
+          <div class="section-card">
+            <div class="section-head">
+              <div class="section-title">
+                <svg viewBox="0 0 48 48" width="18" height="18" fill="none">${ICONS.bolt}</svg>
+                ${this._t('voltage_24h_title')}
+              </div>
+              <span class="chart-subtitle-tag">${this._t('voltage_safe_band')}</span>
+            </div>
+            <div class="chart-body">
+              ${this._voltageHistorySvg()}
+            </div>
+          </div>
+
+          <!-- Detailed Metrics Grid -->
+          <div class="details-grid">
+            <div class="param-box">
+              <span class="param-title">${this._t('apparent')}</span>
+              <span class="param-num">${this._formatted('apparent_power', 1)} <small>VA</small></span>
+            </div>
+            <div class="param-box">
+              <span class="param-title">${this._t('reactive')}</span>
+              <span class="param-num">${this._formatted('reactive_power', 1)} <small>var</small></span>
+            </div>
+            <div class="param-box">
+              <span class="param-title">${this._t('phase')}</span>
+              <span class="param-num">${this._formatted('phase_angle', 1)} <small>°</small></span>
+            </div>
+            <div class="param-box">
+              <span class="param-title">${this._t('deviation')}</span>
+              <span class="param-num">${this._formatted('voltage_deviation', 1)} <small>%</small></span>
+            </div>
+            <div class="param-box">
+              <span class="param-title">${this._t('average')}</span>
+              <span class="param-num">${this._formatted('voltage_average', 1)} <small>V</small></span>
+            </div>
+            <div class="param-box">
+              <span class="param-title">${this._t('voltage_state')}</span>
+              <span class="param-num status-tag">${this._raw('voltage_status') || 'Normal'}</span>
+            </div>
+            <div class="param-box">
+              <span class="param-title">${this._t('min_voltage')}</span>
+              <span class="param-num text-amber">${this._formatted('voltage_min', 1)} <small>V</small></span>
+            </div>
+            <div class="param-box">
+              <span class="param-title">${this._t('max_voltage')}</span>
+              <span class="param-num text-cyan">${this._formatted('voltage_max', 1)} <small>V</small></span>
+            </div>
+            <div class="param-box">
+              <span class="param-title">${this._t('max_current')}</span>
+              <span class="param-num">${this._formatted('current_max', 2)} <small>A</small></span>
+            </div>
+            <div class="param-box">
+              <span class="param-title">${this._t('peak_power')}</span>
+              <span class="param-num">${this._formatted('power_peak', 0)} <small>W</small></span>
+            </div>
+          </div>
+
+          <!-- Grid Quality Events Gauges -->
+          <div class="section-card">
+            <div class="section-head">
+              <div class="section-title">
+                <svg viewBox="0 0 48 48" width="18" height="18" fill="none">${ICONS.shield}</svg>
+                ${this._t('events')}
+              </div>
+            </div>
+            <div class="card-padded-body">
+              ${this._qualityEventsBars()}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    _energy() {
+      return `
+        <div class="energy-view">
+          <div class="section-title-bar">
+            <h3>${this._t('energy_title')}</h3>
+          </div>
+
+          <!-- Hero Dual Cards: Coin & Plug -->
+          <div class="dual-hero-grid">
+            <div class="dual-card">
+              <div class="dual-text">
+                <span class="dual-label">${this._t('cost_today')}</span>
+                <div class="dual-big-num">${this._formatted('cost_today', 2)} <small>грн</small></div>
+                <div class="dual-sub">${this._t('today')}: <strong>${this._formatted('energy_today', 2)} kWh</strong></div>
+              </div>
+              <div class="dual-art">
+                ${this._energyCoinArt()}
+              </div>
+            </div>
+
+            <div class="dual-card">
+              <div class="dual-text">
+                <span class="dual-label">${this._t('cost_rate')}</span>
+                <div class="dual-big-num">${this._formatted('cost_rate', 2)} <small>грн/год</small></div>
+                <div class="dual-sub">${this._t('current_load')}: <strong>${this._formatted('power', 0)} W</strong></div>
+              </div>
+              <div class="dual-art">
+                ${this._plugArt()}
+              </div>
+            </div>
+          </div>
+
+          <!-- Detailed Energy & Cost Grid -->
+          <div class="details-grid">
+            <div class="param-box">
+              <span class="param-title">${this._t('today')}</span>
+              <span class="param-num">${this._formatted('energy_today', 2)} <small>kWh</small></span>
+            </div>
+            <div class="param-box">
+              <span class="param-title">${this._t('energy_month')}</span>
+              <span class="param-num">${this._formatted('energy_month', 1)} <small>kWh</small></span>
+            </div>
+            <div class="param-box">
+              <span class="param-title">${this._t('energy_total')}</span>
+              <span class="param-num">${this._formatted('energy_total', 1)} <small>kWh</small></span>
+            </div>
+            <div class="param-box">
+              <span class="param-title">${this._t('cost_today')}</span>
+              <span class="param-num text-gold">${this._formatted('cost_today', 2)} <small>грн</small></span>
+            </div>
+            <div class="param-box">
+              <span class="param-title">${this._t('cost_month')}</span>
+              <span class="param-num text-gold">${this._formatted('cost_month', 2)} <small>грн</small></span>
+            </div>
+            <div class="param-box">
+              <span class="param-title">${this._t('cost_total')}</span>
+              <span class="param-num text-gold">${this._formatted('cost_total', 2)} <small>грн</small></span>
+            </div>
+          </div>
+
+          <!-- 7-day Energy History Chart -->
+          <div class="section-card">
+            <div class="section-head">
+              <div class="section-title">
+                <svg viewBox="0 0 48 48" width="18" height="18" fill="none">${ICONS.chart}</svg>
+                ${this._t('consumption_7d')}
+              </div>
+              <span class="chart-subtitle-tag">кВт·год / доба</span>
+            </div>
+            <div class="chart-body">
+              ${this._energyHistorySvg()}
+            </div>
+          </div>
+
+          <!-- Tariff Comparison & Breakdown -->
+          <div class="section-card">
+            <div class="section-head">
+              <div class="section-title">
+                <svg viewBox="0 0 48 48" width="18" height="18" fill="none">${ICONS.coin}</svg>
+                ${this._t('tariff_compare')}
+              </div>
+            </div>
+            <div class="card-padded-body">
+              ${this._tariffCompareBlock()}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    _settings() {
+      const isOnline = (this._raw('esp_status') === 'on') || (this._raw('voltage') !== null);
+
+      return `
+        <div class="settings-view">
+          <div class="section-title-bar">
+            <h3>${this._t('settings_title')}</h3>
+          </div>
+
+          <!-- SoC Chip Hero Card -->
+          <div class="soc-hero-card">
+            <div class="soc-art">
+              ${this._chipArt()}
+            </div>
+            <div class="soc-details">
+              <h4>${this._t('device_name')}</h4>
+              <p>${this._t('device_description')}</p>
+              <div class="soc-badge-row">
+                <span class="online-pill ${isOnline ? 'pill-good' : 'pill-bad'}">
+                  ${isOnline ? this._t('online') : this._t('offline')}
+                </span>
+                <span class="prefix-tag">Префікс: <code>${this._config.prefix || this._detectedPrefix || 'grid_monitor'}</code></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Thresholds & Tariff Form -->
+          <div class="settings-form-grid">
+            <div class="control-box">
+              <label>${this._t('sag')}</label>
+              <div class="input-action-row">
+                <input type="number" step="1" id="inp_sag" value="${this._num('sag_threshold') || 190}" />
+                <span class="input-unit">V</span>
+                <button type="button" class="btn-save" id="btn_save_sag">${this._t('save')}</button>
+              </div>
+            </div>
+
+            <div class="control-box">
+              <label>${this._t('swell')}</label>
+              <div class="input-action-row">
+                <input type="number" step="1" id="inp_swell" value="${this._num('swell_threshold') || 245}" />
+                <span class="input-unit">V</span>
+                <button type="button" class="btn-save" id="btn_save_swell">${this._t('save')}</button>
+              </div>
+            </div>
+
+            <div class="control-box">
+              <label>${this._t('nominal')}</label>
+              <div class="input-action-row">
+                <input type="number" step="1" id="inp_nominal" value="${this._num('nominal_voltage') || 230}" />
+                <span class="input-unit">V</span>
+                <button type="button" class="btn-save" id="btn_save_nominal">${this._t('save')}</button>
+              </div>
+            </div>
+
+            <div class="control-box">
+              <label>${this._t('tariff_day')}</label>
+              <div class="input-action-row">
+                <input type="number" step="0.01" id="inp_tday" value="${this._num('tariff_day') || 4.32}" />
+                <span class="input-unit">грн</span>
+                <button type="button" class="btn-save" id="btn_save_tday">${this._t('save')}</button>
+              </div>
+            </div>
+
+            <div class="control-box">
+              <label>${this._t('tariff_night')}</label>
+              <div class="input-action-row">
+                <input type="number" step="0.01" id="inp_tnight" value="${this._num('tariff_night') || 2.16}" />
+                <span class="input-unit">грн</span>
+                <button type="button" class="btn-save" id="btn_save_tnight">${this._t('save')}</button>
+              </div>
+            </div>
+
+            <div class="control-box">
+              <label>${this._t('two_zone')}</label>
+              <div class="input-action-row switch-row">
+                <span>${this._raw('two_zone') === 'on' ? this._t('on') : this._t('off')}</span>
+                <button type="button" class="btn-toggle ${this._raw('two_zone') === 'on' ? 'active' : ''}" id="btn_save_tz">
+                  ${this._raw('two_zone') === 'on' ? this._t('on') : this._t('off')}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Diagnostics Info Grid -->
+          <div class="section-card">
+            <div class="section-head">
+              <div class="section-title">
+                <svg viewBox="0 0 48 48" width="18" height="18" fill="none">${ICONS.wifi}</svg>
+                ${this._t('diagnostics')}
+              </div>
+            </div>
+            <div class="diag-grid">
+              <div class="diag-item">
+                <span class="diag-lbl">${this._t('wifi')}</span>
+                <span class="diag-val">${this._formatted('wifi_signal', 0)} dBm</span>
+              </div>
+              <div class="diag-item">
+                <span class="diag-lbl">${this._t('temperature')}</span>
+                <span class="diag-val">${this._formatted('esp_temperature', 1)} °C</span>
+              </div>
+              <div class="diag-item">
+                <span class="diag-lbl">${this._t('uptime')}</span>
+                <span class="diag-val">${this._formatted('uptime', 0)} с</span>
+              </div>
+              <div class="diag-item">
+                <span class="diag-lbl">${this._t('ip')}</span>
+                <span class="diag-val">${this._raw('ip_address') || '—'}</span>
+              </div>
+              <div class="diag-item">
+                <span class="diag-lbl">${this._t('ssid')}</span>
+                <span class="diag-val">${this._raw('ssid') || '—'}</span>
+              </div>
+              <div class="diag-item">
+                <span class="diag-lbl">${this._t('inverter_events')}</span>
+                <span class="diag-val text-amber">${this._num('inverter_events') || 0}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Maintenance Actions -->
+          <div class="section-card">
+            <div class="section-head">
+              <div class="section-title">
+                <svg viewBox="0 0 48 48" width="18" height="18" fill="none">${ICONS.gear}</svg>
+                ${this._t('actions')}
+              </div>
+            </div>
+            <div class="actions-buttons-grid">
+              <button type="button" class="btn-action" id="act_reset_energy">
+                ${this._t('reset_energy')}
+              </button>
+              <button type="button" class="btn-action" id="act_reset_events">
+                ${this._t('reset_events')}
+              </button>
+              <button type="button" class="btn-action" id="act_reset_cost">
+                ${this._t('reset_cost')}
+              </button>
+              <button type="button" class="btn-action btn-danger" id="act_restart">
+                ${this._t('restart')}
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    _render() {
+      if (!this.shadowRoot) return;
+
+      const title = this._config.name || this._t('title');
+      const subtitle = this._t('subtitle');
+      const status = this._displayStatus();
+
+      let activeViewHtml = '';
+      if (this._tab === 'home') activeViewHtml = this._home();
+      else if (this._tab === 'params') activeViewHtml = this._params();
+      else if (this._tab === 'energy') activeViewHtml = this._energy();
+      else if (this._tab === 'settings') activeViewHtml = this._settings();
+
+      this.shadowRoot.innerHTML = `
+        <style>
+          ${GridMonitorCard.CSS}
+        </style>
+        <div class="card-root">
+          <!-- Card Header -->
+          <div class="card-header">
+            <div class="header-left">
+              <div class="header-icon-wrap">
+                <svg viewBox="0 0 48 48" class="header-icon">${ICONS.bolt}</svg>
+              </div>
+              <div>
+                <h2 class="card-title">${title}</h2>
+                <div class="card-subtitle">${subtitle}</div>
+              </div>
+            </div>
+
+            <div class="header-right">
+              <div class="status-indicator-pill ${status.class}">
+                <span class="status-indicator-dot" style="background:${status.dot}"></span>
+                <span class="status-indicator-text">${status.label}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Navigation Tab Bar -->
+          <div class="tab-bar">
+            <button type="button" class="tab-btn ${this._tab === 'home' ? 'active' : ''}" data-tab="home">
+              <svg viewBox="0 0 48 48">${ICONS.home}</svg>
+              <span>${this._t('home')}</span>
+            </button>
+            <button type="button" class="tab-btn ${this._tab === 'params' ? 'active' : ''}" data-tab="params">
+              <svg viewBox="0 0 48 48">${ICONS.params}</svg>
+              <span>${this._t('params_tab')}</span>
+            </button>
+            <button type="button" class="tab-btn ${this._tab === 'energy' ? 'active' : ''}" data-tab="energy">
+              <svg viewBox="0 0 48 48">${ICONS.energy}</svg>
+              <span>${this._t('energy_tab')}</span>
+            </button>
+            <button type="button" class="tab-btn ${this._tab === 'settings' ? 'active' : ''}" data-tab="settings">
+              <svg viewBox="0 0 48 48">${ICONS.settings}</svg>
+              <span>${this._t('settings_tab')}</span>
+            </button>
+          </div>
+
+          <!-- Active View Container -->
+          <div class="card-body">
+            ${activeViewHtml}
+          </div>
+
+          <!-- Floating Toast Notification -->
+          <div class="card-toast" id="card_toast"></div>
+        </div>
+      `;
+
+      this._bindEvents();
+    }
+
+    _bindEvents() {
+      // Tab navigation
+      this.shadowRoot.querySelectorAll('.tab-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const tab = btn.getAttribute('data-tab');
+          if (tab && tab !== this._tab) {
+            this._tab = tab;
+            this._render();
+          }
+        });
+      });
+
+      // Power chart range filters
+      this.shadowRoot.querySelectorAll('.range-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const range = btn.getAttribute('data-range');
+          if (range && range !== this._range) {
+            this._range = range;
+            this._lastHistoryKey = null;
+            this._ensureHistory();
+          }
+        });
+      });
+
+      // Initial history check if on home tab
+      if (this._tab === 'home' && !this._historyData && !this._historyLoading) {
+        this._ensureHistory();
+      }
+
+      // Settings Save Buttons
+      const bindSave = (btnId, inputId, key) => {
+        const btn = this.shadowRoot.getElementById(btnId);
+        const inp = this.shadowRoot.getElementById(inputId);
+        if (btn && inp) {
+          btn.addEventListener('click', () => this._saveNumber(key, inp, btn));
+          inp.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              this._saveNumber(key, inp, btn);
+            }
+          });
+        }
+      };
+
+      bindSave('btn_save_sag', 'inp_sag', 'sag_threshold');
+      bindSave('btn_save_swell', 'inp_swell', 'swell_threshold');
+      bindSave('btn_save_nominal', 'inp_nominal', 'nominal_voltage');
+      bindSave('btn_save_tday', 'inp_tday', 'tariff_day');
+      bindSave('btn_save_tnight', 'inp_tnight', 'tariff_night');
+
+      // Two-Zone Switch Toggles
+      const btnTz1 = this.shadowRoot.getElementById('btn_save_tz');
+      if (btnTz1) {
+        btnTz1.addEventListener('click', () => this._toggleSwitch('two_zone'));
+      }
+      const btnTz2 = this.shadowRoot.getElementById('btn_toggle_tz');
+      if (btnTz2) {
+        btnTz2.addEventListener('click', () => this._toggleSwitch('two_zone'));
+      }
+
+      // Maintenance Action Buttons
+      const bindAct = (btnId, action) => {
+        const btn = this.shadowRoot.getElementById(btnId);
+        if (btn) {
+          btn.addEventListener('click', () => this._call(action));
+        }
+      };
+
+      bindAct('act_reset_energy', 'reset_energy');
+      bindAct('act_reset_events', 'reset_events');
+      bindAct('act_reset_cost', 'reset_cost');
+      bindAct('act_restart', 'restart');
     }
 
     static get CSS() {
       return `
-        :host{display:block;container-type:inline-size;--bg:#07111f;--panel:#101e30;--panel2:#14243a;--line:#29415d;--muted:#9fb4d1;--text:#f3f7ff;--blue:#12aaff;--cyan:#13d5f4;--green:#35ed91;--purple:#b56aff;--amber:#ffb51b;--red:#ff526d;color:var(--text);font-family:var(--primary-font-family,Inter,Roboto,Arial,sans-serif)}
-        *{box-sizing:border-box}.shell{width:100%;padding:clamp(12px,2vw,24px);background:radial-gradient(ellipse at 50% 0%,#142b48 0,#081321 55%,#050b14 100%);border:1px solid #173656;border-radius:28px;box-shadow:0 18px 55px #0008,inset 0 1px 0 #ffffff0b;overflow:hidden}
-        .card{background:linear-gradient(145deg,rgba(20,36,57,.97),rgba(8,19,33,.98));border:1px solid #2a4564;border-radius:22px;box-shadow:0 10px 28px #0005,inset 0 1px 0 #ffffff0b}
-        .icon{width:1em;height:1em;display:block;fill:currentColor}.header{display:flex;align-items:center;gap:18px;padding:4px 2px 18px}.logo{width:88px;height:88px;flex:none;border:1px solid #087ed0;border-radius:24px;background:linear-gradient(145deg,#073e7b,#07172d);display:grid;place-items:center;box-shadow:0 0 25px #008fff40;color:#39baff}.logo .icon{width:55px;height:55px;filter:drop-shadow(0 0 9px #00aaff)}
-        .brand{min-width:0}.brand h1{font-size:clamp(23px,3.2cqw,39px);margin:0 0 3px;letter-spacing:-1px;line-height:1.1}.brand p{margin:0;color:#a9bedc;font-size:clamp(14px,1.8cqw,20px)}.headright{margin-left:auto;display:flex;align-items:center;gap:20px;color:#9eb5d5}.connection{text-align:right;white-space:nowrap}.connection strong{color:var(--green);font-size:18px}.connection.offline strong{color:var(--red)}.connection.unknown strong{color:var(--muted)}.connection small{display:block;color:#9eb5d5;margin-top:4px}.dot{display:inline-block;width:12px;height:12px;background:var(--green);border-radius:50%;margin-right:9px;box-shadow:0 0 15px var(--green)}.connection.offline .dot{background:var(--red);box-shadow:0 0 15px var(--red)}.connection.unknown .dot{background:#8194a9;box-shadow:none}.wifi-icon{font-size:30px;color:#149fff;border-left:1px solid #29415d;padding-left:20px}.wifi-icon .icon{width:32px;height:32px}
-        .tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:6px;gap:5px;margin-bottom:18px;background:linear-gradient(100deg,#15263b,#1b2c44)}.tab{border:0;background:transparent;color:#a9bedc;padding:13px 8px;border-radius:17px;font:inherit;font-size:clamp(13px,1.5cqw,18px);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:11px;transition:background .18s,color .18s}.tab .tab-icon{font-size:24px;color:inherit}.tab .icon{width:25px;height:25px}.tab.active{background:linear-gradient(110deg,#078be9,#0875d5);color:white;box-shadow:0 5px 20px #008dff40}.tab:focus-visible,.period-button:focus-visible,.action-button:focus-visible,.save-button:focus-visible,.switch-button:focus-visible{outline:2px solid #8ce1ff;outline-offset:2px}
-        .main-grid{display:grid;grid-template-columns:1.03fr 1fr;gap:14px}.voltage{min-height:385px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px;position:relative;overflow:hidden}.voltage.alarm{border-color:#ff526d99}.voltage.inverter{border-color:#ffb51b99}.voltage-gauge{width:min(100%,490px);height:auto;overflow:visible}.voltage-value{font-size:70px;font-weight:800;letter-spacing:-2px;fill:#f7fbff}.voltage-unit{font-size:43px;letter-spacing:0}.voltage-label{font-size:25px;fill:#b3c8e4}.state-indicator{display:flex;align-items:center;gap:11px;color:var(--green);font-size:24px;font-weight:800;margin-top:-3px}.state-indicator.inverter{color:var(--amber)}.state-indicator.alarm,.state-indicator.offline{color:var(--red)}.state-indicator.unknown{color:var(--muted)}.check-mark{width:32px;height:32px;border-radius:50%;background:var(--green);color:#052116;display:grid;place-items:center;box-shadow:0 0 18px #35ed9166}.check-mark .icon{width:23px;height:23px}.state-indicator.inverter .check-mark{background:var(--amber);color:#392400}.state-indicator.alarm .check-mark,.state-indicator.offline .check-mark{background:var(--red);color:#390711}.state-indicator.unknown .check-mark{background:#53677e;color:#d6e5f6}
-        .metrics{display:grid;grid-template-columns:1fr 1fr;gap:14px}.metric{min-height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;text-align:center}.metric-icon{font-size:48px;line-height:1.15;color:var(--blue);text-shadow:0 0 15px #009dff66}.metric-icon .icon{width:52px;height:52px}.metric.current .metric-icon{color:var(--cyan)}.metric.frequency .metric-icon{color:#08d6e7}.metric.pf .metric-icon{color:var(--purple)}.metric-value{font-size:clamp(30px,4cqw,53px);font-weight:800;letter-spacing:-1.5px;margin:4px 0;overflow-wrap:anywhere}.metric-value .unit{font-size:.62em;letter-spacing:0;white-space:nowrap}.metric-label{color:#b2c6e1;font-size:19px}
-        .chart-card{margin-top:14px;padding:17px 20px 12px}.chart-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px}.chart-head h2{font-size:24px;margin:0;display:flex;align-items:center;gap:12px}.chart-icon{color:var(--blue);font-size:28px}.chart-icon .icon{width:30px;height:30px}.periods{margin-left:auto;display:flex;background:#1a2b42;border-radius:15px;padding:4px;gap:3px}.period-button{border:0;background:transparent;color:#b4c7e0;padding:8px 15px;border-radius:12px;font:inherit;font-size:15px;cursor:pointer}.period-button.active{background:#078de9;color:white;box-shadow:0 3px 12px #008fff55}.chart{width:100%;height:auto;display:block;overflow:visible}.chart-grid{fill:none;stroke:#29415c;stroke-width:1}.chart-grid text{fill:#b7c9df;stroke:none;font-size:14px}.chart-glow{fill:none;stroke:#0aaaff;stroke-width:8;opacity:.55}.chart-line{fill:none;stroke:#16b5ff;stroke-width:3.5;stroke-linejoin:round;stroke-linecap:round}.chart-dot{fill:#18baff;filter:drop-shadow(0 0 7px #18baff)}.chart-tag{fill:#0d2035;stroke:#08aaff}.chart-tag-text{fill:#fff!important;font-size:15px!important;font-weight:bold}.chart-empty{height:205px;display:grid;place-items:center;color:#91a8c3;font-size:14px;text-align:center;padding:20px}
-        .bottom-status{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin-top:14px}.info{padding:17px 12px;min-height:128px;display:flex;align-items:center;justify-content:center;gap:12px;min-width:0}.info .symbol{font-size:38px;flex:none;color:var(--green);filter:drop-shadow(0 0 10px #35ed9166)}.info .symbol .icon{width:42px;height:42px}.info .symbol.blue{color:#91b8e9}.info .symbol.amber{color:var(--amber)}.info .small{color:#b6c9e2;font-size:16px}.info strong{display:block;font-size:20px;margin-top:5px;overflow-wrap:anywhere}.info .good{color:var(--green)}.info .cost-line{margin-top:3px}
-        .banner{margin-top:14px;padding:18px 24px;min-height:88px;display:flex;align-items:center;gap:18px;border:1px solid #39d77e;background:linear-gradient(90deg,#0c302a,#0c2631 68%,#102b42);box-shadow:0 0 24px #28d87920}.banner.inverter{border-color:#ffb51b;background:linear-gradient(90deg,#382711,#18283a 80%);box-shadow:0 0 24px #ffb51b20}.banner.alarm,.banner.offline{border-color:#ff526d;background:linear-gradient(90deg,#3a1420,#18283a 80%);box-shadow:0 0 24px #ff526d20}.banner.unknown{border-color:#53677e;background:linear-gradient(90deg,#1a2939,#101e30)}.banner-check{width:48px;height:48px;border-radius:50%;background:var(--green);color:#052116;display:grid;place-items:center;flex:none;box-shadow:0 0 18px #35ed9166}.banner-check .icon{width:36px;height:36px}.banner.inverter .banner-check{background:var(--amber);color:#392400}.banner.alarm .banner-check,.banner.offline .banner-check{background:var(--red);color:#390711}.banner.unknown .banner-check{background:#53677e;color:#d6e5f6}.banner strong{color:#4df29a;font-size:clamp(17px,2cqw,24px)}.banner.inverter strong{color:#ffd078}.banner.alarm strong,.banner.offline strong{color:#ff8a9a}.banner.unknown strong{color:#b4c7df}.house-art{margin-left:auto;width:130px;max-width:22%;flex:none;filter:drop-shadow(0 0 11px #1b8fff)}.house-art svg{display:block;width:100%;height:auto}
-        .detail-panel{padding:22px;margin-top:2px}.detail-panel h2{margin:0 0 18px;font-size:25px}.detail-panel h2.subheading{margin:24px 0 14px;font-size:19px}.detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.detail{padding:16px;border-radius:16px;background:#13243a;border:1px solid #2b4562;min-width:0}.detail>span,.detail label>span{display:block;color:#9fb5d1;font-size:14px;margin-bottom:7px}.detail b{font-size:22px;overflow-wrap:anywhere}.setting{display:flex;align-items:end;gap:10px}.setting label{flex:1;min-width:0}.setting-input{display:flex;align-items:center;gap:8px}.setting-input input{width:100%;min-width:0;background:#091727;border:1px solid #37526f;border-radius:9px;color:var(--text);padding:10px;font:inherit;font-size:18px}.setting-input small{color:#9fb5d1;white-space:nowrap}.save-button,.switch-button,.action-button{border:1px solid #278ed0;background:#092645;color:#d7efff;border-radius:10px;padding:9px 12px;font:inherit;cursor:pointer}.save-button:hover,.switch-button:hover,.action-button:hover{background:#0c3962}.save-button:disabled,.switch-button:disabled,.action-button:disabled{opacity:.45;cursor:not-allowed}.switch-setting{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.switch-setting>span{color:#9fb5d1;font-size:14px}.switch-setting>strong{font-size:16px}.switch-button{grid-column:1/-1;display:flex;align-items:center;gap:8px;justify-content:center}.switch-button .icon{width:20px;height:20px}.switch-button.on{border-color:#35ed91;color:#35ed91}.action-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.action-button{min-height:68px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;font-size:13px;border-color:#2b8ed0}.action-button span{font-size:22px;color:#45bdff}.action-button .icon{width:25px;height:25px}.footer{display:flex;justify-content:space-between;gap:10px;margin:14px 2px 0;color:#6885a2;font-size:11px}.footer span:last-child{max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-        @container (max-width:760px){.shell{padding:12px}.header{gap:11px;padding:5px 2px 14px}.logo{width:58px;height:58px;border-radius:17px}.logo .icon{width:38px;height:38px}.headright{gap:8px}.connection strong{font-size:14px}.connection small{font-size:10px}.wifi-icon{font-size:21px;padding-left:10px}.wifi-icon .icon{width:24px;height:24px}.tabs{margin-bottom:12px}.tab{gap:5px;padding:12px 3px;font-size:12px}.tab .tab-icon{font-size:19px}.tab .icon{width:20px;height:20px}.main-grid{grid-template-columns:1fr;gap:10px}.voltage{min-height:300px}.voltage-gauge{width:min(100%,420px)}.metrics{gap:10px}.metric{min-height:135px}.metric-icon .icon{width:38px;height:38px}.metric-label{font-size:15px}.chart-card{padding:13px 11px}.chart-head h2{font-size:19px}.periods{width:100%;margin:0}.period-button{flex:1;padding:8px 4px;font-size:13px}.bottom-status{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.info{min-height:100px;padding:12px 8px}.info .symbol .icon{width:30px;height:30px}.info .small{font-size:13px}.info strong{font-size:16px}.banner{padding:14px;min-height:70px}.banner-check{width:38px;height:38px}.banner-check .icon{width:28px;height:28px}.house-art{width:80px}.detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.detail-panel{padding:16px}.detail-panel h2{font-size:22px}.action-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-        @container (max-width:420px){.headright .wifi-icon{display:none}.connection small{max-width:105px}.tab{font-size:11px}.tab .tab-icon{display:none}.metric{min-height:122px;padding:12px 8px}.metric-value{font-size:clamp(25px,8cqw,34px)}.info{gap:8px}.info .symbol .icon{width:26px;height:26px}.info .small{font-size:12px}.info strong{font-size:14px}.detail-grid{grid-template-columns:1fr}.setting{align-items:stretch}}
-        /* Premium instrument finish: layered glass, metal highlights and soft depth. */
-        :host{color-scheme:dark}.shell{position:relative;isolation:isolate;background:radial-gradient(ellipse at 12% 8%,#008bff25,transparent 32%),radial-gradient(ellipse at 88% 24%,#20e1b31a,transparent 30%),radial-gradient(ellipse at 50% 100%,#4351be20,transparent 42%),linear-gradient(145deg,#050b16,#091629 48%,#050b16);border-color:#70aee233;box-shadow:0 24px 60px #0009,inset 0 1px 0 #ffffff18,inset 0 -1px 0 #0008}
-        .shell:before{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;background:linear-gradient(122deg,#ffffff08,transparent 24%,transparent 77%,#16a6ff0b)}.shell>*{position:relative;z-index:1}
-        .card{position:relative;isolation:isolate;overflow:hidden;background:linear-gradient(145deg,#192d48f5,#091526fa 68%,#0a1c30f7);border:1px solid #70aee23d;box-shadow:0 16px 34px #0007,inset 0 1px 0 #ffffff20,inset 0 -1px 0 #0006;backdrop-filter:blur(14px);transition:border-color .24s,box-shadow .24s,transform .24s}
-        .card:before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;border-radius:inherit;background:linear-gradient(128deg,#ffffff12,transparent 23%,transparent 72%,#1da9ff0c)}.card:after{content:"";position:absolute;left:9%;right:9%;top:0;height:1px;z-index:0;pointer-events:none;background:linear-gradient(90deg,transparent,#c5ecff55,transparent)}.card>*{position:relative;z-index:1}
-        .logo{position:relative;overflow:hidden;background:radial-gradient(circle at 34% 20%,#2580d0,#0a2c59 50%,#061428 82%);border-color:#3aaef2a8;box-shadow:0 0 0 4px #009bff12,0 14px 32px #007fff4a,inset 0 2px 13px #ffffff35,inset 0 -8px 18px #0007}.logo:after{content:"";position:absolute;inset:-65% 28% 28% -30%;transform:rotate(35deg);background:linear-gradient(90deg,transparent,#ffffff22,transparent);pointer-events:none}.logo .icon{filter:drop-shadow(0 0 10px #23baff) drop-shadow(0 4px 3px #0008)}
-        .tabs{border:1px solid #79b7e34d;border-radius:23px;background:linear-gradient(180deg,#1a304beF,#091627f5);box-shadow:inset 0 1px 0 #ffffff20,0 12px 28px #0006}.tab.active{background:linear-gradient(120deg,#12b9ff,#087be9 52%,#1559c9);box-shadow:0 7px 22px #0090ff60,inset 0 1px 0 #ffffff65,inset 0 -2px 5px #003e9c80}
-        .voltage{isolation:isolate;background:radial-gradient(ellipse at 50% 42%,#0093ff30,transparent 48%),linear-gradient(145deg,#173553,#071323 72%);border-color:#72b8ea4f;box-shadow:0 18px 38px #0007,inset 0 2px 0 #ffffff22,inset 0 -12px 28px #0007}.voltage:before{background:linear-gradient(125deg,#ffffff14,transparent 30%,transparent 72%,#26aeff12)}.voltage:after{content:"";position:absolute;inset:9px;z-index:0;pointer-events:none;border:1px solid #9fdfff13;border-radius:17px;box-shadow:inset 0 0 34px #0091ff18}.voltage-gauge{position:relative;z-index:1;filter:drop-shadow(0 14px 18px #0006);overflow:visible}.dial-tick{fill:none;stroke:#81b5d2;stroke-opacity:.54;stroke-width:1.7}.dial-tick.active{stroke:#b5f7ff;stroke-opacity:.96;filter:drop-shadow(0 0 4px #19bdff)}.gauge-dot{fill:#f3ffff;stroke:#08aaff;stroke-width:5;filter:drop-shadow(0 0 8px #08c5ff)}.tower-shadow{fill:#031322;opacity:.54}.tower-frame{stroke-width:1.55}.tower-frame .tower-rail{stroke-width:3}.tower-frame .tower-arm{stroke-width:2.7}.tower-frame .tower-crossarm{stroke-width:1.4;opacity:.78}.tower-frame .tower-insulator{stroke:#c8f6ff;stroke-width:1.1}.tower-frame .tower-wire{stroke:#5bc8ff;stroke-width:1;opacity:.65}.tower-foot{fill:none;stroke:#c0eeff;stroke-width:2.6;filter:drop-shadow(0 0 5px #09aaff)}.voltage-value{filter:drop-shadow(0 3px 8px #0009)}.state-indicator{position:relative;z-index:1;text-shadow:0 0 16px currentColor}.state-indicator .check-mark{box-shadow:0 0 0 5px #3fffa411,0 0 24px #3fffa070,inset 0 2px 4px #ffffff66}
-        .metric{background:linear-gradient(145deg,#1c3452,#091628);border-color:#70aee247;box-shadow:inset 0 1px 0 #ffffff20,0 14px 28px #0006,inset 0 -8px 17px #0005}.metric:before{content:"";position:absolute;right:-62px;top:-76px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,#00aeff40,transparent 70%);pointer-events:none}.metric-icon{filter:drop-shadow(0 5px 9px #00a6ff65)}.metric-value{text-shadow:0 3px 14px #0007}.info{background:linear-gradient(145deg,#1a314d,#081425);border-color:#69a4d944;box-shadow:inset 0 1px 0 #ffffff1d,0 12px 27px #0006,inset 0 -7px 16px #0005}.info .symbol{filter:drop-shadow(0 5px 8px #0006) drop-shadow(0 0 10px currentColor)}
-        .chart-card{background:linear-gradient(145deg,#142b45f7,#071221fa);box-shadow:0 18px 36px #0007,inset 0 1px 0 #ffffff20,inset 0 -9px 20px #0005}.chart-line{filter:drop-shadow(0 0 3px #05baff)}.chart-tag{filter:drop-shadow(0 5px 8px #0008)}
-        .banner{position:relative;overflow:hidden;background:linear-gradient(105deg,#07362bf7,#082830f7 55%,#082038f7);border-color:#43f5a0b3;box-shadow:0 0 0 1px #43f5a01a,0 0 30px #29dc8621,inset 0 1px 0 #ffffff2e,inset 0 -8px 20px #0005}.banner strong{text-shadow:0 2px 12px #24ff9d45}.banner .banner-check{box-shadow:0 0 0 6px #3fffa414,0 0 24px #3fffa078,inset 0 2px 4px #ffffff5c}.banner.inverter{background:linear-gradient(105deg,#403014f7,#222a32f7 58%,#10233af7)}.banner.alarm,.banner.offline{background:linear-gradient(105deg,#401b27f7,#202336f7 62%,#171c2af7)}
-        .house-art{width:min(30%,210px);max-width:210px;filter:drop-shadow(0 8px 15px #000a) drop-shadow(0 0 15px #0082ff54);opacity:.98}.house-art svg{display:block;width:100%;height:auto}
-        .energy-hero{display:grid;grid-template-columns:1.08fr .92fr;gap:15px;margin:0 0 15px}.energy-visual{position:relative;isolation:isolate;min-height:170px;overflow:hidden;padding:20px;border-radius:19px;border:1px solid #70aee24f;box-shadow:inset 0 1px 0 #ffffff2c,0 16px 32px #0006,inset 0 -10px 20px #0004;display:flex;flex-direction:column;justify-content:center;align-items:flex-start}.energy-visual:before{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(circle at 82% 24%,#ffbd4a42,transparent 34%),linear-gradient(125deg,#193e68,#10213d 58%,#201d45)}.energy-load:before{background:radial-gradient(circle at 82% 24%,#19cdff40,transparent 35%),linear-gradient(125deg,#123f61,#10213d 60%,#122d50)}.energy-visual .eyebrow{color:#b4cbe6;font-size:12px;letter-spacing:.1em;text-transform:uppercase}.energy-visual .hero-number{position:relative;z-index:1;max-width:75%;margin:7px 0 3px;font-size:clamp(25px,4cqw,43px);line-height:1.12;font-weight:850;letter-spacing:-1px;text-shadow:0 4px 18px #0008;overflow-wrap:anywhere}.energy-visual small{position:relative;z-index:1;max-width:76%;color:#c1d4ea;font-size:13px}.energy-object{position:absolute;right:2%;bottom:-8%;width:43%;height:105%;filter:drop-shadow(0 11px 12px #0008);transform:rotate(-4deg);opacity:.95}.plug-object{width:42%;right:2%;transform:rotate(5deg)}
-        .energy-visual-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;margin-top:14px}.visual-card{padding:18px;border-radius:18px;background:linear-gradient(145deg,#1b334ff5,#0a1728fa);border:1px solid #69a4d944;box-shadow:inset 0 1px 0 #ffffff1e,0 11px 24px #0005}.visual-card h3{margin:0 0 15px;font-size:17px}.bar-list{display:grid;gap:14px}.bar-row{display:grid;grid-template-columns:64px minmax(36px,1fr) minmax(80px,auto);gap:11px;align-items:center;color:var(--muted);font-size:13px}.bar-row b{color:var(--text);font-size:14px;text-align:right}.bar-track{height:9px;border-radius:9px;overflow:hidden;background:#263c56;box-shadow:inset 0 2px 3px #0008}.bar-track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#078bff,#16d6e8);box-shadow:0 0 12px #0aaaff62;transition:width .55s ease}.bar-track i.night-rate{background:linear-gradient(90deg,#8057d8,#c07aff);box-shadow:0 0 12px #a875ff62}.rate-pulse{display:inline-flex;align-items:center;gap:7px;margin-top:13px;padding:6px 10px;border-radius:18px;background:#0b3440;border:1px solid #28bdc457;color:#69e6d4;font-size:12px;max-width:100%;flex-wrap:wrap}.rate-pulse .icon{width:17px;height:17px}.current-tariff{display:flex;flex-direction:column;justify-content:center;align-items:flex-start}.current-tariff .big-number{font-size:clamp(27px,3.5cqw,40px);overflow-wrap:anywhere}
-        .settings-hero{display:flex;align-items:center;gap:15px;padding:14px 18px;margin:0 0 15px;border-radius:18px;background:linear-gradient(110deg,#163c5ff2,#17224bf2);border:1px solid #70aee24a;box-shadow:inset 0 1px 0 #ffffff27,0 14px 28px #0005}.chip-art{width:80px;flex:none;filter:drop-shadow(0 8px 12px #0008) drop-shadow(0 0 13px #078fff45)}.device-copy{min-width:0}.device-copy strong{display:block;font-size:17px}.device-copy span{display:block;margin-top:4px;color:#a9bfdc;font-size:12px}.device-status{margin-left:auto;display:flex;align-items:center;gap:8px;white-space:nowrap;color:var(--muted);font-size:13px}.device-status i{width:10px;height:10px;border-radius:50%;background:#8597aa;box-shadow:0 0 8px #8597aa66}.device-status.online{color:var(--green)}.device-status.online i{background:var(--green);box-shadow:0 0 12px #35ed91a8}.device-status.offline{color:var(--red)}.device-status.offline i{background:var(--red);box-shadow:0 0 12px #ff526d88}.detail:hover,.visual-card:hover,.control:hover{border-color:#59bbef70;box-shadow:0 16px 32px #0007,0 0 24px #0099ff13}.tariff-state{position:relative}.tariff-led{position:absolute;right:14px;bottom:14px;width:8px;height:8px;border-radius:50%;background:#7e8ea2}.tariff-led.active{background:var(--green);box-shadow:0 0 12px #35ed91b0}
-        .metric:hover,.info:hover,.action-button:hover,.save-button:hover,.switch-button:hover{transform:translateY(-3px);border-color:#54bdff80;box-shadow:0 18px 34px #0008,0 0 24px #0099ff1b}.tab,.period-button,.action-button,.save-button,.switch-button{transition:background .22s,color .22s,border-color .22s,box-shadow .22s,transform .22s}
-        @media(prefers-reduced-motion:no-preference){.shell:not(.render-ready){animation:deviceBoot .7s cubic-bezier(.2,.8,.2,1) both}.logo .icon{animation:logoFloat 4.2s ease-in-out infinite}.connection.online .dot,.device-status.online i{animation:ledPulse 2.2s ease-in-out infinite}.gauge-dot{animation:gaugePulse 2.8s ease-in-out infinite}.chart-dot{animation:chartPulse 2.4s ease-in-out infinite}.voltage:after{animation:screenGlow 7s ease-in-out infinite alternate}@keyframes deviceBoot{from{opacity:0;transform:translateY(8px) scale(.995)}to{opacity:1;transform:translateY(0) scale(1)}}@keyframes logoFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}@keyframes ledPulse{0%,100%{box-shadow:0 0 7px currentColor}50%{box-shadow:0 0 16px currentColor,0 0 25px currentColor}}@keyframes gaugePulse{0%,100%{filter:drop-shadow(0 0 5px #08c5ff)}50%{filter:drop-shadow(0 0 12px #08c5ff)}}@keyframes chartPulse{0%,100%{opacity:.8}50%{opacity:1}}@keyframes screenGlow{from{box-shadow:inset 0 0 24px #0091ff10}to{box-shadow:inset 0 0 40px #0091ff24}}}
-        @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
-        @container (max-width:760px){.energy-hero{grid-template-columns:1fr}.energy-visual{min-height:145px}.energy-visual-grid{grid-template-columns:1fr}.energy-object{width:36%;height:110%}.settings-hero{gap:11px;padding:12px}.chip-art{width:62px}.device-copy strong{font-size:15px}.device-status{font-size:12px}}
-        @container (max-width:420px){.energy-visual{min-height:130px;padding:15px}.energy-visual .hero-number{font-size:clamp(24px,7cqw,31px);max-width:80%}.energy-visual small{font-size:11px;max-width:80%}.energy-object{width:31%;opacity:.72}.settings-hero{flex-wrap:wrap}.chip-art{width:52px}.device-status{margin-left:6px}.bar-row{grid-template-columns:47px minmax(24px,1fr) minmax(75px,auto);gap:7px}.banner strong{max-width:68%}}
+        :host {
+          display: block;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+          box-sizing: border-box;
+          --c-bg: #07101f;
+          --c-card: #0d1b33;
+          --c-card-sub: #112444;
+          --c-border: rgba(18, 181, 255, 0.16);
+          --c-blue: #12b5ff;
+          --c-blue-dark: #025cb8;
+          --c-green: #35ed91;
+          --c-amber: #ffb51b;
+          --c-red: #ff526d;
+          --c-purple: #b56aff;
+          --c-gold: #ffd24d;
+          --c-text-main: #f0f6fc;
+          --c-text-sub: #8ca5c4;
+          --c-text-dim: #5c7599;
+        }
+
+        *, *::before, *::after {
+          box-sizing: inherit;
+        }
+
+        .card-root {
+          background: linear-gradient(180deg, #09152b 0%, #060e1d 100%);
+          border: 1px solid var(--c-border);
+          border-radius: 16px;
+          color: var(--c-text-main);
+          padding: 16px;
+          position: relative;
+          overflow: hidden;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+        }
+
+        /* Header */
+        .card-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          margin-bottom: 14px;
+        }
+        .header-left {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+        .header-icon-wrap {
+          width: 42px;
+          height: 42px;
+          border-radius: 12px;
+          background: linear-gradient(135deg, rgba(18, 181, 255, 0.2), rgba(2, 92, 184, 0.4));
+          border: 1px solid rgba(18, 181, 255, 0.35);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 0 16px rgba(18, 181, 255, 0.25);
+        }
+        .header-icon {
+          width: 24px;
+          height: 24px;
+          color: var(--c-blue);
+        }
+        .card-title {
+          margin: 0;
+          font-size: 1.22rem;
+          font-weight: 700;
+          letter-spacing: -0.01em;
+          color: #fff;
+        }
+        .card-subtitle {
+          font-size: 0.8rem;
+          color: var(--c-text-sub);
+          margin-top: 2px;
+        }
+
+        /* Status Indicator */
+        .status-indicator-pill {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(14, 27, 49, 0.8);
+        }
+        .status-indicator-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          box-shadow: 0 0 8px currentColor;
+        }
+        .status-normal { color: var(--c-green); border-color: rgba(53, 237, 145, 0.3); }
+        .status-alarm { color: var(--c-amber); border-color: rgba(255, 181, 27, 0.4); background: rgba(255, 181, 27, 0.1); }
+        .status-inverter { color: var(--c-purple); border-color: rgba(181, 106, 255, 0.4); background: rgba(181, 106, 255, 0.1); }
+        .status-offline { color: var(--c-red); border-color: rgba(255, 82, 109, 0.4); background: rgba(255, 82, 109, 0.1); }
+
+        /* Banner */
+        .alert-banner {
+          padding: 10px 14px;
+          border-radius: 10px;
+          margin-bottom: 14px;
+          font-size: 0.86rem;
+          font-weight: 600;
+          text-align: center;
+          border: 1px solid currentColor;
+        }
+
+        /* Tabs */
+        .tab-bar {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 6px;
+          background: rgba(8, 18, 36, 0.9);
+          padding: 4px;
+          border-radius: 12px;
+          margin-bottom: 16px;
+          border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .tab-btn {
+          background: transparent;
+          border: none;
+          border-radius: 8px;
+          color: var(--c-text-sub);
+          padding: 8px 4px;
+          cursor: pointer;
+          font-size: 0.82rem;
+          font-weight: 600;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          transition: all 0.2s ease;
+        }
+        .tab-btn svg {
+          width: 16px;
+          height: 16px;
+          fill: none;
+          stroke: currentColor;
+          stroke-width: 2;
+        }
+        .tab-btn:hover {
+          color: #fff;
+          background: rgba(255, 255, 255, 0.04);
+        }
+        .tab-btn.active {
+          color: #fff;
+          background: linear-gradient(135deg, rgba(18, 181, 255, 0.25), rgba(2, 92, 184, 0.5));
+          border: 1px solid rgba(18, 181, 255, 0.35);
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Voltage Hero Card */
+        .voltage-hero-card {
+          position: relative;
+          background: #061124;
+          border: 1px solid rgba(18, 181, 255, 0.25);
+          border-radius: 14px;
+          overflow: hidden;
+          margin-bottom: 14px;
+          min-height: 170px;
+        }
+        .tower-art {
+          width: 100%;
+          height: 100%;
+          position: absolute;
+          top: 0;
+          left: 0;
+          object-fit: cover;
+          pointer-events: none;
+        }
+        .voltage-overlay {
+          position: relative;
+          z-index: 2;
+          display: flex;
+          align-items: center;
+          gap: 20px;
+          padding: 20px;
+          background: linear-gradient(90deg, rgba(7, 16, 31, 0.95) 0%, rgba(7, 16, 31, 0.75) 55%, rgba(7, 16, 31, 0.4) 100%);
+          height: 100%;
+        }
+        .gauge-wrap {
+          position: relative;
+          width: 110px;
+          height: 110px;
+          flex-shrink: 0;
+        }
+        .gauge-svg {
+          width: 100%;
+          height: 100%;
+          transform: rotate(-90deg);
+        }
+        .gauge-bg {
+          fill: none;
+          stroke: rgba(255, 255, 255, 0.08);
+          stroke-width: 9;
+        }
+        .gauge-bar {
+          fill: none;
+          stroke: var(--c-blue);
+          stroke-width: 9;
+          stroke-linecap: round;
+          transition: stroke-dasharray 0.6s ease;
+          filter: drop-shadow(0 0 6px var(--c-blue));
+        }
+        .gauge-inner {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+        }
+        .gauge-num {
+          font-size: 1.6rem;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+          color: #fff;
+          line-height: 1;
+        }
+        .gauge-unit {
+          font-size: 0.85rem;
+          font-weight: 700;
+          color: var(--c-blue);
+          margin-top: 2px;
+        }
+        .voltage-info {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .v-status-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 6px 14px;
+          border-radius: 20px;
+          font-size: 0.88rem;
+          font-weight: 700;
+          width: fit-content;
+        }
+        .v-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+        }
+        .v-meta-row {
+          display: flex;
+          gap: 14px;
+          font-size: 0.82rem;
+          color: var(--c-text-sub);
+        }
+        .v-meta-row strong {
+          color: #fff;
+        }
+
+        /* Hero Metrics Grid */
+        .hero-metrics-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 10px;
+          margin-bottom: 14px;
+        }
+        .hero-card {
+          background: var(--c-card);
+          border: 1px solid rgba(255, 255, 255, 0.07);
+          border-radius: 12px;
+          padding: 12px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+        }
+        .hero-icon-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 6px;
+        }
+        .hero-label {
+          font-size: 0.78rem;
+          font-weight: 600;
+          color: var(--c-text-sub);
+        }
+        .hero-icon {
+          width: 18px;
+          height: 18px;
+        }
+        .icon-power { color: var(--c-green); }
+        .icon-current { color: var(--c-blue); }
+        .icon-freq { color: var(--c-purple); }
+        .icon-pf { color: var(--c-gold); }
+        .hero-val {
+          font-size: 1.35rem;
+          font-weight: 800;
+          color: #fff;
+          line-height: 1.1;
+        }
+        .hero-val .unit {
+          font-size: 0.82rem;
+          font-weight: 600;
+          color: var(--c-text-sub);
+        }
+        .hero-sub {
+          font-size: 0.72rem;
+          color: var(--c-text-dim);
+          margin-top: 6px;
+        }
+        .hero-sub strong {
+          color: var(--c-text-sub);
+        }
+
+        /* Section Card */
+        .section-card {
+          background: var(--c-card);
+          border: 1px solid rgba(255, 255, 255, 0.07);
+          border-radius: 12px;
+          overflow: hidden;
+          margin-bottom: 14px;
+        }
+        .section-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 12px 14px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          background: rgba(255, 255, 255, 0.02);
+        }
+        .section-title {
+          font-size: 0.92rem;
+          font-weight: 700;
+          color: #fff;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .chart-subtitle-tag {
+          font-size: 0.76rem;
+          color: var(--c-text-sub);
+        }
+        .chart-ranges {
+          display: flex;
+          gap: 4px;
+        }
+        .range-btn {
+          background: rgba(255, 255, 255, 0.05);
+          border: none;
+          border-radius: 6px;
+          color: var(--c-text-sub);
+          font-size: 0.75rem;
+          font-weight: 600;
+          padding: 4px 8px;
+          cursor: pointer;
+        }
+        .range-btn.active {
+          background: var(--c-blue);
+          color: #030a17;
+          font-weight: 700;
+        }
+        .chart-body {
+          padding: 10px;
+        }
+        .card-padded-body {
+          padding: 14px;
+        }
+        .sub-chart-svg {
+          width: 100%;
+          height: auto;
+          display: block;
+        }
+        .chart-empty {
+          text-align: center;
+          padding: 30px 10px;
+          color: var(--c-text-dim);
+          font-size: 0.85rem;
+        }
+
+        /* Status Pills */
+        .status-pills-row {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 8px;
+          margin-bottom: 14px;
+        }
+        .pill-card {
+          background: var(--c-card);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 10px;
+          padding: 10px;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+        .pill-label {
+          font-size: 0.72rem;
+          color: var(--c-text-dim);
+        }
+        .pill-val {
+          font-size: 0.85rem;
+          color: #fff;
+        }
+        .pill-good { color: var(--c-green); }
+        .pill-bad { color: var(--c-red); }
+
+        /* House Banner */
+        .house-summary-banner {
+          background: linear-gradient(135deg, #0f2347 0%, #0a162d 100%);
+          border: 1px solid rgba(18, 181, 255, 0.2);
+          border-radius: 14px;
+          padding: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+        }
+        .house-text h4 {
+          margin: 0 0 6px;
+          font-size: 1.05rem;
+          color: var(--c-green);
+        }
+        .house-text p {
+          margin: 0;
+          font-size: 0.82rem;
+          line-height: 1.4;
+          color: var(--c-text-sub);
+        }
+        .house-art-wrap {
+          width: 110px;
+          height: 90px;
+          flex-shrink: 0;
+        }
+        .real-vector-art {
+          width: 100%;
+          height: 100%;
+          display: block;
+        }
+
+        /* Section Title Bar */
+        .section-title-bar h3 {
+          margin: 0 0 14px;
+          font-size: 1.12rem;
+          font-weight: 700;
+          color: #fff;
+        }
+
+        /* Details Grid */
+        .details-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 10px;
+          margin-bottom: 14px;
+        }
+        .param-box {
+          background: var(--c-card);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 10px;
+          padding: 12px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+        }
+        .param-title {
+          font-size: 0.76rem;
+          color: var(--c-text-sub);
+          margin-bottom: 6px;
+        }
+        .param-num {
+          font-size: 1.15rem;
+          font-weight: 700;
+          color: #fff;
+        }
+        .param-num small {
+          font-size: 0.76rem;
+          font-weight: 600;
+          color: var(--c-text-sub);
+        }
+        .text-amber { color: var(--c-amber); }
+        .text-cyan { color: var(--c-blue); }
+        .text-gold { color: var(--c-gold); }
+        .status-tag {
+          font-size: 0.95rem;
+          color: var(--c-green);
+        }
+
+        /* Quality Events */
+        .events-card {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+        .events-bar-item {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        .events-bar-head {
+          display: flex;
+          justify-content: space-between;
+          font-size: 0.82rem;
+          font-weight: 600;
+        }
+        .events-val { font-size: 0.95rem; font-weight: 800; }
+        .sag-val { color: var(--c-amber); }
+        .swell-val { color: var(--c-purple); }
+        .outage-val { color: var(--c-red); }
+        .bar-track {
+          width: 100%;
+          height: 8px;
+          background: rgba(255, 255, 255, 0.06);
+          border-radius: 4px;
+          overflow: hidden;
+        }
+        .bar-fill {
+          height: 100%;
+          border-radius: 4px;
+          transition: width 0.4s ease;
+        }
+        .sag-fill { background: var(--c-amber); box-shadow: 0 0 8px var(--c-amber); }
+        .swell-fill { background: var(--c-purple); box-shadow: 0 0 8px var(--c-purple); }
+        .outage-fill { background: var(--c-red); box-shadow: 0 0 8px var(--c-red); }
+        .outage-meta-row {
+          display: flex;
+          justify-content: space-between;
+          padding-top: 10px;
+          margin-top: 4px;
+          border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .meta-col {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .meta-label { font-size: 0.74rem; color: var(--c-text-dim); }
+        .meta-value { font-size: 0.92rem; font-weight: 700; color: #fff; }
+
+        /* Dual Hero (Coin & Plug) */
+        .dual-hero-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+          margin-bottom: 14px;
+        }
+        .dual-card {
+          background: linear-gradient(135deg, #10254c 0%, #0a1832 100%);
+          border: 1px solid rgba(18, 181, 255, 0.2);
+          border-radius: 14px;
+          padding: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+        }
+        .dual-label {
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: var(--c-text-sub);
+        }
+        .dual-big-num {
+          font-size: 1.55rem;
+          font-weight: 800;
+          color: #fff;
+          margin: 4px 0 6px;
+        }
+        .dual-big-num small {
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: var(--c-text-sub);
+        }
+        .dual-sub {
+          font-size: 0.78rem;
+          color: var(--c-text-sub);
+        }
+        .dual-sub strong { color: #fff; }
+        .dual-art {
+          width: 75px;
+          height: 75px;
+          flex-shrink: 0;
+        }
+
+        /* Tariff Box */
+        .tariff-box {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+        }
+        .tariff-rate-banner {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding-bottom: 12px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .tariff-rate-label {
+          font-size: 0.78rem;
+          color: var(--c-text-dim);
+        }
+        .tariff-rate-num {
+          font-size: 1.45rem;
+          font-weight: 800;
+          color: var(--c-gold);
+        }
+        .rate-unit {
+          font-size: 0.85rem;
+          color: var(--c-text-sub);
+          font-weight: 600;
+        }
+        .zone-badge {
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-size: 0.8rem;
+          font-weight: 700;
+        }
+        .zone-day { background: rgba(255, 181, 27, 0.15); color: var(--c-amber); border: 1px solid rgba(255, 181, 27, 0.3); }
+        .zone-night { background: rgba(181, 106, 255, 0.15); color: var(--c-purple); border: 1px solid rgba(181, 106, 255, 0.3); }
+        .tariff-bars-wrap {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .tariff-row {
+          display: grid;
+          grid-template-columns: 100px 1fr 80px;
+          align-items: center;
+          gap: 10px;
+          font-size: 0.84rem;
+        }
+        .tariff-progress {
+          height: 8px;
+          background: rgba(255, 255, 255, 0.06);
+          border-radius: 4px;
+          overflow: hidden;
+        }
+        .t-bar { height: 100%; border-radius: 4px; }
+        .t-bar-day { background: linear-gradient(90deg, #ffb51b, #ffd24d); }
+        .t-bar-night { background: linear-gradient(90deg, #7b3fe4, #b56aff); }
+        .tariff-num { font-weight: 700; text-align: right; color: #fff; }
+        .two-zone-toggle-line {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding-top: 10px;
+          border-top: 1px solid rgba(255, 255, 255, 0.06);
+          font-size: 0.88rem;
+          font-weight: 600;
+        }
+
+        /* SoC Chip Hero */
+        .soc-hero-card {
+          background: linear-gradient(135deg, #0e1e36 0%, #091424 100%);
+          border: 1px solid rgba(18, 181, 255, 0.2);
+          border-radius: 14px;
+          padding: 16px;
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          margin-bottom: 14px;
+        }
+        .soc-art {
+          width: 80px;
+          height: 80px;
+          flex-shrink: 0;
+        }
+        .soc-details h4 {
+          margin: 0 0 4px;
+          font-size: 1.05rem;
+          color: #fff;
+        }
+        .soc-details p {
+          margin: 0 0 8px;
+          font-size: 0.8rem;
+          color: var(--c-text-sub);
+        }
+        .soc-badge-row {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        .online-pill {
+          padding: 3px 10px;
+          border-radius: 12px;
+          font-size: 0.74rem;
+          font-weight: 700;
+        }
+        .prefix-tag {
+          font-size: 0.78rem;
+          color: var(--c-text-dim);
+        }
+        .prefix-tag code {
+          color: var(--c-blue);
+          font-weight: bold;
+        }
+
+        /* Settings Form */
+        .settings-form-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+          margin-bottom: 14px;
+        }
+        .control-box {
+          background: var(--c-card);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 10px;
+          padding: 12px;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        .control-box label {
+          font-size: 0.78rem;
+          font-weight: 600;
+          color: var(--c-text-sub);
+        }
+        .input-action-row {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .input-action-row input {
+          width: 100%;
+          background: rgba(14, 27, 49, 0.95);
+          border: 1px solid rgba(18, 181, 255, 0.25);
+          border-radius: 8px;
+          color: #fff;
+          padding: 8px 10px;
+          font-size: 0.95rem;
+          font-weight: 600;
+          outline: none;
+        }
+        .input-action-row input:focus {
+          border-color: var(--c-blue);
+          box-shadow: 0 0 0 2px rgba(18, 181, 255, 0.2);
+        }
+        .input-unit {
+          font-size: 0.8rem;
+          color: var(--c-text-dim);
+          min-width: 24px;
+        }
+        .btn-save {
+          background: linear-gradient(135deg, #078de9, #025cb8);
+          border: none;
+          border-radius: 8px;
+          color: #fff;
+          font-size: 0.78rem;
+          font-weight: 600;
+          padding: 8px 12px;
+          cursor: pointer;
+          white-space: nowrap;
+          transition: all 0.2s;
+        }
+        .btn-save:hover {
+          background: linear-gradient(135deg, #12b5ff, #078de9);
+        }
+        .btn-save.btn-saved {
+          background: #35ed91 !important;
+          color: #03140a !important;
+        }
+        .switch-row {
+          justify-content: space-between;
+          padding: 4px 0;
+        }
+        .btn-toggle {
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          border-radius: 20px;
+          color: var(--c-text-sub);
+          padding: 6px 14px;
+          font-size: 0.8rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .btn-toggle.active {
+          background: var(--c-green);
+          color: #03140a;
+          border-color: var(--c-green);
+          box-shadow: 0 0 10px rgba(53, 237, 145, 0.4);
+        }
+
+        /* Diagnostics Grid */
+        .diag-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 10px;
+          padding: 12px;
+        }
+        .diag-item {
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+        }
+        .diag-lbl { font-size: 0.74rem; color: var(--c-text-dim); }
+        .diag-val { font-size: 0.95rem; font-weight: 700; color: #fff; }
+
+        /* Maintenance Actions */
+        .actions-buttons-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 10px;
+          padding: 14px;
+        }
+        .btn-action {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 8px;
+          color: #fff;
+          font-size: 0.82rem;
+          font-weight: 600;
+          padding: 10px 14px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .btn-action:hover {
+          background: rgba(18, 181, 255, 0.15);
+          border-color: var(--c-blue);
+          color: var(--c-blue);
+        }
+        .btn-danger:hover {
+          background: rgba(255, 82, 109, 0.15) !important;
+          border-color: var(--c-red) !important;
+          color: var(--c-red) !important;
+        }
+
+        /* Toast */
+        .card-toast {
+          position: absolute;
+          bottom: 20px;
+          left: 50%;
+          transform: translateX(-50%) translateY(50px);
+          background: #35ed91;
+          color: #04140b;
+          font-size: 0.85rem;
+          font-weight: 700;
+          padding: 8px 18px;
+          border-radius: 20px;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+          opacity: 0;
+          pointer-events: none;
+          transition: all 0.25s ease;
+          z-index: 99;
+        }
+        .card-toast.show {
+          transform: translateX(-50%) translateY(0);
+          opacity: 1;
+        }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 600px) {
+          .hero-metrics-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+          .status-pills-row {
+            grid-template-columns: repeat(2, 1fr);
+          }
+          .details-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+          .dual-hero-grid {
+            grid-template-columns: 1fr;
+          }
+          .settings-form-grid {
+            grid-template-columns: 1fr;
+          }
+          .actions-buttons-grid {
+            grid-template-columns: 1fr;
+          }
+          .diag-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
       `;
     }
   }
