@@ -51,6 +51,13 @@ git diff --check
 
 Also run the ESPHome-secret-aware YAML parser and dashboard/entity coverage check when firmware or dashboard mappings change. Do not claim live Home Assistant validation unless it was actually performed.
 
+## Release versioning
+
+- Use the release format `YYYY.MM.N`, for example `2026.11.1`: `YYYY` is the four-digit calendar year, `MM` is the two-digit calendar month, and `N` is the release sequence number within that month, starting at `1`.
+- Do not create, tag, publish, or increment a release version unless the repository owner explicitly requests it.
+- When the owner requests a release, use the version they specify. If they ask to update or re-create an existing version, replace the existing release/tag for that version instead of minting a new version, unless they explicitly request a different version.
+- Publish a release only after the approved changes are on `main` and the applicable validation checks have passed.
+
 ## GitHub workflow
 
 - Inspect `origin/main` and open PRs before changes.
