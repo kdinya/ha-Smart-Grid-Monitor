@@ -42,6 +42,7 @@
       params_title: 'Електричні параметри', energy_title: 'Енергія та вартість', settings_title: 'Налаштування та діагностика',
       apparent: 'Повна потужність', reactive: 'Реактивна потужність', phase: 'Кут фази', deviation: 'Відхилення напруги', average: 'Середня напруга за 5 хв', min_voltage: 'Мінімальна напруга сьогодні', max_voltage: 'Максимальна напруга сьогодні', max_current: 'Максимальний струм сьогодні', peak_power: 'Пікова потужність сьогодні', voltage_state: 'Статус напруги',
       today: 'Сьогодні', energy_month: 'Споживання за місяць', energy_total: 'Загальна енергія PZEM', cost_today: 'Вартість сьогодні', cost_month: 'Вартість за місяць', cost_total: 'Загальна розрахована вартість', tariff: 'Поточний тариф', cost_rate: 'Вартість за годину', two_zone: 'Двозонний облік',
+      estimated_cost: 'Орієнтовна вартість', current_load: 'Поточне навантаження', tariff_compare: 'Порівняння тарифів', current_rate: 'Активний тариф', night: 'Ніч', device_name: 'Grid Monitor · ESP32-C3', device_description: 'Контролер ESPHome · PZEM-004T', diagnostics: 'Діагностика',
       sag: 'Поріг просідання', swell: 'Поріг перенапруги', nominal: 'Номінальна напруга', tariff_day: 'Денний тариф', tariff_night: 'Нічний тариф', wifi: 'Сигнал Wi‑Fi', temperature: 'Температура ESP32', uptime: 'Час роботи ESP32', ip: 'IP-адреса', ssid: 'Wi‑Fi мережа',
       events: 'Події інвертора', inverter_events: 'Кількість відключень', current_duration: 'Поточна тривалість', last_duration: 'Остання тривалість', total_duration: 'Загальний час від інвертора', sag_events: 'Просідання напруги', swell_events: 'Перенапруги', save: 'Зберегти', on: 'Увімкнено', off: 'Вимкнено',
       actions: 'Дії', reset_energy: 'Скинути енергію PZEM', reset_events: 'Скинути події', reset_cost: 'Скинути облік', restart: 'Перезапустити ESP', confirm: 'Виконати цю дію?', invalid_number: 'Введіть коректне число в допустимому діапазоні.',
@@ -57,6 +58,7 @@
       params_title: 'Electrical parameters', energy_title: 'Energy and cost', settings_title: 'Settings and diagnostics',
       apparent: 'Apparent power', reactive: 'Reactive power', phase: 'Phase angle', deviation: 'Voltage deviation', average: '5-minute average voltage', min_voltage: 'Minimum voltage today', max_voltage: 'Maximum voltage today', max_current: 'Maximum current today', peak_power: 'Peak power today', voltage_state: 'Voltage status',
       today: 'Today', energy_month: 'Consumption this month', energy_total: 'Total PZEM energy', cost_today: 'Cost today', cost_month: 'Cost this month', cost_total: 'Total calculated cost', tariff: 'Current tariff', cost_rate: 'Cost per hour', two_zone: 'Two-zone tariff',
+      estimated_cost: 'Estimated cost', current_load: 'Current load', tariff_compare: 'Tariff comparison', current_rate: 'Active tariff', night: 'Night', device_name: 'Grid Monitor · ESP32-C3', device_description: 'ESPHome controller · PZEM-004T', diagnostics: 'Diagnostics',
       sag: 'Sag threshold', swell: 'Swell threshold', nominal: 'Nominal voltage', tariff_day: 'Day tariff', tariff_night: 'Night tariff', wifi: 'Wi-Fi signal', temperature: 'ESP32 temperature', uptime: 'ESP32 uptime', ip: 'IP address', ssid: 'Wi-Fi network',
       events: 'Inverter events', inverter_events: 'Outage count', current_duration: 'Current duration', last_duration: 'Last duration', total_duration: 'Total inverter time', sag_events: 'Voltage sags', swell_events: 'Voltage swells', save: 'Save', on: 'On', off: 'Off',
       actions: 'Actions', reset_energy: 'Reset PZEM energy', reset_events: 'Reset events', reset_cost: 'Reset accounting', restart: 'Restart ESP', confirm: 'Run this action?', invalid_number: 'Enter a valid number within the allowed range.',
@@ -83,9 +85,13 @@
     plug: '<path d="M17 7v12m14-12v12M12 19h24v3a12 12 0 0 1-12 12v8m0-8a12 12 0 0 1-12-12z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',
   };
 
+  let CARD_SEQUENCE = 0;
+
   class GridMonitorCard extends HTMLElement {
     constructor() {
       super();
+      this._instanceId = ++CARD_SEQUENCE;
+      this._hasRendered = false;
       this.attachShadow({ mode: 'open' });
       this._config = null;
       this._hass = null;
@@ -194,6 +200,8 @@
       const progress = voltage === null ? 0 : Math.max(0, Math.min(100, ((voltage - 150) / 130) * 100));
       const voltageNumber = voltage === null ? this._formatted('voltage') : voltage.toLocaleString(this._locale(), { maximumFractionDigits: 1 });
       const voltageUnit = voltage === null ? '' : this._unit('voltage') || (this._lang() === 'uk' ? 'В' : 'V');
+      const gaugeAngle = (180 + progress * 1.8) * Math.PI / 180;
+      const gaugeDot = voltage === null ? '' : `<circle class="gauge-dot" cx="${(250 + 190 * Math.cos(gaugeAngle)).toFixed(1)}" cy="${(270 + 190 * Math.sin(gaugeAngle)).toFixed(1)}" r="7"/>`;
       const pzemText = status.mains === 'on' ? this._t('active') : status.inverter ? this._t('inactive') : this._t('detecting');
       const mainsText = status.mains === 'on' ? this._t('has_voltage') : status.inverter ? this._t('no_voltage') : this._t('detecting');
       const sourceText = status.inverter ? this._t('from_inverter') : status.mains === 'on' ? this._t('from_mains') : this._t('detecting');
@@ -207,14 +215,18 @@
                 <linearGradient id="${this._id('arc')}" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#078bff"/><stop offset=".52" stop-color="#08d6e7"/><stop offset="1" stop-color="#39ef83"/></linearGradient>
                 <radialGradient id="${this._id('glow')}"><stop stop-color="#087de0" stop-opacity=".32"/><stop offset="1" stop-color="#087de0" stop-opacity="0"/></radialGradient>
                 <filter id="${this._id('blur')}"><feGaussianBlur stdDeviation="7"/></filter>
+                <linearGradient id="${this._id('tower-metal')}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e4f8ff"/><stop offset=".34" stop-color="#58b9e9"/><stop offset=".68" stop-color="#174c79"/><stop offset="1" stop-color="#b7edff"/></linearGradient>
+                <linearGradient id="${this._id('tower-face')}" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#0b3458"/><stop offset=".5" stop-color="#71d3ff"/><stop offset="1" stop-color="#123b61"/></linearGradient>
               </defs>
               <ellipse cx="250" cy="170" rx="190" ry="150" fill="url(#${this._id('glow')})"/>
+              <path d="M76 246Q148 205 218 229T356 221T424 243V270H76Z" fill="#08223a" opacity=".62"/>
+              <g class="distant-trees" fill="#0d4771"><path d="M89 239l10-37 10 37zm22 0 12-48 12 48zm258 0 10-41 10 41zm22 0 12-49 12 49z"/></g>
               <path d="M72 270 A190 190 0 1 1 428 270" fill="none" stroke="#19334f" stroke-width="28" stroke-linecap="round" pathLength="100"/>
+              <path d="M72 270 A190 190 0 1 1 428 270" fill="none" stroke="#75cfff" stroke-opacity=".16" stroke-width="34" stroke-linecap="round" pathLength="100"/>
+              ${this._gaugeTicks(progress)}
               <path d="M72 270 A190 190 0 1 1 428 270" fill="none" stroke="url(#${this._id('arc')})" stroke-width="28" stroke-linecap="round" stroke-dasharray="${progress} 100" pathLength="100"/>
-              <g opacity=".82" stroke="#55bcff" fill="none" stroke-width="2.2" filter="url(#${this._id('blur')})"><path d="M250 63 205 211h90zM250 63v148M218 125h64M211 165h78M205 211l45-148 45 148"/></g>
-              <g stroke="#b6eaff" fill="none" stroke-width="2.1"><path d="M250 63 205 211h90zM250 63v148M218 125h64M211 165h78M205 211l45-148 45 148"/><path d="m205 211 45-28 45 28m-78-46 33-40 33 40"/></g>
-              <path d="M85 242Q150 180 205 226T320 220T420 242V270H85Z" fill="#06274a" opacity=".62"/>
-              <g fill="#0a477a" opacity=".8"><path d="M90 230l8-28 8 28zm22 0 10-38 10 38zm270 0 9-34 9 34zm20 0 11-43 11 43z"/></g>
+              ${gaugeDot}
+              ${this._towerArtwork()}
               <text x="250" y="286" text-anchor="middle" class="voltage-value">${this._escape(voltageNumber)} <tspan class="voltage-unit">${this._escape(voltageUnit)}</tspan></text>
               <text x="250" y="322" text-anchor="middle" class="voltage-label">${this._escape(this._t('voltage'))}</text>
             </svg>
@@ -234,11 +246,63 @@
           <div class="card info"><span class="symbol green">${this._svg('shield')}</span><div><div class="small">${this._escape(this._t('pzem_link'))}</div><strong class="${status.mains === 'on' ? 'good' : ''}">${this._escape(pzemText)}</strong></div></div>
           <div class="card info"><span class="symbol amber">${this._svg('coin')}</span><div><div class="small">${this._escape(this._t('today_consumption'))}</div><strong>${this._escape(energy)}</strong><div class="small cost-line">≈ ${this._escape(cost)}</div></div></div>
         </div>
-        <div class="card banner ${status.stateClass}"><span class="banner-check">${this._svg('check')}</span><strong>${this._escape(status.banner)}</strong><span class="house-art" aria-hidden="true"><svg viewBox="0 0 150 80"><path d="m12 42 62-34 62 34v33H12z" fill="#102f4e" stroke="#50b7ff" stroke-width="3"/><path d="M61 75V48h26v27M28 49h18v17H28zm77 0h18v17h-18z" fill="#ffcb69" stroke="#f4aa45" stroke-width="2"/><path d="M7 77h137" stroke="#42c67e" stroke-width="4" stroke-linecap="round"/><circle cx="25" cy="31" r="3" fill="#77d5ff"/><circle cx="128" cy="19" r="3" fill="#77d5ff"/></svg></span></div>
+        <div class="card banner ${status.stateClass}"><span class="banner-check">${this._svg('check')}</span><strong>${this._escape(status.banner)}</strong><span class="house-art" aria-hidden="true">${this._houseArt()}</span></div>
       </section>`;
     }
 
-    _id(name) { return `gm-${name}`; }
+    _id(name) { return `gm-${this._instanceId}-${name}`; }
+    _gaugeTicks(progress) {
+      return Array.from({ length: 25 }, (_, index) => {
+        const angle = (180 + index * 7.5) * Math.PI / 180;
+        const major = index % 4 === 0;
+        const inner = major ? 178 : 183;
+        const outer = major ? 200 : 197;
+        const x1 = 250 + inner * Math.cos(angle); const y1 = 270 + inner * Math.sin(angle);
+        const x2 = 250 + outer * Math.cos(angle); const y2 = 270 + outer * Math.sin(angle);
+        const active = index / 24 * 100 <= progress ? ' active' : '';
+        return `<path class="dial-tick${active}" d="M${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}"/>`;
+      }).join('');
+    }
+    _towerArtwork() {
+      return `<g class="tower-illustration">
+        <path class="tower-shadow" d="M250 60 202 212h96z"/>
+        <g class="tower-halo" filter="url(#${this._id('blur')})" fill="none" stroke="#38bdff" stroke-width="5" opacity=".58">
+          <path d="M250 60 202 212M250 60 298 212M250 60v152M177 116h146M187 151h126M202 183h96M177 116 323 151 187 151 323 116M187 151 298 183 202 183 298 151M202 183 250 212 298 183"/>
+        </g>
+        <g class="tower-frame" fill="none" stroke="url(#${this._id('tower-metal')})" stroke-linecap="round" stroke-linejoin="round">
+          <path class="tower-rail" d="M250 60 202 212M250 60 298 212M250 60v152"/>
+          <path d="M177 116h146M187 151h126M202 183h96M202 212h96"/>
+          <path d="M177 116 313 151M323 116 187 151M187 151 288 183M313 151 202 183M202 183 278 212M298 183 202 212"/>
+          <path class="tower-arm" d="M157 108h186M168 143h164M230 94h40"/>
+          <path class="tower-crossarm" d="M157 108 177 116M343 108 323 116M168 143 187 151M332 143 313 151"/>
+          <path class="tower-insulator" d="M165 108v12m-4-8h8m-8 5h8M335 108v12m-4-8h8m-8 5h8M176 143v10m-4-7h8m-8 5h8M324 143v10m-4-7h8m-8 5h8"/>
+          <path class="tower-wire" d="M124 108h33m186 0h33M142 143h26m164 0h26"/>
+          <path d="M216 212 250 60l34 152" opacity=".65"/>
+        </g>
+        <path class="tower-foot" d="M195 215h110"/>
+      </g>`;
+    }
+    _houseArt() {
+      return `<svg viewBox="0 0 300 175" aria-hidden="true">
+        <defs>
+          <linearGradient id="${this._id('house-roof')}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#55c8ff"/><stop offset=".5" stop-color="#1b559f"/><stop offset="1" stop-color="#09244e"/></linearGradient>
+          <linearGradient id="${this._id('house-wall')}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e5f2ff"/><stop offset=".55" stop-color="#89b4db"/><stop offset="1" stop-color="#42678f"/></linearGradient>
+          <linearGradient id="${this._id('house-glass')}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff5b2"/><stop offset="1" stop-color="#ff9b39"/></linearGradient>
+          <filter id="${this._id('house-shadow')}"><feGaussianBlur stdDeviation="5"/></filter>
+        </defs>
+        <ellipse cx="158" cy="158" rx="119" ry="11" fill="#000" opacity=".42" filter="url(#${this._id('house-shadow')})"/>
+        <path d="M35 91 145 20l123 66-111 66z" fill="url(#${this._id('house-roof')})" stroke="#82d5ff" stroke-width="2"/>
+        <path d="M35 91 145 20v15L48 98z" fill="#2a79c1"/><path d="m145 20 123 66-16 9L145 38z" fill="#0c3268"/>
+        <path d="m64 94 93-47 85 47v51l-85 25-93-46z" fill="url(#${this._id('house-wall')})" stroke="#d8ecff" stroke-opacity=".55"/>
+        <path d="m157 47 85 47v51l-85 25z" fill="#315b89" opacity=".9"/>
+        <path d="m119 67 38-20 39 21-39 23z" fill="#0b2d5e" stroke="#68bfff"/><path d="m129 68 28-11 27 13-27 13z" fill="#ffbf55"/>
+        <path d="m84 105 27-14v29l-27 14zm100 0 35-17v33l-35 18z" fill="url(#${this._id('house-glass')})" stroke="#fff1b0" stroke-width="3"/>
+        <path d="m84 105 27-14m-14 7v29m87-22 35-17m-18 9v33" stroke="#6c4b39" stroke-width="3"/>
+        <path d="m135 126 32-16v48l-32 9z" fill="#17385f" stroke="#d4e8ff" stroke-width="2"/><circle cx="160" cy="141" r="2" fill="#ffd36b"/>
+        <path d="m22 148 12-43 12 43zm-6 0 18-28 18 28zm230 0 13-45 13 45zm-6 0 19-29 19 29z" fill="#0c6a48"/>
+        <g fill="#24b879"><circle cx="34" cy="108" r="12"/><circle cx="258" cy="111" r="13"/></g>
+      </svg>`;
+    }
     _heroMetric(key, icon, digits) {
       const value = this._num(key);
       const display = value === null ? this._escape(this._formatted(key, digits)) : value.toLocaleString(this._locale(), { maximumFractionDigits: digits });
@@ -346,24 +410,59 @@
     }
 
     _energy() {
-      return `<section class="detail-panel"><h2>${this._escape(this._t('energy_title'))}</h2><div class="detail-grid energy-grid">
-        ${this._detail('energy_today', this._t('today'), 3)}${this._detail('energy_month', this._t('energy_month'), 2)}${this._detail('energy_total', this._t('energy_total'), 3)}
-        ${this._detail('cost_today', this._t('cost_today'), 2)}${this._detail('cost_month', this._t('cost_month'), 2)}${this._detail('cost_total', this._t('cost_total'), 2)}
-        ${this._detail('tariff', this._t('tariff'), 2)}${this._detail('cost_rate', this._t('cost_rate'), 2)}${this._detail('two_zone', this._t('two_zone'), 0)}
-      </div></section>`;
+      const twoZone = this._raw('two_zone') === 'on';
+      return `<section class="detail-panel energy-panel"><h2>${this._escape(this._t('energy_title'))}</h2>
+        <div class="energy-hero">
+          <article class="energy-visual energy-coin"><span class="eyebrow">${this._escape(this._t('today'))}</span><strong class="hero-number">${this._escape(this._formatted('energy_today', 2))}</strong><small>${this._escape(this._t('estimated_cost'))} · ${this._escape(this._formatted('cost_today', 2))}</small>${this._energyCoinArt()}</article>
+          <article class="energy-visual energy-load"><span class="eyebrow">${this._escape(this._t('current_load'))}</span><strong class="hero-number">${this._escape(this._formatted('power', 0))}</strong><small>${this._escape(this._t('cost_rate'))} · ${this._escape(this._formatted('cost_rate', 2))}</small>${this._plugArt()}</article>
+        </div>
+        <div class="detail-grid energy-grid">
+          ${this._detail('energy_today', this._t('today'), 3)}${this._detail('energy_month', this._t('energy_month'), 2)}${this._detail('energy_total', this._t('energy_total'), 3)}
+          ${this._detail('cost_today', this._t('cost_today'), 2)}${this._detail('cost_month', this._t('cost_month'), 2)}${this._detail('cost_total', this._t('cost_total'), 2)}
+          ${this._detail('tariff', this._t('tariff'), 2)}${this._detail('cost_rate', this._t('cost_rate'), 2)}
+          <div class="detail tariff-state"><span>${this._escape(this._t('two_zone'))}</span><b class="${twoZone ? 'good' : ''}">${this._escape(twoZone ? this._t('on') : this._t('off'))}</b><i class="tariff-led ${twoZone ? 'active' : ''}"></i></div>
+        </div>
+        <div class="visual-grid energy-visual-grid">
+          <section class="visual-card tariff-visual"><h3>${this._escape(this._t('tariff_compare'))}</h3>${this._tariffBars()}</section>
+          <section class="visual-card current-tariff"><h3>${this._escape(this._t('current_rate'))}</h3><strong class="big-number">${this._escape(this._formatted('tariff', 2))}</strong><span class="rate-pulse">${this._svg('energy')} ${this._escape(this._t('two_zone'))}: ${this._escape(twoZone ? this._t('on') : this._t('off'))}</span></section>
+        </div>
+      </section>`;
+    }
+
+    _energyCoinArt() {
+      return `<svg class="energy-object coin-object" viewBox="0 0 180 160" aria-hidden="true"><defs><linearGradient id="${this._id('coin-edge')}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff0a0"/><stop offset=".45" stop-color="#ffb72e"/><stop offset="1" stop-color="#a95608"/></linearGradient><linearGradient id="${this._id('coin-face')}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff2a8"/><stop offset=".5" stop-color="#ffbb36"/><stop offset="1" stop-color="#cb7416"/></linearGradient></defs><ellipse cx="95" cy="139" rx="66" ry="10" fill="#000" opacity=".35"/><path d="M34 48Q34 26 92 26t58 22v63q0 22-58 22t-58-22z" fill="url(#${this._id('coin-edge')})"/><path d="M34 42Q34 20 92 20t58 22v61q0 22-58 22t-58-22z" fill="url(#${this._id('coin-face')})" stroke="#fff0aa" stroke-width="2"/><ellipse cx="92" cy="42" rx="58" ry="22" fill="#ffe18a" stroke="#fff8d3" stroke-width="2"/><ellipse cx="92" cy="42" rx="43" ry="13" fill="#c47a16" opacity=".42"/><path d="m90 27-18 30h18l-9 22 34-34H95l11-18z" fill="#fffbd7" stroke="#fff4a4" stroke-width="1.5"/></svg>`;
+    }
+
+    _plugArt() {
+      return `<svg class="energy-object plug-object" viewBox="0 0 180 160" aria-hidden="true"><defs><linearGradient id="${this._id('plug-metal')}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e0fbff"/><stop offset=".42" stop-color="#35c3f5"/><stop offset="1" stop-color="#164a92"/></linearGradient></defs><ellipse cx="95" cy="140" rx="62" ry="9" fill="#000" opacity=".34"/><path d="M68 23v34m44-34v34" stroke="#e8fbff" stroke-width="12" stroke-linecap="round"/><path d="M48 54q0-15 17-15h50q17 0 17 16v28q0 24-25 33v23H73v-23Q48 107 48 83z" fill="url(#${this._id('plug-metal')})" stroke="#a7edff" stroke-width="2"/><path d="M65 61h50v19q0 15-25 23Q65 94 65 80z" fill="#0a3157" opacity=".58"/><path d="m92 55-15 26h15l-8 19 25-30H94l9-15z" fill="#ecffff"/></svg>`;
+    }
+
+    _tariffBars() {
+      const day = this._num('tariff_day'); const night = this._num('tariff_night');
+      const max = Math.max(day || 0, night || 0, 0.01);
+      const row = (key, label, cls, value) => `<div class="bar-row"><span>${this._escape(this._t(label))}</span><div class="bar-track"><i class="${cls}" style="width:${value === null ? 0 : Math.max(0, Math.min(100, value / max * 100)).toFixed(1)}%"></i></div><b>${this._escape(this._formatted(key, 2))}</b></div>`;
+      return `<div class="bar-list">${row('tariff_day', 'day', 'day-rate', day)}${row('tariff_night', 'night', 'night-rate', night)}</div>`;
     }
 
     _settings() {
       const twoZone = this._raw('two_zone') === 'on';
-      const wifi = this._formatted('wifi_signal', 0);
-      return `<section class="detail-panel"><h2>${this._escape(this._t('settings_title'))}</h2><div class="detail-grid settings-grid">
+      const esp = this._raw('esp_status');
+      const deviceState = esp === 'on' ? this._t('online') : esp === 'off' ? this._t('offline') : esp === 'unavailable' ? this._t('unavailable') : this._t('unknown');
+      const deviceClass = esp === 'on' ? 'online' : esp === 'off' ? 'offline' : 'unknown';
+      return `<section class="detail-panel settings-panel"><h2>${this._escape(this._t('settings_title'))}</h2>
+        <div class="settings-hero">${this._chipArt()}<div class="device-copy"><strong>${this._escape(this._t('device_name'))}</strong><span>${this._escape(this._t('device_description'))}</span></div><div class="device-status ${deviceClass}"><i></i><b>${this._escape(deviceState)}</b></div></div>
+        <div class="detail-grid settings-grid">
         ${this._setting('sag_threshold', this._t('sag'))}${this._setting('swell_threshold', this._t('swell'))}${this._setting('nominal_voltage', this._t('nominal'))}${this._setting('tariff_day', this._t('tariff_day'))}${this._setting('tariff_night', this._t('tariff_night'))}
         <div class="detail switch-setting"><span>${this._escape(this._t('two_zone'))}</span><strong>${this._escape(twoZone ? this._t('on') : this._t('off'))}</strong><button class="switch-button ${twoZone ? 'on' : ''}" data-switch="two_zone" aria-pressed="${twoZone}">${this._svg('gear')}<span>${this._escape(twoZone ? this._t('on') : this._t('off'))}</span></button></div>
-      </div><h2 class="subheading">${this._escape(this._t('settings_title'))}</h2><div class="detail-grid">
+      </div><h2 class="subheading">${this._escape(this._t('diagnostics'))}</h2><div class="detail-grid">
         ${this._detail('wifi_signal', this._t('wifi'), 0)}${this._detail('esp_temperature', this._t('temperature'), 1)}${this._detail('uptime', this._t('uptime'), 0)}${this._detail('ip_address', this._t('ip'), 0)}${this._detail('ssid', this._t('ssid'), 0)}${this._detail('inverter_events', this._t('inverter_events'), 0)}
       </div><h2 class="subheading">${this._escape(this._t('actions'))}</h2><div class="action-grid">
         ${this._action('reset_energy', this._t('reset_energy'))}${this._action('reset_events', this._t('reset_events'))}${this._action('reset_cost', this._t('reset_cost'))}${this._action('restart', this._t('restart'))}
       </div></section>`;
+    }
+
+    _chipArt() {
+      return `<svg class="chip-art" viewBox="0 0 120 100" aria-hidden="true"><defs><linearGradient id="${this._id('chip-frame')}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#c9f8ff"/><stop offset=".42" stop-color="#27bce9"/><stop offset="1" stop-color="#174887"/></linearGradient><linearGradient id="${this._id('chip-core')}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#32efff"/><stop offset="1" stop-color="#1267d7"/></linearGradient></defs><g stroke="#78ddff" stroke-width="3" stroke-linecap="round"><path d="M12 24H29M12 42H29M12 60H29M12 78H29M91 24h17M91 42h17M91 60h17M91 78h17M38 9v14m20-14v14m20-14v14M38 77v14m20-14v14m20-14v14"/></g><rect x="26" y="18" width="68" height="64" rx="14" fill="#071b34" stroke="url(#${this._id('chip-frame')})" stroke-width="3"/><rect x="34" y="26" width="52" height="48" rx="9" fill="url(#${this._id('chip-core')})"/><path d="m63 31-18 24h14l-5 16 25-28H65l8-12z" fill="#edffff"/><path d="M39 31h10M39 38h6M74 62h8" stroke="#d2ffff" stroke-width="2" stroke-linecap="round" opacity=".75"/></svg>`;
     }
 
     _action(key, label) {
@@ -374,9 +473,10 @@
       if (!this._config || !this._hass) return;
       const status = this._displayStatus();
       const online = status.esp === 'on';
+      const readyClass = this._hasRendered ? ' render-ready' : '';
       const tab = (id, key, icon) => `<button class="tab ${this._activeTab === id ? 'active' : ''}" data-tab="${id}" aria-selected="${this._activeTab === id}"><span class="tab-icon">${this._svg(icon)}</span>${this._escape(this._t(key))}</button>`;
       const activeContent = this._activeTab === 'home' ? this._home() : this._activeTab === 'params' ? this._params() : this._activeTab === 'energy' ? this._energy() : this._settings();
-      this.shadowRoot.innerHTML = `<style>${GridMonitorCard.CSS}</style><main class="shell ${status.stateClass}">
+      this.shadowRoot.innerHTML = `<style>${GridMonitorCard.CSS}</style><main class="shell ${status.stateClass}${readyClass}">
         <header class="header"><div class="logo">${this._svg('bolt')}</div><div class="brand"><h1>${this._escape(this._config.name || this._t('title'))}</h1><p>${this._escape(this._t('subtitle'))}</p></div>
           <div class="headright"><div class="connection ${online ? 'online' : status.esp === 'off' ? 'offline' : 'unknown'}"><span class="dot"></span><strong>${this._escape(online ? this._t('online') : status.esp === 'off' ? this._t('offline') : this._t('unknown'))}</strong><small>${this._escape(this._t('updated'))}: ${this._escape(this._updatedTime())}</small></div><span class="wifi-icon" title="${this._escape(this._formatted('wifi_signal', 0))}">${this._svg('wifi')}</span></div>
         </header>
@@ -384,6 +484,7 @@
         <div class="view">${activeContent}</div>
         <footer class="footer"><span>ESPHome · Grid Monitor</span><span>${this._escape(this._formatted('ssid', 0))}</span></footer>
       </main>`;
+      this._hasRendered = true;
       this.shadowRoot.querySelectorAll('[data-tab]').forEach((button) => button.addEventListener('click', () => {
         this._activeTab = button.dataset.tab;
         this._render();
@@ -448,6 +549,26 @@
         .detail-panel{padding:22px;margin-top:2px}.detail-panel h2{margin:0 0 18px;font-size:25px}.detail-panel h2.subheading{margin:24px 0 14px;font-size:19px}.detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.detail{padding:16px;border-radius:16px;background:#13243a;border:1px solid #2b4562;min-width:0}.detail>span,.detail label>span{display:block;color:#9fb5d1;font-size:14px;margin-bottom:7px}.detail b{font-size:22px;overflow-wrap:anywhere}.setting{display:flex;align-items:end;gap:10px}.setting label{flex:1;min-width:0}.setting-input{display:flex;align-items:center;gap:8px}.setting-input input{width:100%;min-width:0;background:#091727;border:1px solid #37526f;border-radius:9px;color:var(--text);padding:10px;font:inherit;font-size:18px}.setting-input small{color:#9fb5d1;white-space:nowrap}.save-button,.switch-button,.action-button{border:1px solid #278ed0;background:#092645;color:#d7efff;border-radius:10px;padding:9px 12px;font:inherit;cursor:pointer}.save-button:hover,.switch-button:hover,.action-button:hover{background:#0c3962}.save-button:disabled,.switch-button:disabled,.action-button:disabled{opacity:.45;cursor:not-allowed}.switch-setting{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.switch-setting>span{color:#9fb5d1;font-size:14px}.switch-setting>strong{font-size:16px}.switch-button{grid-column:1/-1;display:flex;align-items:center;gap:8px;justify-content:center}.switch-button .icon{width:20px;height:20px}.switch-button.on{border-color:#35ed91;color:#35ed91}.action-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.action-button{min-height:68px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;font-size:13px;border-color:#2b8ed0}.action-button span{font-size:22px;color:#45bdff}.action-button .icon{width:25px;height:25px}.footer{display:flex;justify-content:space-between;gap:10px;margin:14px 2px 0;color:#6885a2;font-size:11px}.footer span:last-child{max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
         @container (max-width:760px){.shell{padding:12px}.header{gap:11px;padding:5px 2px 14px}.logo{width:58px;height:58px;border-radius:17px}.logo .icon{width:38px;height:38px}.headright{gap:8px}.connection strong{font-size:14px}.connection small{font-size:10px}.wifi-icon{font-size:21px;padding-left:10px}.wifi-icon .icon{width:24px;height:24px}.tabs{margin-bottom:12px}.tab{gap:5px;padding:12px 3px;font-size:12px}.tab .tab-icon{font-size:19px}.tab .icon{width:20px;height:20px}.main-grid{grid-template-columns:1fr;gap:10px}.voltage{min-height:300px}.voltage-gauge{width:min(100%,420px)}.metrics{gap:10px}.metric{min-height:135px}.metric-icon .icon{width:38px;height:38px}.metric-label{font-size:15px}.chart-card{padding:13px 11px}.chart-head h2{font-size:19px}.periods{width:100%;margin:0}.period-button{flex:1;padding:8px 4px;font-size:13px}.bottom-status{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.info{min-height:100px;padding:12px 8px}.info .symbol .icon{width:30px;height:30px}.info .small{font-size:13px}.info strong{font-size:16px}.banner{padding:14px;min-height:70px}.banner-check{width:38px;height:38px}.banner-check .icon{width:28px;height:28px}.house-art{width:80px}.detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.detail-panel{padding:16px}.detail-panel h2{font-size:22px}.action-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
         @container (max-width:420px){.headright .wifi-icon{display:none}.connection small{max-width:105px}.tab{font-size:11px}.tab .tab-icon{display:none}.metric{min-height:122px;padding:12px 8px}.metric-value{font-size:clamp(25px,8cqw,34px)}.info{gap:8px}.info .symbol .icon{width:26px;height:26px}.info .small{font-size:12px}.info strong{font-size:14px}.detail-grid{grid-template-columns:1fr}.setting{align-items:stretch}}
+        /* Premium instrument finish: layered glass, metal highlights and soft depth. */
+        :host{color-scheme:dark}.shell{position:relative;isolation:isolate;background:radial-gradient(ellipse at 12% 8%,#008bff25,transparent 32%),radial-gradient(ellipse at 88% 24%,#20e1b31a,transparent 30%),radial-gradient(ellipse at 50% 100%,#4351be20,transparent 42%),linear-gradient(145deg,#050b16,#091629 48%,#050b16);border-color:#70aee233;box-shadow:0 24px 60px #0009,inset 0 1px 0 #ffffff18,inset 0 -1px 0 #0008}
+        .shell:before{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;background:linear-gradient(122deg,#ffffff08,transparent 24%,transparent 77%,#16a6ff0b)}.shell>*{position:relative;z-index:1}
+        .card{position:relative;isolation:isolate;overflow:hidden;background:linear-gradient(145deg,#192d48f5,#091526fa 68%,#0a1c30f7);border:1px solid #70aee23d;box-shadow:0 16px 34px #0007,inset 0 1px 0 #ffffff20,inset 0 -1px 0 #0006;backdrop-filter:blur(14px);transition:border-color .24s,box-shadow .24s,transform .24s}
+        .card:before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;border-radius:inherit;background:linear-gradient(128deg,#ffffff12,transparent 23%,transparent 72%,#1da9ff0c)}.card:after{content:"";position:absolute;left:9%;right:9%;top:0;height:1px;z-index:0;pointer-events:none;background:linear-gradient(90deg,transparent,#c5ecff55,transparent)}.card>*{position:relative;z-index:1}
+        .logo{position:relative;overflow:hidden;background:radial-gradient(circle at 34% 20%,#2580d0,#0a2c59 50%,#061428 82%);border-color:#3aaef2a8;box-shadow:0 0 0 4px #009bff12,0 14px 32px #007fff4a,inset 0 2px 13px #ffffff35,inset 0 -8px 18px #0007}.logo:after{content:"";position:absolute;inset:-65% 28% 28% -30%;transform:rotate(35deg);background:linear-gradient(90deg,transparent,#ffffff22,transparent);pointer-events:none}.logo .icon{filter:drop-shadow(0 0 10px #23baff) drop-shadow(0 4px 3px #0008)}
+        .tabs{border:1px solid #79b7e34d;border-radius:23px;background:linear-gradient(180deg,#1a304beF,#091627f5);box-shadow:inset 0 1px 0 #ffffff20,0 12px 28px #0006}.tab.active{background:linear-gradient(120deg,#12b9ff,#087be9 52%,#1559c9);box-shadow:0 7px 22px #0090ff60,inset 0 1px 0 #ffffff65,inset 0 -2px 5px #003e9c80}
+        .voltage{isolation:isolate;background:radial-gradient(ellipse at 50% 42%,#0093ff30,transparent 48%),linear-gradient(145deg,#173553,#071323 72%);border-color:#72b8ea4f;box-shadow:0 18px 38px #0007,inset 0 2px 0 #ffffff22,inset 0 -12px 28px #0007}.voltage:before{background:linear-gradient(125deg,#ffffff14,transparent 30%,transparent 72%,#26aeff12)}.voltage:after{content:"";position:absolute;inset:9px;z-index:0;pointer-events:none;border:1px solid #9fdfff13;border-radius:17px;box-shadow:inset 0 0 34px #0091ff18}.voltage-gauge{position:relative;z-index:1;filter:drop-shadow(0 14px 18px #0006);overflow:visible}.dial-tick{fill:none;stroke:#81b5d2;stroke-opacity:.54;stroke-width:1.7}.dial-tick.active{stroke:#b5f7ff;stroke-opacity:.96;filter:drop-shadow(0 0 4px #19bdff)}.gauge-dot{fill:#f3ffff;stroke:#08aaff;stroke-width:5;filter:drop-shadow(0 0 8px #08c5ff)}.tower-shadow{fill:#031322;opacity:.54}.tower-frame{stroke-width:1.55}.tower-frame .tower-rail{stroke-width:3}.tower-frame .tower-arm{stroke-width:2.7}.tower-frame .tower-crossarm{stroke-width:1.4;opacity:.78}.tower-frame .tower-insulator{stroke:#c8f6ff;stroke-width:1.1}.tower-frame .tower-wire{stroke:#5bc8ff;stroke-width:1;opacity:.65}.tower-foot{fill:none;stroke:#c0eeff;stroke-width:2.6;filter:drop-shadow(0 0 5px #09aaff)}.voltage-value{filter:drop-shadow(0 3px 8px #0009)}.state-indicator{position:relative;z-index:1;text-shadow:0 0 16px currentColor}.state-indicator .check-mark{box-shadow:0 0 0 5px #3fffa411,0 0 24px #3fffa070,inset 0 2px 4px #ffffff66}
+        .metric{background:linear-gradient(145deg,#1c3452,#091628);border-color:#70aee247;box-shadow:inset 0 1px 0 #ffffff20,0 14px 28px #0006,inset 0 -8px 17px #0005}.metric:before{content:"";position:absolute;right:-62px;top:-76px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,#00aeff40,transparent 70%);pointer-events:none}.metric-icon{filter:drop-shadow(0 5px 9px #00a6ff65)}.metric-value{text-shadow:0 3px 14px #0007}.info{background:linear-gradient(145deg,#1a314d,#081425);border-color:#69a4d944;box-shadow:inset 0 1px 0 #ffffff1d,0 12px 27px #0006,inset 0 -7px 16px #0005}.info .symbol{filter:drop-shadow(0 5px 8px #0006) drop-shadow(0 0 10px currentColor)}
+        .chart-card{background:linear-gradient(145deg,#142b45f7,#071221fa);box-shadow:0 18px 36px #0007,inset 0 1px 0 #ffffff20,inset 0 -9px 20px #0005}.chart-line{filter:drop-shadow(0 0 3px #05baff)}.chart-tag{filter:drop-shadow(0 5px 8px #0008)}
+        .banner{position:relative;overflow:hidden;background:linear-gradient(105deg,#07362bf7,#082830f7 55%,#082038f7);border-color:#43f5a0b3;box-shadow:0 0 0 1px #43f5a01a,0 0 30px #29dc8621,inset 0 1px 0 #ffffff2e,inset 0 -8px 20px #0005}.banner strong{text-shadow:0 2px 12px #24ff9d45}.banner .banner-check{box-shadow:0 0 0 6px #3fffa414,0 0 24px #3fffa078,inset 0 2px 4px #ffffff5c}.banner.inverter{background:linear-gradient(105deg,#403014f7,#222a32f7 58%,#10233af7)}.banner.alarm,.banner.offline{background:linear-gradient(105deg,#401b27f7,#202336f7 62%,#171c2af7)}
+        .house-art{width:min(30%,210px);max-width:210px;filter:drop-shadow(0 8px 15px #000a) drop-shadow(0 0 15px #0082ff54);opacity:.98}.house-art svg{display:block;width:100%;height:auto}
+        .energy-hero{display:grid;grid-template-columns:1.08fr .92fr;gap:15px;margin:0 0 15px}.energy-visual{position:relative;isolation:isolate;min-height:170px;overflow:hidden;padding:20px;border-radius:19px;border:1px solid #70aee24f;box-shadow:inset 0 1px 0 #ffffff2c,0 16px 32px #0006,inset 0 -10px 20px #0004;display:flex;flex-direction:column;justify-content:center;align-items:flex-start}.energy-visual:before{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(circle at 82% 24%,#ffbd4a42,transparent 34%),linear-gradient(125deg,#193e68,#10213d 58%,#201d45)}.energy-load:before{background:radial-gradient(circle at 82% 24%,#19cdff40,transparent 35%),linear-gradient(125deg,#123f61,#10213d 60%,#122d50)}.energy-visual .eyebrow{color:#b4cbe6;font-size:12px;letter-spacing:.1em;text-transform:uppercase}.energy-visual .hero-number{position:relative;z-index:1;max-width:75%;margin:7px 0 3px;font-size:clamp(25px,4cqw,43px);line-height:1.12;font-weight:850;letter-spacing:-1px;text-shadow:0 4px 18px #0008;overflow-wrap:anywhere}.energy-visual small{position:relative;z-index:1;max-width:76%;color:#c1d4ea;font-size:13px}.energy-object{position:absolute;right:2%;bottom:-8%;width:43%;height:105%;filter:drop-shadow(0 11px 12px #0008);transform:rotate(-4deg);opacity:.95}.plug-object{width:42%;right:2%;transform:rotate(5deg)}
+        .energy-visual-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;margin-top:14px}.visual-card{padding:18px;border-radius:18px;background:linear-gradient(145deg,#1b334ff5,#0a1728fa);border:1px solid #69a4d944;box-shadow:inset 0 1px 0 #ffffff1e,0 11px 24px #0005}.visual-card h3{margin:0 0 15px;font-size:17px}.bar-list{display:grid;gap:14px}.bar-row{display:grid;grid-template-columns:64px minmax(36px,1fr) minmax(80px,auto);gap:11px;align-items:center;color:var(--muted);font-size:13px}.bar-row b{color:var(--text);font-size:14px;text-align:right}.bar-track{height:9px;border-radius:9px;overflow:hidden;background:#263c56;box-shadow:inset 0 2px 3px #0008}.bar-track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#078bff,#16d6e8);box-shadow:0 0 12px #0aaaff62;transition:width .55s ease}.bar-track i.night-rate{background:linear-gradient(90deg,#8057d8,#c07aff);box-shadow:0 0 12px #a875ff62}.rate-pulse{display:inline-flex;align-items:center;gap:7px;margin-top:13px;padding:6px 10px;border-radius:18px;background:#0b3440;border:1px solid #28bdc457;color:#69e6d4;font-size:12px;max-width:100%;flex-wrap:wrap}.rate-pulse .icon{width:17px;height:17px}.current-tariff{display:flex;flex-direction:column;justify-content:center;align-items:flex-start}.current-tariff .big-number{font-size:clamp(27px,3.5cqw,40px);overflow-wrap:anywhere}
+        .settings-hero{display:flex;align-items:center;gap:15px;padding:14px 18px;margin:0 0 15px;border-radius:18px;background:linear-gradient(110deg,#163c5ff2,#17224bf2);border:1px solid #70aee24a;box-shadow:inset 0 1px 0 #ffffff27,0 14px 28px #0005}.chip-art{width:80px;flex:none;filter:drop-shadow(0 8px 12px #0008) drop-shadow(0 0 13px #078fff45)}.device-copy{min-width:0}.device-copy strong{display:block;font-size:17px}.device-copy span{display:block;margin-top:4px;color:#a9bfdc;font-size:12px}.device-status{margin-left:auto;display:flex;align-items:center;gap:8px;white-space:nowrap;color:var(--muted);font-size:13px}.device-status i{width:10px;height:10px;border-radius:50%;background:#8597aa;box-shadow:0 0 8px #8597aa66}.device-status.online{color:var(--green)}.device-status.online i{background:var(--green);box-shadow:0 0 12px #35ed91a8}.device-status.offline{color:var(--red)}.device-status.offline i{background:var(--red);box-shadow:0 0 12px #ff526d88}.detail:hover,.visual-card:hover,.control:hover{border-color:#59bbef70;box-shadow:0 16px 32px #0007,0 0 24px #0099ff13}.tariff-state{position:relative}.tariff-led{position:absolute;right:14px;bottom:14px;width:8px;height:8px;border-radius:50%;background:#7e8ea2}.tariff-led.active{background:var(--green);box-shadow:0 0 12px #35ed91b0}
+        .metric:hover,.info:hover,.action-button:hover,.save-button:hover,.switch-button:hover{transform:translateY(-3px);border-color:#54bdff80;box-shadow:0 18px 34px #0008,0 0 24px #0099ff1b}.tab,.period-button,.action-button,.save-button,.switch-button{transition:background .22s,color .22s,border-color .22s,box-shadow .22s,transform .22s}
+        @media(prefers-reduced-motion:no-preference){.shell:not(.render-ready){animation:deviceBoot .7s cubic-bezier(.2,.8,.2,1) both}.logo .icon{animation:logoFloat 4.2s ease-in-out infinite}.connection.online .dot,.device-status.online i{animation:ledPulse 2.2s ease-in-out infinite}.gauge-dot{animation:gaugePulse 2.8s ease-in-out infinite}.chart-dot{animation:chartPulse 2.4s ease-in-out infinite}.voltage:after{animation:screenGlow 7s ease-in-out infinite alternate}@keyframes deviceBoot{from{opacity:0;transform:translateY(8px) scale(.995)}to{opacity:1;transform:translateY(0) scale(1)}}@keyframes logoFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}@keyframes ledPulse{0%,100%{box-shadow:0 0 7px currentColor}50%{box-shadow:0 0 16px currentColor,0 0 25px currentColor}}@keyframes gaugePulse{0%,100%{filter:drop-shadow(0 0 5px #08c5ff)}50%{filter:drop-shadow(0 0 12px #08c5ff)}}@keyframes chartPulse{0%,100%{opacity:.8}50%{opacity:1}}@keyframes screenGlow{from{box-shadow:inset 0 0 24px #0091ff10}to{box-shadow:inset 0 0 40px #0091ff24}}}
+        @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+        @container (max-width:760px){.energy-hero{grid-template-columns:1fr}.energy-visual{min-height:145px}.energy-visual-grid{grid-template-columns:1fr}.energy-object{width:36%;height:110%}.settings-hero{gap:11px;padding:12px}.chip-art{width:62px}.device-copy strong{font-size:15px}.device-status{font-size:12px}}
+        @container (max-width:420px){.energy-visual{min-height:130px;padding:15px}.energy-visual .hero-number{font-size:clamp(24px,7cqw,31px);max-width:80%}.energy-visual small{font-size:11px;max-width:80%}.energy-object{width:31%;opacity:.72}.settings-hero{flex-wrap:wrap}.chip-art{width:52px}.device-status{margin-left:6px}.bar-row{grid-template-columns:47px minmax(24px,1fr) minmax(75px,auto);gap:7px}.banner strong{max-width:68%}}
       `;
     }
   }
