@@ -1,0 +1,641 @@
+# ============================================================
+#  Grid Monitor: ESP32-C3 + PZEM-004T v3.0 (100A, CT)
+#  Проводка:  PZEM 5V -> 3V3 ESP (безпечний рівень 3.3V для UART), GND -> GND
+#             PZEM TX -> GPIO20 (RX ESP),  PZEM RX -> GPIO21 (TX ESP)
+#  secrets.yaml: wifi_ssid, wifi_password, api_key, ota_password
+# ============================================================
+esphome:
+  name: grid-monitor
+  friendly_name: Grid Monitor
+  min_version: 2024.6.0
+
+esp32:
+  board: esp32-c3-devkitm-1
+  variant: esp32c3
+  framework:
+    type: esp-idf
+
+# Запис у flash не частіше ніж раз на 5 хв (збереження лічильників)
+preferences:
+  flash_write_interval: 5min
+
+# Логи через USB, щоб UART0 (GPIO20/21) був вільний для PZEM
+logger:
+  hardware_uart: USB_SERIAL_JTAG
+  level: INFO
+  logs:
+    modbus: ERROR
+    modbus_controller: ERROR
+
+api:
+  encryption:
+    key: !secret api_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  fast_connect: true
+  power_save_mode: none
+  ap:
+    ssid: "Grid-Monitor Fallback"
+    password: !secret fallback_password
+
+captive_portal:
+
+# ------------------------------------------------------------
+#  UART + Modbus для PZEM
+# ------------------------------------------------------------
+uart:
+  id: uart_pzem
+  tx_pin: GPIO21
+  rx_pin: GPIO20
+  baud_rate: 9600
+  stop_bits: 1
+
+modbus:
+  id: modbus1
+  uart_id: uart_pzem
+
+# ------------------------------------------------------------
+#  Змінні стану (зберігаються між перезавантаженнями)
+# ------------------------------------------------------------
+globals:
+  # мін/макс за добу
+  - {id: g_v_min, type: float, restore_value: yes, initial_value: '999.0'}
+  - {id: g_v_max, type: float, restore_value: yes, initial_value: '0.0'}
+  - {id: g_i_max, type: float, restore_value: yes, initial_value: '0.0'}
+  - {id: g_p_max, type: float, restore_value: yes, initial_value: '0.0'}
+  # енергія і вартість
+  - {id: e_last, type: float, restore_value: yes, initial_value: '-1.0'}
+  - {id: e_today, type: float, restore_value: yes, initial_value: '0.0'}
+  - {id: e_month, type: float, restore_value: yes, initial_value: '0.0'}
+  - {id: cost_today, type: float, restore_value: yes, initial_value: '0.0'}
+  - {id: cost_month, type: float, restore_value: yes, initial_value: '0.0'}
+  - {id: cost_total, type: float, restore_value: yes, initial_value: '0.0'}
+  # лічильники подій
+  - {id: sag_count, type: int, restore_value: yes, initial_value: '0'}
+  - {id: swell_count, type: int, restore_value: yes, initial_value: '0'}
+  - {id: outage_count, type: int, restore_value: yes, initial_value: '0'}
+  - {id: outage_total_s, type: uint32_t, restore_value: yes, initial_value: '0'}
+  - {id: last_outage_s, type: uint32_t, restore_value: yes, initial_value: '0'}
+  # поточний стан (без збереження)
+  - {id: v_state, type: int, restore_value: no, initial_value: '0'}      # 0 норма, 1 просідання, 2 стрибок
+  - {id: last_pzem_ms, type: uint32_t, restore_value: no, initial_value: '0'}
+  - {id: outage_start_ms, type: uint32_t, restore_value: no, initial_value: '0'}
+  - {id: outage_active, type: bool, restore_value: no, initial_value: 'false'}
+  - {id: comm_ok, type: bool, restore_value: no, initial_value: 'false'}
+  - {id: pzem_seen, type: bool, restore_value: no, initial_value: 'false'}
+
+# ------------------------------------------------------------
+#  Налаштування з HA (змінюються з інтерфейсу, зберігаються)
+# ------------------------------------------------------------
+number:
+  - platform: template
+    id: th_low
+    name: "Sag Threshold"
+    optimistic: true
+    min_value: 150
+    max_value: 230
+    step: 1
+    initial_value: 190
+    restore_value: true
+    unit_of_measurement: V
+    mode: box
+    entity_category: config
+  - platform: template
+    id: th_high
+    name: "Swell Threshold"
+    optimistic: true
+    min_value: 230
+    max_value: 280
+    step: 1
+    initial_value: 245
+    restore_value: true
+    unit_of_measurement: V
+    mode: box
+    entity_category: config
+  - platform: template
+    id: v_nominal
+    name: "Nominal Voltage"
+    optimistic: true
+    min_value: 200
+    max_value: 240
+    step: 1
+    initial_value: 230
+    restore_value: true
+    unit_of_measurement: V
+    mode: box
+    entity_category: config
+  # ТАРИФИ: поставте свої значення з рахунку за світло (грн/кВт·год)
+  - platform: template
+    id: th_tariff_day
+    name: "Tariff Day"
+    optimistic: true
+    min_value: 0
+    max_value: 50
+    step: 0.01
+    initial_value: 4.32
+    restore_value: true
+    unit_of_measurement: UAH/kWh
+    mode: box
+    entity_category: config
+  - platform: template
+    id: th_tariff_night
+    name: "Tariff Night"
+    optimistic: true
+    min_value: 0
+    max_value: 50
+    step: 0.01
+    initial_value: 2.16
+    restore_value: true
+    unit_of_measurement: UAH/kWh
+    mode: box
+    entity_category: config
+
+switch:
+  - platform: template
+    id: sw_two_zone
+    name: "Two-Zone Tariff"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    entity_category: config
+    icon: mdi:weather-night
+
+# ------------------------------------------------------------
+#  Сенсори
+# ------------------------------------------------------------
+sensor:
+  # ---------- PZEM ----------
+  - platform: pzemac
+    id: pzem0
+    modbus_id: modbus1
+    address: 1
+    update_interval: 2s
+    voltage:
+      id: grid_voltage
+      name: "Voltage"
+      accuracy_decimals: 1
+      filters:
+        - throttle_average: 10s
+      on_raw_value:
+        then:
+          - lambda: |-
+              float v = x;
+              id(last_pzem_ms) = millis();
+              id(pzem_seen) = true;
+              if (v > 150.0f && v < id(g_v_min)) id(g_v_min) = v;
+              if (v > id(g_v_max)) id(g_v_max) = v;
+              float lo = id(th_low).state;
+              float hi = id(th_high).state;
+              if (id(v_state) == 0) {
+                if (v < lo) { id(v_state) = 1; id(sag_count)++; }
+                else if (v > hi) { id(v_state) = 2; id(swell_count)++; }
+              } else if (id(v_state) == 1 && v > lo + 3) {
+                id(v_state) = 0;
+              } else if (id(v_state) == 2 && v < hi - 3) {
+                id(v_state) = 0;
+              }
+    current:
+      id: grid_current
+      name: "Current"
+      accuracy_decimals: 2
+      filters:
+        - throttle_average: 10s
+      on_raw_value:
+        then:
+          - lambda: |-
+              if (x > id(g_i_max)) id(g_i_max) = x;
+    power:
+      id: grid_power
+      name: "Power"
+      accuracy_decimals: 1
+      filters:
+        - throttle_average: 10s
+      on_raw_value:
+        then:
+          - lambda: |-
+              if (x > id(g_p_max)) id(g_p_max) = x;
+    frequency:
+      id: grid_freq
+      name: "Frequency"
+      accuracy_decimals: 2
+      filters:
+        - throttle_average: 10s
+    power_factor:
+      id: grid_pf
+      name: "Power Factor"
+      accuracy_decimals: 2
+      filters:
+        - throttle_average: 10s
+    energy:
+      id: grid_energy
+      name: "Energy Total"
+      unit_of_measurement: kWh
+      device_class: energy
+      state_class: total_increasing
+      accuracy_decimals: 3
+      filters:
+        - multiply: 0.001
+      on_value:
+        then:
+          - lambda: |-
+              float e = x;
+              float last = id(e_last);
+              if (last >= 0 && e >= last && (e - last) < 100.0) {
+                float d = e - last;
+                float price = id(th_tariff_day).state;
+                if (id(sw_two_zone).state) {
+                  auto t = id(ha_time).now();
+                  if (t.is_valid() && (t.hour >= 23 || t.hour < 7)) price = id(th_tariff_night).state;
+                }
+                id(e_today) += d;
+                id(e_month) += d;
+                id(cost_today) += d * price;
+                id(cost_month) += d * price;
+                id(cost_total) += d * price;
+              }
+              id(e_last) = e;
+
+  # ---------- Розрахункові ----------
+  - platform: template
+    name: "Apparent Power"
+    id: apparent_power
+    unit_of_measurement: VA
+    device_class: apparent_power
+    state_class: measurement
+    accuracy_decimals: 1
+    update_interval: 10s
+    lambda: |-
+      if (id(outage_active)) return NAN;
+      return id(grid_voltage).state * id(grid_current).state;
+
+  - platform: template
+    name: "Reactive Power"
+    unit_of_measurement: var
+    device_class: reactive_power
+    state_class: measurement
+    accuracy_decimals: 1
+    update_interval: 10s
+    lambda: |-
+      if (id(outage_active)) return NAN;
+      float s = id(grid_voltage).state * id(grid_current).state;
+      float p = id(grid_power).state;
+      if (isnan(s) || isnan(p)) return NAN;
+      float q2 = s * s - p * p;
+      return q2 > 0 ? sqrtf(q2) : 0.0f;
+
+  - platform: template
+    name: "Phase Angle"
+    unit_of_measurement: "°"
+    state_class: measurement
+    accuracy_decimals: 1
+    icon: mdi:angle-acute
+    update_interval: 10s
+    lambda: |-
+      if (id(outage_active)) return NAN;
+      float pf = id(grid_pf).state;
+      if (isnan(pf)) return NAN;
+      if (pf > 1.0f) pf = 1.0f;
+      if (pf < 0.0f) pf = 0.0f;
+      return acosf(pf) * 180.0f / 3.14159265f;
+
+  - platform: template
+    name: "Voltage Deviation"
+    unit_of_measurement: "%"
+    state_class: measurement
+    accuracy_decimals: 1
+    icon: mdi:plus-minus-variant
+    update_interval: 10s
+    lambda: |-
+      if (id(outage_active)) return NAN;
+      float v = id(grid_voltage).state;
+      float n = id(v_nominal).state;
+      if (isnan(v) || n <= 0) return NAN;
+      return (v - n) / n * 100.0f;
+
+  - platform: template
+    name: "Voltage 5min Average"
+    unit_of_measurement: V
+    device_class: voltage
+    state_class: measurement
+    accuracy_decimals: 1
+    update_interval: 10s
+    lambda: |-
+      return id(grid_voltage).state;
+    filters:
+      - sliding_window_moving_average:
+          window_size: 30
+          send_every: 6
+
+  # ---------- Мін/макс за добу ----------
+  - platform: template
+    name: "Voltage Min Today"
+    unit_of_measurement: V
+    device_class: voltage
+    accuracy_decimals: 1
+    update_interval: 15s
+    lambda: |-
+      return id(g_v_min) > 900 ? NAN : id(g_v_min);
+  - platform: template
+    name: "Voltage Max Today"
+    unit_of_measurement: V
+    device_class: voltage
+    accuracy_decimals: 1
+    update_interval: 15s
+    lambda: |-
+      return id(g_v_max) <= 0 ? NAN : id(g_v_max);
+  - platform: template
+    name: "Current Max Today"
+    unit_of_measurement: A
+    device_class: current
+    accuracy_decimals: 2
+    update_interval: 15s
+    lambda: |-
+      return id(g_i_max);
+  - platform: template
+    name: "Power Peak Today"
+    unit_of_measurement: W
+    device_class: power
+    accuracy_decimals: 0
+    update_interval: 15s
+    lambda: |-
+      return id(g_p_max);
+
+  # ---------- Енергія і вартість ----------
+  - platform: template
+    name: "Energy Today"
+    unit_of_measurement: kWh
+    device_class: energy
+    state_class: total_increasing
+    accuracy_decimals: 3
+    update_interval: 30s
+    lambda: |-
+      return id(e_today);
+  - platform: template
+    name: "Energy Month"
+    unit_of_measurement: kWh
+    device_class: energy
+    state_class: total_increasing
+    accuracy_decimals: 2
+    update_interval: 60s
+    lambda: |-
+      return id(e_month);
+  - platform: template
+    id: cur_tariff
+    name: "Current Tariff"
+    unit_of_measurement: UAH/kWh
+    accuracy_decimals: 2
+    icon: mdi:cash-clock
+    update_interval: 30s
+    lambda: |-
+      float price = id(th_tariff_day).state;
+      if (id(sw_two_zone).state) {
+        auto t = id(ha_time).now();
+        if (t.is_valid() && (t.hour >= 23 || t.hour < 7)) price = id(th_tariff_night).state;
+      }
+      return price;
+  - platform: template
+    name: "Cost Rate"
+    unit_of_measurement: UAH/h
+    state_class: measurement
+    accuracy_decimals: 2
+    icon: mdi:cash-fast
+    update_interval: 10s
+    lambda: |-
+      if (id(outage_active)) return NAN;
+      float p = id(grid_power).state;
+      if (isnan(p)) return NAN;
+      return p / 1000.0f * id(cur_tariff).state;
+  - platform: template
+    name: "Cost Today"
+    unit_of_measurement: UAH
+    state_class: total_increasing
+    accuracy_decimals: 2
+    icon: mdi:cash
+    update_interval: 30s
+    lambda: |-
+      return id(cost_today);
+  - platform: template
+    name: "Cost Month"
+    unit_of_measurement: UAH
+    state_class: total_increasing
+    accuracy_decimals: 2
+    icon: mdi:cash-multiple
+    update_interval: 60s
+    lambda: |-
+      return id(cost_month);
+  - platform: template
+    name: "Cost Total"
+    unit_of_measurement: UAH
+    state_class: total_increasing
+    accuracy_decimals: 2
+    icon: mdi:cash-register
+    update_interval: 60s
+    lambda: |-
+      return id(cost_total);
+
+  # ---------- Якість мережі та робота від інвертора ----------
+  - platform: template
+    name: "Sag Count"
+    state_class: total_increasing
+    accuracy_decimals: 0
+    icon: mdi:arrow-down-bold-circle
+    update_interval: 15s
+    lambda: |-
+      return id(sag_count);
+  - platform: template
+    name: "Swell Count"
+    state_class: total_increasing
+    accuracy_decimals: 0
+    icon: mdi:arrow-up-bold-circle
+    update_interval: 15s
+    lambda: |-
+      return id(swell_count);
+  - platform: template
+    name: "Inverter Events"
+    state_class: total_increasing
+    accuracy_decimals: 0
+    icon: mdi:power-plug-off
+    update_interval: 15s
+    lambda: |-
+      return id(outage_count);
+  - platform: template
+    name: "Last Inverter Duration"
+    unit_of_measurement: min
+    accuracy_decimals: 1
+    icon: mdi:timer-sand
+    update_interval: 15s
+    lambda: |-
+      return id(last_outage_s) / 60.0f;
+  - platform: template
+    name: "Total Inverter Time"
+    unit_of_measurement: h
+    state_class: total_increasing
+    accuracy_decimals: 2
+    icon: mdi:timer-off
+    update_interval: 60s
+    lambda: |-
+      return id(outage_total_s) / 3600.0f;
+
+  - platform: template
+    name: "Inverter Current Duration"
+    unit_of_measurement: min
+    accuracy_decimals: 1
+    icon: mdi:timer-play
+    update_interval: 15s
+    lambda: |-
+      if (!id(outage_active)) return 0.0f;
+      return (millis() - id(outage_start_ms)) / 60000.0f;
+
+  # ---------- Діагностика ESP ----------
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    update_interval: 60s
+    entity_category: diagnostic
+  - platform: uptime
+    name: "Uptime"
+    entity_category: diagnostic
+  - platform: internal_temperature
+    name: "ESP Temperature"
+    entity_category: diagnostic
+
+binary_sensor:
+  - platform: status
+    name: "ESP Status"
+    device_class: connectivity
+  # PZEM відповідає = є мережа (стабілізатор)
+  - platform: template
+    id: bin_mains_present
+    name: "Mains Present"
+    device_class: power
+    lambda: |-
+      return id(comm_ok);
+  # ESP жива, PZEM мовчить = працюємо від інвертора
+  - platform: template
+    id: bin_on_inverter
+    name: "On Inverter"
+    device_class: running
+    icon: mdi:current-dc
+    lambda: |-
+      return id(outage_active);
+  - platform: template
+    id: bin_v_out_of_range
+    name: "Voltage Out Of Range"
+    device_class: problem
+    lambda: |-
+      return id(comm_ok) && id(v_state) != 0;
+
+text_sensor:
+  - platform: template
+    name: "Voltage Status"
+    icon: mdi:sine-wave
+    update_interval: 5s
+    lambda: |-
+      if (!id(pzem_seen)) return {"Unknown"};
+      if (id(outage_active)) return {"Inverter"};
+      if (id(v_state) == 1) return {"Sag"};
+      if (id(v_state) == 2) return {"Swell"};
+      return {"Normal"};
+  - platform: wifi_info
+    ip_address:
+      name: "IP Address"
+      entity_category: diagnostic
+    ssid:
+      name: "Connected SSID"
+      entity_category: diagnostic
+
+# ------------------------------------------------------------
+#  Кнопки
+# ------------------------------------------------------------
+button:
+  - platform: restart
+    name: "Restart"
+    entity_category: config
+  - platform: template
+    name: "Reset PZEM Energy"
+    entity_category: config
+    icon: mdi:counter
+    on_press:
+      - pzemac.reset_energy: pzem0
+      - lambda: |-
+          id(e_last) = -1.0;
+  - platform: template
+    name: "Reset Event Counters"
+    entity_category: config
+    icon: mdi:restore
+    on_press:
+      - lambda: |-
+          id(sag_count) = 0;
+          id(swell_count) = 0;
+          id(outage_count) = 0;
+          id(outage_total_s) = 0;
+          id(last_outage_s) = 0;
+  - platform: template
+    name: "Reset Cost Counters"
+    entity_category: config
+    icon: mdi:cash-remove
+    on_press:
+      - lambda: |-
+          id(cost_today) = 0; id(cost_month) = 0; id(cost_total) = 0;
+          id(e_today) = 0; id(e_month) = 0;
+
+# ------------------------------------------------------------
+#  Логіка: ESP жива, а PZEM мовчить 15 с = працюємо від інвертора
+#  (ESP недоступна в HA = напруги нема зовсім або пропав зв'язок з ESP)
+# ------------------------------------------------------------
+interval:
+  - interval: 2s
+    then:
+      - lambda: |-
+          // ok тільки якщо PZEM хоча б раз відповів після старту і мовчить менше 15 с
+          bool ok = id(pzem_seen) && id(last_pzem_ms) != 0 && (millis() - id(last_pzem_ms)) < 15000;
+          
+          if (!ok && id(pzem_seen) && !id(outage_active)) {
+            id(outage_active) = true;
+            id(outage_start_ms) = id(last_pzem_ms);
+            id(outage_count)++;
+          } else if (ok && id(outage_active)) {
+            id(outage_active) = false;
+            uint32_t d = (millis() - id(outage_start_ms)) / 1000;
+            id(last_outage_s) = d;
+            id(outage_total_s) += d;
+          }
+          id(comm_ok) = ok;
+
+          // Публікуємо стани лише після першого виявлення PZEM,
+          // щоб при старті під час блекауту сенсори залишалися unavailable/невизначеними в HA
+          if (id(pzem_seen)) {
+            id(bin_mains_present).publish_state(ok);
+            id(bin_on_inverter).publish_state(id(outage_active));
+            id(bin_v_out_of_range).publish_state(ok && id(v_state) != 0);
+          }
+
+          // Якщо активний інвертор — обнуляємо показники, щоб у HA не зависали останні 230V / 500W
+          if (id(outage_active)) {
+            id(grid_voltage).publish_state(0.0f);
+            id(grid_current).publish_state(0.0f);
+            id(grid_power).publish_state(0.0f);
+            id(grid_freq).publish_state(0.0f);
+            id(grid_pf).publish_state(0.0f);
+          }
+
+# Скидання добових мін/макс і лічильників опівночі, місячних 1-го числа
+time:
+  - platform: homeassistant
+    id: ha_time
+    on_time:
+      - seconds: 0
+        minutes: 0
+        hours: 0
+        then:
+          - lambda: |-
+              id(g_v_min) = 999.0; id(g_v_max) = 0.0;
+              id(g_i_max) = 0.0; id(g_p_max) = 0.0;
+              id(e_today) = 0.0; id(cost_today) = 0.0;
+              if (id(ha_time).now().day_of_month == 1) {
+                id(e_month) = 0.0; id(cost_month) = 0.0;
+              }
