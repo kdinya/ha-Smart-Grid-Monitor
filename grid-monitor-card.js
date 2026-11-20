@@ -98,7 +98,8 @@
       events: 'Події інвертора', inverter_events: 'Кількість відключень', current_duration: 'Поточна тривалість', last_duration: 'Остання тривалість', total_duration: 'Загальний час від інвертора', sag_events: 'Просідання напруги', swell_events: 'Перенапруги', save: 'Зберегти', on: 'Увімкнено', off: 'Вимкнено',
             editor_title: 'Налаштування Smart Grid Monitor',
       editor_device_select: 'Вибір пристрою ESP32 / Префікс',
-      editor_device_hint: 'Оберіть пристрій зі списку знайдених в Home Assistant або введіть власний префікс нижче',
+      editor_device_hint: 'Показано лише пристрої ESPHome. За потреби введіть власний префікс нижче.',
+      editor_entity_hint: 'Почніть вводити назву або виберіть сутність зі списку. Порожнє поле використовує стандартну сутність.',
       editor_prefix: 'Префікс сутностей ESP',
       editor_prefix_hint: 'Наприклад: grid_monitor (якщо сутності мають вигляд sensor.grid_monitor_voltage)',
       editor_autodetect: 'Автовиявлення',
@@ -128,7 +129,8 @@
       events: 'Inverter events', inverter_events: 'Outage count', current_duration: 'Current duration', last_duration: 'Last duration', total_duration: 'Total inverter time', sag_events: 'Voltage sags', swell_events: 'Voltage swells', save: 'Save', on: 'On', off: 'Off',
             editor_title: 'Smart Grid Monitor Settings',
       editor_device_select: 'ESP32 Device / Prefix Selection',
-      editor_device_hint: 'Select a detected device from Home Assistant or enter a custom prefix below',
+      editor_device_hint: 'Only ESPHome devices are listed. Enter a custom prefix below if needed.',
+      editor_entity_hint: 'Start typing a name or choose an entity from the list. Leave blank to use the default entity.',
       editor_prefix: 'ESPHome Entity Prefix',
       editor_prefix_hint: 'E.g.: grid_monitor (if sensors are named like sensor.grid_monitor_voltage)',
       editor_autodetect: 'Auto-detect',
@@ -187,9 +189,20 @@
       return TEXT[lang]?.[key] || TEXT.en?.[key] || key;
     }
 
+    _getEspHomeEntityIds() {
+      const states = this._hass?.states;
+      const entities = this._hass?.entities;
+      if (!states || !entities || typeof entities !== 'object') return [];
+
+      return Object.keys(entities).filter((entityId) =>
+        Boolean(states[entityId]) && String(entities[entityId]?.platform || '').toLowerCase() === 'esphome'
+      );
+    }
+
     _getCandidates() {
       if (!this._hass?.states) return [];
-      const states = Object.keys(this._hass.states);
+      const espHomeEntityIds = this._getEspHomeEntityIds();
+      const espHomeEntitySet = new Set(espHomeEntityIds);
       const prefixSet = new Set();
 
       const suffixes = [
@@ -198,19 +211,18 @@
         '_voltage_out_of_range', '_sag_threshold', '_tariff_day'
       ];
 
-      states.forEach((id) => {
-        const parts = id.split('.');
-        const name = parts[1] || '';
-        suffixes.forEach((s) => {
-          if (name.endsWith(s)) {
-            const pref = name.slice(0, -s.length);
-            if (pref) prefixSet.add(pref);
+      espHomeEntityIds.forEach((id) => {
+        const name = id.split('.')[1] || '';
+        suffixes.forEach((suffix) => {
+          if (name.endsWith(suffix)) {
+            const prefix = name.slice(0, -suffix.length);
+            if (prefix) prefixSet.add(prefix);
           }
         });
       });
 
-      prefixSet.add('grid_monitor');
-      if (this._config.prefix) prefixSet.add(this._config.prefix);
+      // Keep the configured/default prefix visible, but only count entities registered by ESPHome.
+      prefixSet.add(this._config.prefix || 'grid_monitor');
 
       const candidates = [];
       const totalKeys = Object.keys(DEFAULTS).length;
@@ -223,18 +235,14 @@
           const domain = defId.split('.')[0];
           const suffix = defId.split('.').slice(1).join('.').replace(/^grid_monitor_/, '');
           const candidate = `${domain}.${prefix}_${suffix}`;
+          const hasCandidate = espHomeEntitySet.has(candidate);
+          const hasAlias = !hasCandidate && (ALIAS_SUFFIXES[key] || []).some((alias) =>
+            espHomeEntitySet.has(`${domain}.${prefix}_${alias}`)
+          );
 
-          if (this._hass.states[candidate] || this._hass.states[defId]) {
+          if (hasCandidate || hasAlias) {
             matchCount++;
             if (key === 'voltage' || key === 'power' || key === 'current') hasCore = true;
-          } else if (ALIAS_SUFFIXES[key]) {
-            const hasAlias = ALIAS_SUFFIXES[key].some((s) =>
-              this._hass.states[`${domain}.${prefix}_${s}`] || this._hass.states[`${domain}.${s}`]
-            );
-            if (hasAlias) {
-              matchCount++;
-              if (key === 'voltage' || key === 'power' || key === 'current') hasCore = true;
-            }
           }
         }
 
@@ -245,21 +253,39 @@
         if (prefix.toLowerCase().includes('monitor')) weight += 3;
         if (hasCore) weight += 6;
 
-        candidates.push({
-          prefix,
-          count: matchCount,
-          total: totalKeys,
-          weight,
-        });
+        candidates.push({ prefix, count: matchCount, total: totalKeys, weight });
       });
 
       candidates.sort((a, b) => b.weight - a.weight || b.count - a.count);
       return candidates;
     }
 
+    _getEntityDatalistOptions(key) {
+      const states = this._hass?.states || {};
+      const domain = DEFAULTS[key]?.split('.')[0];
+      if (!domain) return '';
+
+      const available = Object.keys(states)
+        .filter((entityId) => entityId.startsWith(`${domain}.`))
+        .map((entityId) => {
+          const registryName = this._hass?.entities?.[entityId]?.name;
+          const friendlyName = states[entityId]?.attributes?.friendly_name;
+          return { entityId, label: friendlyName || registryName || entityId };
+        })
+        .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
+
+      const configured = this._config.entities?.[key];
+      if (configured && !available.some((item) => item.entityId === configured)) {
+        available.unshift({ entityId: configured, label: `${configured} (${this._t('unavailable')})` });
+      }
+
+      return available.map(({ entityId, label }) =>
+        `<option value="${this._escape(entityId)}" label="${this._escape(label)}"></option>`
+      ).join('');
+    }
+
     _autoDetect() {
-      const candidates = this._getCandidates();
-      const best = candidates.find((c) => c.count > 0) || candidates[0];
+      const best = this._getCandidates().find((candidate) => candidate.count > 0);
       if (best) {
         this._config.prefix = best.prefix;
         this._fireChanged();
@@ -465,10 +491,12 @@
             ${['voltage', 'current', 'power', 'frequency', 'power_factor', 'energy_today', 'cost_today', 'mains', 'inverter'].map((k) => `
               <div class="field" style="margin-bottom:8px">
                 <label style="font-size:0.75rem">${k}</label>
-                <input type="text" data-entity-key="${k}" value="${this._escape(this._config.entities?.[k] || '')}" placeholder="${DEFAULTS[k] || ''}">
+                <input type="text" data-entity-key="${k}" list="entity_options_${k}" value="${this._escape(this._config.entities?.[k] || '')}" placeholder="${DEFAULTS[k] || ''}">
+                <datalist id="entity_options_${k}">${this._getEntityDatalistOptions(k)}</datalist>
               </div>
             `).join('')}
           </div>
+          <div class="hint">${this._t('editor_entity_hint')}</div>
         </details>
       `;
 
@@ -540,9 +568,10 @@
 
     static getStubConfig(hass) {
       let foundPrefix = 'grid_monitor';
-      if (hass?.states) {
+      if (hass?.states && hass?.entities) {
         const prefixCounts = {};
-        Object.keys(hass.states).forEach((id) => {
+        Object.keys(hass.entities).forEach((id) => {
+          if (hass.entities[id]?.platform !== 'esphome' || !hass.states[id]) return;
           if (id.includes('_voltage') || id.includes('_power')) {
             const m = id.match(/^(?:sensor|binary_sensor)\.([a-zA-Z0-9_]+)_(?:voltage|power)/);
             if (m && m[1]) {
