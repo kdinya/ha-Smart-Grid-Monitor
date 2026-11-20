@@ -72,4 +72,5 @@ Also run the ESPHome-secret-aware YAML parser and dashboard/entity coverage chec
 - Use a focused feature branch and conventional commits.
 - Keep firmware, frontend, documentation and tests understandable in the same change when they form one installable feature.
 - Open a PR with a concise summary and validation evidence. Merge only after checks pass, then verify the merge commit and final files on `main`.
+- If the owner clearly requested the change and the PR is mergeable, all required checks and reviews have completed successfully, and no unresolved blocking findings remain, merge it without asking for another confirmation; do not stop after opening a clean PR. If findings or failing checks remain, address them first and re-check before merging.
 - Do not force-push or rewrite shared history. Delete merged feature branches when appropriate.
