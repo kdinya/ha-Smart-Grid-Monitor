@@ -1139,7 +1139,7 @@
               ${this._towerArtwork()}
               ${gaugeDot}
               <text x="250" y="254" text-anchor="middle" class="voltage-value${voltage === null ? ' empty' : ''}" data-role="voltage-text"><tspan data-role="voltage-number">${this._escape(voltageNumber)}</tspan> <tspan class="voltage-unit" data-role="voltage-unit">${this._escape(voltageUnit)}</tspan></text>
-              <text x="250" y="276" text-anchor="middle" class="voltage-label">${this._escape(this._t('voltage'))}</text>
+              <text x="250" y="281" text-anchor="middle" class="voltage-label">${this._escape(this._t('voltage'))}</text>
               <text x="${gaugePoint(GAUGE.start)[0].toFixed(0)}" y="306" text-anchor="middle" class="gauge-end">${GAUGE.min}</text>
               <text x="${gaugePoint(GAUGE.start + GAUGE.span)[0].toFixed(0)}" y="306" text-anchor="middle" class="gauge-end">${GAUGE.max}</text>
             </svg>
@@ -2943,6 +2943,11 @@
         @container (max-width:900px){.chart-reading-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
         @container (max-width:760px){.chart-scrubber{grid-template-columns:minmax(0,1fr) auto;gap:8px}.chart-scrubber-label{grid-column:1/-1}.chart-readings-head .chart-readings-status{margin-left:0}}
         @container (max-width:520px){.chart-reading-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.chart-reading{padding:10px}.chart-reading strong{font-size:16px}}
+
+        .voltage{padding:5px 12px 4px;justify-content:space-between}
+        .shell:not(.home-active)>.header{align-items:flex-start;padding-bottom:6px}
+        @container (max-width:959px){.shell:not(.home-active)>.header{padding-bottom:4px}.shell:not(.home-active)>.header>.tabs-top{margin-bottom:1px}}
+        @container (max-width:760px){.voltage{padding:5px 10px 4px}}
 
       `;
     }
