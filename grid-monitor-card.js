@@ -1627,8 +1627,11 @@
         rangeMs: bounds.rangeMs, plotWidth, startDistance: pointerType === 'touch' ? this._chartPointerDistance(points) : 1,
         currentDistance: pointerType === 'touch' ? this._chartPointerDistance(points) : 1,
         tStart: bounds.tStart, tEnd: bounds.tEnd,
+        live: false, committed: false, fetching: false, blockedUntil: 0,
+        buf: { start: bounds.tStart, end: this._historyAt || Date.now(), items: Array.isArray(this._history) ? this._history.slice() : [] },
       };
       plot.classList.add('is-panning');
+      this._panEnsureBuffer(this._chartPan, bounds.tStart - 2 * bounds.rangeMs, Date.now());
     }
 
     _chartPointerMove(event) {
@@ -1640,7 +1643,7 @@
       const currentX = points.reduce((sum, point) => sum + point.x, 0) / points.length;
       pan.deltaX = currentX - pan.startX;
       pan.currentDistance = pan.pointerType === 'touch' ? this._chartPointerDistance(points) : 1;
-      this._chartPanPreview(pan);
+      this._panLive(pan);
       event.preventDefault?.();
     }
 
@@ -1701,9 +1704,93 @@
       if (!pan) return;
       this._chartPan = null;
       pan.plot.classList.remove('is-panning');
-      if (Math.abs(pan.deltaX) < 8 && Math.abs((pan.currentDistance || 1) - (pan.startDistance || 1)) < 8) { this._refreshChart(); return; }
+      if (!pan.live && Math.abs(pan.deltaX) < 8 && Math.abs((pan.currentDistance || 1) - (pan.startDistance || 1)) < 8) { this._refreshChart(); return; }
       const { start, end } = this._chartPanTarget(pan);
+      if (this._panCovers(pan, start, end)) {
+        this._panCommit(pan, start, end);
+        this._refreshChart();
+        this._ensureHistory();
+        return;
+      }
       this._setCustomChartRange(start, end);
+    }
+
+    _chartHistoryKey() {
+      const metricKey = this._chartMetric || 'power';
+      return `${this._historyRange}${this._historyWindowToken()}:${metricKey}:${this._entity(metricKey)}`;
+    }
+
+    _panCovers(pan, start, end) {
+      return !!pan.buf && pan.buf.start <= start + 1000 && pan.buf.end >= end - 120e3;
+    }
+
+    // Applies the range under the fingers using data that is already buffered, without reloading history.
+    _panCommit(pan, start, end) {
+      if (this._historyRange !== 'custom') this._historyReturnRange = this._historyRange;
+      this._historyRequest += 1;
+      this._historyLoading = false;
+      this._voltageHistoryRequest += 1;
+      this._voltageHistoryLoading = false;
+      this._historyCustomRange = { start, end };
+      this._historyRange = 'custom';
+      this._history = pan.buf.items;
+      this._historyError = false;
+      this._historyKey = this._chartHistoryKey();
+      this._historyAt = pan.buf.end;
+      this._syncVoltageHistoryFromChart();
+      if (!pan.committed) {
+        pan.committed = true;
+        this._clearChartScrub();
+        this._updateChartDateRangeControls();
+        const picker = this.shadowRoot.querySelector('.chart-date-range');
+        if (picker) picker.open = false;
+      }
+    }
+
+    // Redraws the chart with real data for the range under the fingers on every move.
+    _panLive(pan) {
+      if (!pan.live) {
+        if (Math.abs(pan.deltaX) < 8 && Math.abs((pan.currentDistance || 1) - (pan.startDistance || 1)) < 8) return;
+        pan.live = true;
+      }
+      const { start, end } = this._chartPanTarget(pan);
+      const range = end - start;
+      if (!(range > 0)) return;
+      this._panEnsureBuffer(pan, start - range * 1.5, end);
+      if (!this._panCovers(pan, start, end)) { this._chartPanPreview(pan); return; }
+      this._panCommit(pan, start, end);
+      pan.startX += pan.deltaX;
+      pan.deltaX = 0;
+      pan.startDistance = pan.currentDistance;
+      pan.tStart = start;
+      pan.tEnd = end;
+      pan.rangeMs = range;
+      this._refreshChart();
+    }
+
+    // Loads the missing edge of the buffer (older history, or newest samples) while the gesture continues.
+    _panEnsureBuffer(pan, wantStart, wantEnd) {
+      const hass = this._hass;
+      if (!pan?.buf || pan.fetching || Date.now() < pan.blockedUntil || typeof hass?.callApi !== 'function') return;
+      const now = Date.now();
+      const buf = pan.buf;
+      const floor = now - 366 * 24 * 3600e3;
+      let from; let to; let side;
+      if (Math.max(wantStart, floor) < buf.start - 1000) { from = Math.max(wantStart, floor); to = buf.start; side = 'left'; }
+      else if (wantEnd > buf.end + 60e3 && now - buf.end > 60e3) { from = buf.end; to = now; side = 'right'; }
+      else return;
+      const metricKey = this._chartMetric || 'power';
+      const path = `history/period/${encodeURIComponent(new Date(from).toISOString())}?filter_entity_id=${encodeURIComponent(this._entity(metricKey))}&end_time=${encodeURIComponent(new Date(to).toISOString())}&minimal_response`;
+      pan.fetching = true;
+      Promise.resolve().then(() => hass.callApi('GET', path)).then((response) => {
+        if (this._chartPan !== pan) return;
+        const merged = [...this._parseHistoryResponse(response, metricKey), ...buf.items].sort((a, b) => a.time - b.time);
+        buf.items = merged.filter((item, index) => index === 0 || item.time.getTime() !== merged[index - 1].time.getTime());
+        if (side === 'left') buf.start = from; else buf.end = to;
+      }).catch(() => { pan.blockedUntil = Date.now() + 2500; }).finally(() => {
+        pan.fetching = false;
+        if (this._chartPan === pan) this._panLive(pan);
+      });
     }
 
     _reloadChartHistory() {
@@ -2057,7 +2144,7 @@
     }
 
     _ensureHistory() {
-      if (!this._hass || !this._config || this._activeTab !== 'params') return;
+      if (!this._hass || !this._config || this._activeTab !== 'params' || this._chartPan) return;
       const metricKey = this._chartMetric || 'power';
       const key = `${this._historyRange}${this._historyWindowToken()}:${metricKey}:${this._entity(metricKey)}`;
       if (key !== this._historyKey || Date.now() - this._historyAt >= 60000) this._loadHistory(key);
