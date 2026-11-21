@@ -35,6 +35,12 @@ homeassistant:
 
 Copy the package into the configured packages directory, run **Settings → System → Check configuration**, and restart Home Assistant. If packages are already enabled, copy only the file into that directory. Alternatively, an administrator can create the statistics helper directly from the card's **Settings → Statistics** section using **Create helper**; the card uses Home Assistant's storage-backed helper creation and no YAML edit is needed. Without a helper, the date is held only by the current card instance and will not persist across reloads or devices.
 
+## Delete this card's Home Assistant history
+
+In the HACS card's **Settings** tab, the **Home Assistant history and statistics** section has separate buttons for Recorder history and Home Assistant statistics. Both actions require administrator permissions and show a confirmation. Create a Home Assistant backup first: deleted data cannot be recovered from the card.
+
+**Delete Recorder history** calls `recorder.purge_entities` with `keep_days: 0`, targeting only the sensor and binary-sensor entities currently resolved by this card. It does not purge the whole Recorder database. **Delete HA statistics** separately clears short-term and long-term statistics for the card's sensor entities. Long-term statistics are not removed by Recorder history purge, so use the second button only when you also intend to delete those aggregates. These buttons do not reset ESPHome counters; use the existing **Reset PZEM Energy**, **Reset Cost Counters**, and other device reset actions for that.
+
 ## Entity coverage
 
 The card's Parameters tab charts power and voltage; the Energy tab uses one chart with an Energy/Cost selector for cumulative energy and cost. The native view covers live voltage, current, power, frequency and power factor; apparent and reactive power, phase angle and voltage deviation; five-minute average, daily min/max and daily peak values; today/month/total energy and cost; current tariff and cost rate; sag and swell counters; PZEM communication outage counters and durations; PZEM, ESP and voltage alarm states; thresholds, nominal voltage, tariffs and two-zone tariff; Wi-Fi, uptime, ESP temperature, IP and SSID diagnostics; and reset/restart actions. The night tariff control appears only while `switch.grid_monitor_two_zone_tariff` is on.

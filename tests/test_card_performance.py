@@ -331,6 +331,105 @@ assert.equal(overridden._statsStart, Date.parse('2026-11-20T10:00:00.000Z'));
 """)
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
+    def test_recorder_history_cleanup_targets_only_card_entities_and_requires_confirmation(self):
+        result = run_node(r"""
+const states = {
+  'sensor.grid_monitor_voltage': state('230'),
+  'sensor.grid_monitor_power': state('110'),
+  'binary_sensor.grid_monitor_pzem_online': state('on'),
+  'input_text.grid_monitor_statistics_start': state(''),
+  'sensor.unrelated_temperature': state('22'),
+};
+const card = makeCard(states, { prefix: 'grid_monitor', language: 'en' });
+const dialogs = [];
+let request = null;
+card._showDialog = async (options) => { dialogs.push(options); return true; };
+card._hass.callService = async (domain, service, data) => { request = { domain, service, data }; };
+(async () => {
+  assert.deepEqual(JSON.parse(JSON.stringify(card._panelHistoryEntityIds())), [
+    'binary_sensor.grid_monitor_pzem_online',
+    'sensor.grid_monitor_power',
+    'sensor.grid_monitor_voltage',
+  ]);
+  assert.equal(await card._deletePanelHistory('recorder'), true);
+  assert.equal(dialogs[0].confirm, true);
+  assert.match(dialogs[0].message, /3 entities/);
+  assert.equal(request.domain, 'recorder');
+  assert.equal(request.service, 'purge_entities');
+  assert.deepEqual(JSON.parse(JSON.stringify(request.data)), {
+    entity_id: ['binary_sensor.grid_monitor_pzem_online', 'sensor.grid_monitor_power', 'sensor.grid_monitor_voltage'],
+    keep_days: 0,
+  });
+  assert.equal(Boolean(dialogs[1].confirm), false);
+})().catch((error) => { console.error(error); process.exit(1); });
+""")
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_statistics_cleanup_uses_only_sensor_statistic_ids_and_reports_permission_failure(self):
+        result = run_node(r"""
+const states = {
+  'sensor.grid_monitor_voltage': state('230'),
+  'sensor.grid_monitor_power': state('110'),
+  'binary_sensor.grid_monitor_pzem_online': state('on'),
+  'sensor.unrelated_temperature': state('22'),
+};
+const card = makeCard(states, { prefix: 'grid_monitor', language: 'en' });
+const dialogs = [];
+let request = null;
+card._showDialog = async (options) => { dialogs.push(options); return true; };
+card._hass.callWS = async (message) => { request = message; };
+(async () => {
+  assert.equal(await card._deletePanelHistory('statistics'), true);
+  assert.equal(dialogs[0].confirm, true);
+  assert.match(dialogs[0].message, /2 sensors/);
+  assert.deepEqual(JSON.parse(JSON.stringify(request)), {
+    type: 'recorder/clear_statistics',
+    statistic_ids: ['sensor.grid_monitor_power', 'sensor.grid_monitor_voltage'],
+  });
+  assert.equal(Boolean(dialogs[1].confirm), false);
+
+  const denied = makeCard(states, { prefix: 'grid_monitor', language: 'en' });
+  const deniedDialogs = [];
+  denied._showDialog = async (options) => { deniedDialogs.push(options); return true; };
+  denied._hass.callWS = async () => { throw new Error('Admin required'); };
+  assert.equal(await denied._deletePanelHistory('statistics'), false);
+  assert.equal(deniedDialogs.length, 2);
+  assert.match(deniedDialogs[1].message, /administrator/);
+})().catch((error) => { console.error(error); process.exit(1); });
+""")
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_history_cleanup_cancel_does_not_call_home_assistant(self):
+        result = run_node(r"""
+const card = makeCard({ 'sensor.grid_monitor_voltage': state('230') });
+let calls = 0;
+card._showDialog = async () => false;
+card._hass.callService = async () => { calls += 1; };
+(async () => {
+  assert.equal(await card._deletePanelHistory('recorder'), false);
+  assert.equal(calls, 0, 'canceling the confirmation never calls Recorder');
+})().catch((error) => { console.error(error); process.exit(1); });
+""")
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_history_cleanup_buttons_use_delegated_click_handling(self):
+        result = run_node(r"""
+const card = makeCard();
+card._closeChartDateRangePopover = () => {};
+let kind = '';
+card._deletePanelHistory = (value) => { kind = value; };
+const button = {
+  dataset: { historyDelete: 'statistics' },
+  closest(selector) {
+    if (selector === '.chart-date-range') return null;
+    return selector.includes('[data-history-delete]') ? this : null;
+  },
+};
+card._handleCardClick({ target: button });
+assert.equal(kind, 'statistics');
+""")
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
     def test_changing_statistics_start_clears_energy_history_and_reloads_active_charts(self):
         result = run_node(r"""
 const card = makeCard();
