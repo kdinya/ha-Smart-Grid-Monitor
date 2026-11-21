@@ -111,6 +111,9 @@ class RepositoryContractTests(unittest.TestCase):
                 filter_source = "\n".join(entry.get("lambda", "") for entry in sensor["filters"] if isinstance(entry, dict))
                 self.assertIn("isfinite(x)", filter_source)
                 self.assertIn(f"x > {maximum}", filter_source)
+        firmware_source = (ROOT / "esphome/grid-monitor.yaml").read_text(encoding="utf-8")
+        self.assertIn("std::isfinite(", firmware_source)
+        self.assertNotRegex(firmware_source, r"(?<![:\w])isfinite\s*\(")
         self.assertIn("on_value", pzem["voltage"])
         self.assertNotIn("on_raw_value", pzem["voltage"])
         derived = {sensor.get("name"): sensor for sensor in firmware["sensor"] if sensor.get("platform") == "template"}
