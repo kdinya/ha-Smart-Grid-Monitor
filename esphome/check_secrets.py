@@ -18,6 +18,26 @@ PLACEHOLDERS = (
 PASSWORD_KEYS = ("fallback_password", "ota_password")
 
 
+def _strip_yaml_comment(value: str) -> str:
+    """Strip a YAML comment outside a quoted scalar without losing literal # characters."""
+    quote = value[0] if value.startswith(("\"", "'")) else None
+    index = 0
+    while index < len(value):
+        char = value[index]
+        if quote == "\"" and char == "\\":
+            index += 2
+            continue
+        if quote == "'" and char == "'" and index + 1 < len(value) and value[index + 1] == "'":
+            index += 2
+            continue
+        if quote and char == quote:
+            quote = None
+        elif not quote and char == "#" and (index == 0 or value[index - 1].isspace()):
+            return value[:index].rstrip()
+        index += 1
+    return value.strip()
+
+
 def read_flat_yaml(path: Path) -> dict[str, str]:
     """Read the simple top-level key/value shape used by ESPHome secrets.yaml."""
     values: dict[str, str] = {}
@@ -27,8 +47,8 @@ def read_flat_yaml(path: Path) -> dict[str, str]:
         match = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*?)\s*$", line)
         if not match:
             continue
-        key, value = match.groups()
-        value = value.strip()
+        key, raw_value = match.groups()
+        value = _strip_yaml_comment(raw_value)
         if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
             value = value[1:-1]
         values[key] = value
