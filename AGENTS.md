@@ -51,6 +51,8 @@ git diff --check
 ```
 
 Also run the ESPHome-secret-aware YAML parser and dashboard/entity coverage check when firmware or dashboard mappings change. Do not claim live Home Assistant validation unless it was actually performed.
+- Keep routine pull-request validation lightweight: run syntax, unit/contract, JSON and YAML checks; do not install or compile the full ESPHome toolchain for every change. Reserve firmware compilation for firmware-specific/manual or scheduled validation.
+- Before waiting on GitHub checks, inspect branch protection and actual check-runs. Do not block on an advisory app suite that is not required and has zero check-runs; required checks and concrete review findings still gate merging.
 
 ## Release versioning
 

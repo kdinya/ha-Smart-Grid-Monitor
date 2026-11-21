@@ -109,7 +109,7 @@ views:
             icon: mdi:shield-check
             color: green
           - type: tile
-            entity: binary_sensor.grid_monitor_voltage_out_of_range
+            entity: sensor.grid_monitor_voltage_status
             name: Якість напруги
             icon: mdi:alert-circle
             color: red

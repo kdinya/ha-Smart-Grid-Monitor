@@ -9,7 +9,15 @@ The repository now provides two supported interface paths. The recommended path 
 1. Copy `esphome/secrets.example.yaml` to `esphome/secrets.yaml`.
 2. Replace every `REPLACE_WITH_…` placeholder with your own values before compiling or flashing. Use different passwords for the fallback access point and OTA, each at least 16 characters; do not reuse the template or the Wi-Fi password.
 3. Run `python3 esphome/check_secrets.py` from the repository root. The check reports missing or placeholder keys without printing any secret values.
-4. Compile and flash with ESPHome after the check passes.
+4. Compile and flash with ESPHome after the check passes. The secret preflight uses PyYAML, which is included in an ESPHome Python environment; otherwise install the test dependency with `python3 -m pip install -r requirements-test.txt`.
+
+Run the repository's fast local checks before opening a pull request:
+
+```bash
+python3 -m pip install -r requirements-test.txt
+node --check grid-monitor-card.js
+python3 -m unittest discover -s tests -v
+```
 
 After updating the firmware, the communication entities are `binary_sensor.grid_monitor_pzem_online`, `binary_sensor.grid_monitor_pzem_offline`, and `sensor.grid_monitor_power_source_status`. `binary_sensor.grid_monitor_on_inverter` is no longer provided because the project has no independent inverter/ATS input. Update any external automations that relied on the old inferred inverter entity.
 
