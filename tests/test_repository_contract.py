@@ -85,8 +85,8 @@ class RepositoryContractTests(unittest.TestCase):
         header = card.split("    _headerHtml() {", 1)[1].split("    _home() {", 1)[0]
         self.assertNotIn("_headRightHtml", header)
         self.assertIn("${this._activeTab === 'home' ? '' : this._tabs('side')}", card)
-        self.assertIn(".shell:not(.home-active)>.page-layout{display:grid", card)
-        self.assertIn(".shell:not(.home-active)>.page-layout>.tabs-side{display:grid;grid-template-columns:minmax(0,1fr)", card)
+        self.assertIn(".shell:not(.home-active)>.page-layout{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:14px;align-items:start}", card)
+        self.assertIn(".shell:not(.home-active)>.page-layout>.tabs-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:0;align-self:start;width:100%}", card)
         self.assertIn(".shell:not(.home-active)>.page-layout>.tabs-side{display:none}", card)
 
     def test_daily_voltage_and_power_minima_ignore_invalid_restored_values(self):
@@ -122,6 +122,17 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("reset_stats: ['reset_daily_min_max_stats', 'reset_stats']", card)
         self.assertIn("this._action('reset_stats'", card)
         self.assertIn("'reset_stats', 'restart'", card)
+
+    def test_chart_preserves_spikes_and_voltage_minimum_matches_plotted_period(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        self.assertIn("first: null, last: null, min: null, max: null", card)
+        self.assertIn("if (!bucket.min || sample.v < bucket.min.v) bucket.min = sample", card)
+        self.assertIn("if (!bucket.max || sample.v > bucket.max.v) bucket.max = sample", card)
+        self.assertIn("[bucket.first, bucket.min, bucket.max, bucket.last]", card)
+        self.assertIn("this._chartData(this._voltageHistory, 'voltage')", card)
+        self.assertIn("data-role=\"voltage-min-period\"", card)
+        self.assertNotIn('data-value-key=\"voltage_min\"', card)
+        self.assertIn("range_title: 'Діапазон напруги на графіку'", card)
 
     def test_chart_is_measured_and_rescaled_to_the_card_width(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")

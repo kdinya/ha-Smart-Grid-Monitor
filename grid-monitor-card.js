@@ -122,8 +122,8 @@
       chart_title: 'Детальний графік', stat_min: 'Мін.', stat_avg: 'Сер.', stat_max: 'Макс.', hour: 'Год', day: 'День', week: 'Тиждень', month: 'Місяць', loading: 'Завантаження історії…', no_history: 'Історія поки недоступна',
       mains: 'Зв’язок з PZEM', has_voltage: 'Дані доступні', no_voltage: 'Дані недоступні', source: 'Живлення ESP', from_mains: 'Мережа (не підтверджено)', from_inverter: 'Джерело невідоме', pzem_link: 'Зв’язок з PZEM', active: 'Онлайн', inactive: 'Офлайн', today_consumption: 'Споживання сьогодні',
       esp_power_connection: 'Схема живлення ESP', esp_power_shared: 'Від мережі разом із модулем', esp_power_after_avr: 'Після АВР', esp_power_independent: 'Незалежне живлення', esp_power_avr_note: 'ESP може живитися від інвертора', pzem_grid_note: 'PZEM вимірює мережу в усіх режимах',
-      params_title: 'Електричні параметри', range_title: 'Діапазон напруги сьогодні', range_now: 'Зараз', energy_title: 'Енергія та вартість', settings_title: 'Налаштування та діагностика',
-      apparent: 'Повна потужність', reactive: 'Реактивна потужність', phase: 'Кут фази', deviation: 'Відхилення напруги', average: 'Середня напруга за 5 хв', min_voltage: 'Мінімальна напруга сьогодні', max_voltage: 'Максимальна напруга сьогодні', max_current: 'Максимальний струм сьогодні', peak_power: 'Пікова потужність сьогодні', voltage_state: 'Статус напруги',
+      params_title: 'Електричні параметри', range_title: 'Діапазон напруги на графіку', range_now: 'Зараз', energy_title: 'Енергія та вартість', settings_title: 'Налаштування та діагностика',
+      apparent: 'Повна потужність', reactive: 'Реактивна потужність', phase: 'Кут фази', deviation: 'Відхилення напруги', average: 'Середня напруга за 5 хв', min_voltage: 'Мін. на графіку', max_voltage: 'Макс. на графіку', max_current: 'Максимальний струм сьогодні', peak_power: 'Пікова потужність сьогодні', voltage_state: 'Статус напруги',
       today: 'Сьогодні', energy_month: 'Споживання за місяць', energy_total: 'Загальна енергія PZEM', cost_today: 'Вартість сьогодні', cost_month: 'Вартість за місяць', cost_total: 'Загальна розрахована вартість', tariff: 'Поточний тариф', cost_rate: 'Вартість за годину', two_zone: 'Двозонний облік',
       estimated_cost: 'Орієнтовна вартість', current_load: 'Поточне навантаження', tariff_compare: 'Порівняння тарифів', current_rate: 'Активний тариф', night: 'Ніч', device_name: 'Grid Monitor · ESP32-C3', device_description: 'Контролер ESPHome · PZEM-004T', diagnostics: 'Діагностика',
       sag: 'Поріг просідання', swell: 'Поріг перенапруги', nominal: 'Номінальна напруга', tariff_day: 'Денний тариф', tariff_night: 'Нічний тариф', wifi: 'Сигнал Wi‑Fi', temperature: 'Температура ESP32', uptime: 'Час роботи ESP32', ip: 'IP-адреса', ssid: 'Wi‑Fi мережа',
@@ -161,8 +161,8 @@
       chart_title: 'Detailed chart', stat_min: 'Min', stat_avg: 'Avg', stat_max: 'Max', hour: 'Hour', day: 'Day', week: 'Week', month: 'Month', loading: 'Loading history…', no_history: 'History is not available yet',
       mains: 'PZEM connection', has_voltage: 'Data available', no_voltage: 'Data unavailable', source: 'ESP power source', from_mains: 'Mains (not confirmed)', from_inverter: 'Source unknown', pzem_link: 'PZEM connection', active: 'Online', inactive: 'Offline', today_consumption: 'Consumption today',
       esp_power_connection: 'ESP power arrangement', esp_power_shared: 'Mains shared with the module', esp_power_after_avr: 'After AVR', esp_power_independent: 'Independent power', esp_power_avr_note: 'ESP may be powered by the inverter', pzem_grid_note: 'PZEM measures mains in every mode',
-      params_title: 'Electrical parameters', range_title: 'Voltage range today', range_now: 'Now', energy_title: 'Energy and cost', settings_title: 'Settings and diagnostics',
-      apparent: 'Apparent power', reactive: 'Reactive power', phase: 'Phase angle', deviation: 'Voltage deviation', average: '5-minute average voltage', min_voltage: 'Minimum voltage today', max_voltage: 'Maximum voltage today', max_current: 'Maximum current today', peak_power: 'Peak power today', voltage_state: 'Voltage status',
+      params_title: 'Electrical parameters', range_title: 'Voltage range on chart', range_now: 'Now', energy_title: 'Energy and cost', settings_title: 'Settings and diagnostics',
+      apparent: 'Apparent power', reactive: 'Reactive power', phase: 'Phase angle', deviation: 'Voltage deviation', average: '5-minute average voltage', min_voltage: 'Chart minimum', max_voltage: 'Chart maximum', max_current: 'Maximum current today', peak_power: 'Peak power today', voltage_state: 'Voltage status',
       today: 'Today', energy_month: 'Consumption this month', energy_total: 'Total PZEM energy', cost_today: 'Cost today', cost_month: 'Cost this month', cost_total: 'Total calculated cost', tariff: 'Current tariff', cost_rate: 'Cost per hour', two_zone: 'Two-zone tariff',
       estimated_cost: 'Estimated cost', current_load: 'Current load', tariff_compare: 'Tariff comparison', current_rate: 'Active tariff', night: 'Night', device_name: 'Grid Monitor · ESP32-C3', device_description: 'ESPHome controller · PZEM-004T', diagnostics: 'Diagnostics',
       sag: 'Sag threshold', swell: 'Swell threshold', nominal: 'Nominal voltage', tariff_day: 'Day tariff', tariff_night: 'Night tariff', wifi: 'Wi-Fi signal', temperature: 'ESP32 temperature', uptime: 'ESP32 uptime', ip: 'IP address', ssid: 'Wi-Fi network',
@@ -783,6 +783,11 @@
       this._historyLoading = false;
       this._historyError = false;
       this._historyRequest = 0;
+      this._voltageHistory = [];
+      this._voltageHistoryKey = '';
+      this._voltageHistoryAt = 0;
+      this._voltageHistoryLoading = false;
+      this._voltageHistoryRequest = 0;
       this._stateSnapshot = null;
       this._renderedLanguage = null;
       this._pendingChangedKeys = new Set();
@@ -1274,14 +1279,28 @@
 
     _chartStatsHtml() {
       const metric = CHART_METRICS[this._chartMetric || 'power'];
-      const values = (Array.isArray(this._history) ? this._history : []).map((item) => item.value).filter((value) => Number.isFinite(value));
+      const data = this._chartData();
+      const plottedValues = data?.series.map((point) => point.v).filter(Number.isFinite) || [];
+      const historyValues = (Array.isArray(this._history) ? this._history : []).map((item) => item.value).filter(Number.isFinite);
       const fmt = (value) => (value === null ? '—' : value.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits }));
-      const min = values.length ? Math.min(...values) : null;
-      const max = values.length ? Math.max(...values) : null;
-      const avg = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+      const min = plottedValues.length ? Math.min(...plottedValues) : null;
+      const max = plottedValues.length ? Math.max(...plottedValues) : null;
+      const avg = historyValues.length ? historyValues.reduce((sum, value) => sum + value, 0) / historyValues.length : null;
       const unit = metric.unit(this._lang());
       const cell = (label, value) => `<div><span>${this._escape(label)}</span><b>${this._escape(value === null ? '—' : `${fmt(value)} ${unit}`)}</b></div>`;
       return cell(this._t('stat_min'), min) + cell(this._t('stat_avg'), avg) + cell(this._t('stat_max'), max);
+    }
+
+    _chartData(history = this._history, metricKey = this._chartMetric || 'power') {
+      const width = Math.max(280, Math.round(this._chartW || 985));
+      const rangeMs = RANGES[this._historyRange] * 3600e3;
+      const tEnd = Date.now(); const tStart = tEnd - rangeMs;
+      const series = this._bucketHistory(tStart, tEnd, width < 520 ? 48 : 96, history);
+      if (!series.length) return null;
+      const current = this._num(metricKey);
+      const [minValid, maxValid] = CHART_METRICS[metricKey].plausible;
+      if (current !== null && current >= minValid && current <= maxValid) series.push({ t: tEnd, v: current });
+      return { series, tStart, tEnd, rangeMs };
     }
 
     _chartScale(series) {
@@ -1321,11 +1340,11 @@
       return d;
     }
 
-    _bucketHistory(start, end, count) {
+    _bucketHistory(start, end, count, sourceHistory = this._history) {
       if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || count < 1) return [];
       const bucketMs = (end - start) / count;
-      const buckets = Array.from({ length: count }, () => ({ weighted: 0, duration: 0 }));
-      const history = Array.isArray(this._history) ? this._history : [];
+      const buckets = Array.from({ length: count }, () => ({ weighted: 0, duration: 0, first: null, last: null, min: null, max: null }));
+      const history = Array.isArray(sourceHistory) ? sourceHistory : [];
 
       for (let index = 0; index < history.length; index += 1) {
         const point = history[index];
@@ -1342,16 +1361,35 @@
           const bucketStart = start + bucketIndex * bucketMs;
           const overlap = Math.max(0, Math.min(intervalEnd, bucketStart + bucketMs) - Math.max(intervalStart, bucketStart));
           if (overlap > 0) {
-            buckets[bucketIndex].weighted += point.value * overlap;
-            buckets[bucketIndex].duration += overlap;
+            const bucket = buckets[bucketIndex];
+            const sample = { t: Math.max(intervalStart, bucketStart), v: point.value, order: index };
+            bucket.weighted += point.value * overlap;
+            bucket.duration += overlap;
+            if (!bucket.first) bucket.first = sample;
+            bucket.last = sample;
+            if (!bucket.min || sample.v < bucket.min.v) bucket.min = sample;
+            if (!bucket.max || sample.v > bucket.max.v) bucket.max = sample;
           }
           bucketIndex += 1;
         }
       }
 
-      return buckets.flatMap((bucket, index) => bucket.duration > 0
-        ? [{ t: start + (index + 0.5) * bucketMs, v: bucket.weighted / bucket.duration }]
-        : []);
+      // Keep measured bucket extrema so brief PZEM power spikes survive chart reduction.
+      return buckets.flatMap((bucket, index) => {
+        if (!bucket.duration) return [];
+        if (bucket.min.v === bucket.max.v) return [{ t: start + (index + 0.5) * bucketMs, v: bucket.weighted / bucket.duration }];
+        const seen = new Set();
+        return [bucket.first, bucket.min, bucket.max, bucket.last]
+          .filter(Boolean)
+          .sort((a, b) => a.t - b.t || a.order - b.order)
+          .filter((point) => {
+            const key = `${point.t}:${point.v}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          })
+          .map(({ t, v }) => ({ t, v }));
+      });
     }
 
     _chartSvg() {
@@ -1360,18 +1398,15 @@
       const narrow = width < 520;
       const height = narrow ? 200 : 228;
       const x0 = narrow ? 56 : 70; const x1 = width - (narrow ? 14 : 20); const y0 = 26; const y1 = height - 30;
-      const rangeMs = RANGES[this._historyRange] * 3600e3;
-      const tEnd = Date.now(); const tStart = tEnd - rangeMs;
-      const buckets = narrow ? 48 : 96;
-      const series = this._bucketHistory(tStart, tEnd, buckets);
-      if (!series.length) {
+      const data = this._chartData();
+      if (!data) {
         this._chartPts = [];
         return `<div class="chart-empty">${this._escape(this._t('no_history'))}</div>`;
       }
-      const current = this._num(this._chartMetric || 'power');
-      if (current !== null) series.push({ t: tEnd, v: current });
+      const { series, tStart, rangeMs } = data;
       const scale = this._chartScale(series);
-      const metric = CHART_METRICS[this._chartMetric || 'power'];
+      const metricKey = this._chartMetric || 'power';
+      const metric = CHART_METRICS[metricKey];
       const unit = metric.unit(this._lang());
       const X = (t) => x0 + Math.min(1, Math.max(0, (t - tStart) / rangeMs)) * (x1 - x0);
       const Y = (v) => y1 - ((Math.max(scale.lo, Math.min(scale.max, v)) - scale.lo) / (scale.max - scale.lo)) * (y1 - y0);
@@ -1393,7 +1428,9 @@
         return `<path d="M${x.toFixed(1)} ${y0}V${y1}"/>${show ? `<text x="${x.toFixed(1)}" y="${height - 8}" text-anchor="${index === 0 ? 'start' : index === 4 ? 'end' : 'middle'}">${this._escape(label)}</text>` : ''}`;
       }).join('');
       const last = pts[pts.length - 1];
-      const hasCurrent = current !== null;
+      const current = this._num(metricKey);
+      const [minValid, maxValid] = metric.plausible;
+      const hasCurrent = current !== null && current >= minValid && current <= maxValid;
       const latest = hasCurrent ? `${current.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits })} ${unit}` : '';
       const tagX = Math.min(Math.max(last.x - 42, x0 - 8), width - 86);
       const tagY = Math.max(2, last.y - 44);
@@ -1447,10 +1484,43 @@
     }
 
     _ensureHistory() {
-      if (!this._hass || !this._config || this._activeTab !== 'params' || this._historyLoading) return;
-      const key = `${this._historyRange}:${this._chartMetric || 'power'}:${this._entity(this._chartMetric || 'power')}`;
-      if (key === this._historyKey && Date.now() - this._historyAt < 60000) return;
-      this._loadHistory(key);
+      if (!this._hass || !this._config || this._activeTab !== 'params') return;
+      const metricKey = this._chartMetric || 'power';
+      const key = `${this._historyRange}:${metricKey}:${this._entity(metricKey)}`;
+      if (key !== this._historyKey || Date.now() - this._historyAt >= 60000) this._loadHistory(key);
+      if (metricKey === 'voltage') this._syncVoltageHistoryFromChart();
+      else this._ensureVoltageHistory();
+    }
+
+    _voltageHistoryCacheKey() { return `${this._historyRange}:${this._entity('voltage')}`; }
+
+    _syncVoltageHistoryFromChart() {
+      const chartKey = `${this._historyRange}:voltage:${this._entity('voltage')}`;
+      if (this._historyKey !== chartKey) return false;
+      this._voltageHistory = this._history;
+      this._voltageHistoryKey = this._voltageHistoryCacheKey();
+      this._voltageHistoryAt = this._historyAt;
+      return true;
+    }
+
+    _ensureVoltageHistory() {
+      if (!this._hass || !this._config || this._activeTab !== 'params') return;
+      if ((this._chartMetric || 'power') === 'voltage') { this._syncVoltageHistoryFromChart(); return; }
+      const key = this._voltageHistoryCacheKey();
+      if (key === this._voltageHistoryKey && Date.now() - this._voltageHistoryAt < 60000) return;
+      this._loadVoltageHistory(key);
+    }
+
+    _parseHistoryResponse(response, metricKey) {
+      const series = Array.isArray(response?.[0]) ? response[0] : [];
+      const [minValid, maxValid] = CHART_METRICS[metricKey].plausible;
+      return series.map((item) => {
+        const value = Number(item.state);
+        const plausible = Number.isFinite(value) && value >= minValid && value <= maxValid;
+        return { time: new Date(item.last_changed || item.last_updated), value: plausible ? value : null };
+      })
+        .filter((item) => Number.isFinite(item.time.getTime()))
+        .sort((a, b) => a.time - b.time);
     }
 
     async _loadHistory(key = `${this._historyRange}:${this._chartMetric || 'power'}:${this._entity(this._chartMetric || 'power')}`) {
@@ -1470,27 +1540,52 @@
         const path = `history/period/${encodeURIComponent(start.toISOString())}?filter_entity_id=${entity}&end_time=${encodeURIComponent(end.toISOString())}&minimal_response`;
         const response = await hass.callApi('GET', path);
         if (request !== this._historyRequest) return;
-        const series = Array.isArray(response?.[0]) ? response[0] : [];
-        this._history = series.map((item) => {
-          const value = Number(item.state);
-          const [minValid, maxValid] = CHART_METRICS[metricKey].plausible;
-          const plausible = Number.isFinite(value) && value >= minValid && value <= maxValid;
-          return { time: new Date(item.last_changed || item.last_updated), value: plausible ? value : null };
-        })
-          .filter((item) => Number.isFinite(item.time.getTime()))
-          .sort((a, b) => a.time - b.time);
+        this._history = this._parseHistoryResponse(response, metricKey);
         this._historyKey = key;
         this._historyAt = Date.now();
+        if (metricKey === 'voltage') this._syncVoltageHistoryFromChart();
       } catch (_error) {
         if (request === this._historyRequest) {
           this._history = [];
           this._historyError = true;
           this._historyKey = key;
           this._historyAt = Date.now();
+          if (metricKey === 'voltage') this._syncVoltageHistoryFromChart();
         }
       } finally {
         if (request === this._historyRequest) {
           this._historyLoading = false;
+          this._refreshChart();
+        }
+      }
+    }
+
+    async _loadVoltageHistory(key = this._voltageHistoryCacheKey()) {
+      if (!this._hass || this._voltageHistoryLoading) return;
+      this._voltageHistoryLoading = true;
+      const request = ++this._voltageHistoryRequest;
+      const hass = this._hass;
+      const range = this._historyRange;
+      const end = new Date();
+      const start = new Date(end.getTime() - RANGES[range] * 60 * 60 * 1000);
+      try {
+        if (typeof hass.callApi !== 'function') throw new Error('History API unavailable');
+        const entity = encodeURIComponent(this._entity('voltage'));
+        const path = `history/period/${encodeURIComponent(start.toISOString())}?filter_entity_id=${entity}&end_time=${encodeURIComponent(end.toISOString())}&minimal_response`;
+        const response = await hass.callApi('GET', path);
+        if (request !== this._voltageHistoryRequest) return;
+        this._voltageHistory = this._parseHistoryResponse(response, 'voltage');
+        this._voltageHistoryKey = key;
+        this._voltageHistoryAt = Date.now();
+      } catch (_error) {
+        if (request === this._voltageHistoryRequest) {
+          this._voltageHistory = [];
+          this._voltageHistoryKey = key;
+          this._voltageHistoryAt = Date.now();
+        }
+      } finally {
+        if (request === this._voltageHistoryRequest) {
+          this._voltageHistoryLoading = false;
           this._refreshChart();
         }
       }
@@ -1501,11 +1596,33 @@
       if (plot) plot.innerHTML = this._chartSvg();
       const stats = this.shadowRoot.querySelector('[data-role="chart-stats"]');
       if (stats) stats.innerHTML = this._chartStatsHtml();
+      if (this._activeTab === 'params') this._updateRange();
+    }
+
+    _voltageRangeStats() {
+      const data = this._chartData(this._voltageHistory, 'voltage');
+      const values = data?.series.map((point) => point.v).filter(Number.isFinite) || [];
+      return {
+        min: values.length ? Math.min(...values) : null,
+        max: values.length ? Math.max(...values) : null,
+      };
+    }
+
+    _formatVoltage(value) {
+      if (value === null || !Number.isFinite(value)) return '—';
+      const metric = CHART_METRICS.voltage;
+      return `${value.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits })} ${metric.unit(this._lang())}`;
+    }
+
+    _voltageRangeDetail(bound, label) {
+      const value = this._voltageRangeStats()[bound];
+      return `<div class="detail"><span>${this._escape(label)}</span><b data-role="voltage-${bound}-period">${this._escape(this._formatVoltage(value))}</b></div>`;
     }
 
     _rangeLayout() {
       const pct = (value) => (value === null ? null : Math.max(0, Math.min(100, ((value - GAUGE.min) / (GAUGE.max - GAUGE.min)) * 100)));
-      const low = pct(this._num('voltage_min')); const high = pct(this._num('voltage_max'));
+      const voltageRange = this._voltageRangeStats();
+      const low = pct(voltageRange.min); const high = pct(voltageRange.max);
       const sag = pct(this._num('sag_threshold')); const swell = pct(this._num('swell_threshold'));
       const now = pct(this._num('voltage'));
       const box = (left, width) => (left === null || width === null ? 'display:none' : `left:${left.toFixed(1)}%;width:${Math.max(0, width).toFixed(1)}%`);
@@ -1519,8 +1636,9 @@
 
     _rangeCard() {
       const layout = this._rangeLayout();
+      const voltageRange = this._voltageRangeStats();
       return `<div class="range-card" data-role="range-card">
-        <div class="range-head"><h3>${this._escape(this._t('range_title'))}</h3><div class="range-values"><span>${this._escape(this._t('min_voltage'))} <b data-value-key="voltage_min" data-value-digits="1">${this._escape(this._formatted('voltage_min', 1))}</b></span><span>${this._escape(this._t('max_voltage'))} <b data-value-key="voltage_max" data-value-digits="1">${this._escape(this._formatted('voltage_max', 1))}</b></span></div></div>
+        <div class="range-head"><h3>${this._escape(this._t('range_title'))}</h3><div class="range-values"><span>${this._escape(this._t('min_voltage'))} <b data-role="voltage-min-period">${this._escape(this._formatVoltage(voltageRange.min))}</b></span><span>${this._escape(this._t('max_voltage'))} <b data-role="voltage-max-period">${this._escape(this._formatVoltage(voltageRange.max))}</b></span></div></div>
         <div class="range-track"><i class="range-zone low" data-role="range-zone-low" style="${layout.zoneLow}"></i><i class="range-zone high" data-role="range-zone-high" style="${layout.zoneHigh}"></i><i class="range-span" data-role="range-span" style="${layout.span}"></i><b class="range-now" data-role="range-now" style="${layout.now}"></b></div>
         <div class="range-scale"><span>${GAUGE.min}</span><span>${Math.round((GAUGE.min + GAUGE.max) / 2)}</span><span>${GAUGE.max}</span></div>
       </div>`;
@@ -1530,6 +1648,9 @@
       const layout = this._rangeLayout();
       const apply = (role, style) => { const node = this.shadowRoot.querySelector(`[data-role="${role}"]`); if (node) node.setAttribute('style', style); };
       apply('range-zone-low', layout.zoneLow); apply('range-zone-high', layout.zoneHigh); apply('range-span', layout.span); apply('range-now', layout.now);
+      const voltageRange = this._voltageRangeStats();
+      this.shadowRoot.querySelectorAll('[data-role="voltage-min-period"]').forEach((node) => { node.textContent = this._formatVoltage(voltageRange.min); });
+      this.shadowRoot.querySelectorAll('[data-role="voltage-max-period"]').forEach((node) => { node.textContent = this._formatVoltage(voltageRange.max); });
       const power = this._powerRangeLayout();
       apply('power-range-span', power.span); apply('power-range-now', power.now);
       const unit = this._lang() === 'uk' ? 'Вт' : 'W';
@@ -1572,7 +1693,7 @@
       return `<section class="detail-panel"><h2>${this._escape(this._t('params_title'))}</h2>${this._chart()}${this._rangeCard()}${this._powerRangeCard()}<div class="detail-grid">
         ${this._detail('apparent_power', this._t('apparent'), 0)}${this._detail('reactive_power', this._t('reactive'), 0)}${this._detail('phase_angle', this._t('phase'), 1)}
         ${this._detail('voltage_deviation', this._t('deviation'), 1)}${this._detail('voltage_average', this._t('average'), 1)}${this._detail('voltage_status', this._t('voltage_state'), 0)}
-        ${this._detail('voltage_min', this._t('min_voltage'), 1)}${this._detail('voltage_max', this._t('max_voltage'), 1)}${this._detail('current_max', this._t('max_current'), 2)}${this._detail('power_peak', this._t('peak_power'), 0)}
+        ${this._voltageRangeDetail('min', this._t('min_voltage'))}${this._voltageRangeDetail('max', this._t('max_voltage'))}${this._detail('current_max', this._t('max_current'), 2)}${this._detail('power_peak', this._t('peak_power'), 0)}
       </div><h2 class="subheading">${this._escape(this._t('events'))}</h2><div class="detail-grid">
         ${this._detail('inverter_events', this._t('inverter_events'), 0)}${this._detail('inverter_current_duration', this._t('current_duration'), 1)}${this._detail('last_inverter_duration', this._t('last_duration'), 1)}${this._detail('total_inverter_time', this._t('total_duration'), 2)}${this._detail('sag_count', this._t('sag_events'), 0)}${this._detail('swell_count', this._t('swell_events'), 0)}
       </div></section>`;
@@ -1912,23 +2033,27 @@
           button.setAttribute('aria-pressed', String(active));
         });
         this._refreshChart();
-        this._loadHistory();
+        this._ensureHistory();
         return;
       }
       if (target.dataset.period) {
         if (this._historyRange === target.dataset.period) return;
         this._historyRequest += 1;
         this._historyLoading = false;
+        this._voltageHistoryRequest += 1;
+        this._voltageHistoryLoading = false;
         this._historyRange = target.dataset.period;
         this._historyKey = '';
         this._history = [];
+        this._voltageHistoryKey = '';
+        this._voltageHistory = [];
         this.shadowRoot.querySelectorAll('[data-period]').forEach((button) => {
           const active = button.dataset.period === this._historyRange;
           button.classList.toggle('active', active);
           button.setAttribute('aria-pressed', String(active));
         });
         this._refreshChart();
-        this._loadHistory();
+        this._ensureHistory();
         return;
       }
       if (target.dataset.action) this._call(target.dataset.action);
@@ -2287,7 +2412,7 @@
         .detail-panel{padding:22px;margin-top:2px}.detail-panel h2{margin:0 0 18px;font-size:25px}.detail-panel h2.subheading{margin:24px 0 14px;font-size:19px}.detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.detail{padding:16px;border-radius:16px;background:#13243a;border:1px solid #2b4562;min-width:0}.detail>span,.detail label>span{display:block;color:#9fb5d1;font-size:14px;margin-bottom:7px}.detail b{font-size:22px;overflow-wrap:anywhere}.setting{display:flex;align-items:end;gap:10px}.setting label{flex:1;min-width:0}.setting-input{display:flex;align-items:center;gap:8px}.setting-input input{width:100%;min-width:0;background:#091727;border:1px solid #37526f;border-radius:9px;color:var(--text);padding:10px;font:inherit;font-size:18px}.setting-input small{color:#9fb5d1;white-space:nowrap}.save-button,.switch-button,.action-button{border:1px solid #278ed0;background:#092645;color:#d7efff;border-radius:10px;padding:9px 12px;font:inherit;cursor:pointer}.save-button:hover,.switch-button:hover,.action-button:hover{background:#0c3962}.save-button:disabled,.switch-button:disabled,.action-button:disabled{opacity:.45;cursor:not-allowed}.switch-setting{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.switch-setting>span{color:#9fb5d1;font-size:14px}.switch-setting>strong{font-size:16px}.switch-button{grid-column:1/-1;display:flex;align-items:center;gap:8px;justify-content:center}.switch-button .icon{width:20px;height:20px}.switch-button.on{border-color:#35ed91;color:#35ed91}.action-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.action-button{min-height:68px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;font-size:13px;border-color:#2b8ed0}.action-button span{font-size:22px;color:#45bdff}.action-button .icon{width:25px;height:25px}.footer{display:flex;justify-content:space-between;gap:10px;margin:14px 2px 0;color:#6885a2;font-size:11px}.footer span:last-child{max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
         .chart-head .periods+.periods{margin-left:0}.chart-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:4px 0 10px}.chart-stats>div{background:#13243a;border:1px solid #2b4562;border-radius:14px;padding:9px 12px;min-width:0}.chart-stats span{display:block;color:#9fb5d1;font-size:13px}.chart-stats b{display:block;font-size:19px;margin-top:3px;overflow-wrap:anywhere}
         .voltage-brand{display:flex;align-items:flex-start;gap:10px;align-self:flex-start;width:100%;min-width:0;max-width:100%;margin-bottom:0;flex-wrap:wrap}.voltage-brand .logo{flex:none}.voltage-brand .brand{flex:1 1 auto}.voltage-brand .brand h1{margin:0 0 2px;line-height:1.15;font-size:clamp(20px,2.6cqw,32px)}.voltage-brand .brand p{font-size:clamp(13px,1.5cqw,16px);line-height:1.2}.voltage-brand .home-status{flex:none;align-self:flex-start;gap:8px;margin-left:auto;max-width:100%}.voltage-brand .home-status .connection small{margin-top:2px}.voltage .voltage-gauge{margin:0}.main-right{display:flex;flex-direction:column;gap:10px;min-width:0}.main-right>.metrics{flex:1}
-        @container (min-width:960px){.shell.home-active>.tabs-top{display:none}.shell:not(.home-active)>.tabs-top{display:none}.shell:not(.home-active)>.page-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,.38fr);gap:16px;align-items:start}.shell:not(.home-active)>.page-layout>.tabs-side{display:grid;grid-template-columns:minmax(0,1fr);margin:0;align-self:start;width:100%}.home-view .main-grid{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);grid-template-rows:auto;align-items:stretch}.home-view .main-grid>.voltage{grid-column:1;grid-row:1}.home-view .main-grid>.main-right{grid-column:2;grid-row:1}.home-view .main-right>.tabs-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:0;align-self:stretch;width:100%}}
+        @container (min-width:960px){.shell.home-active>.tabs-top{display:none}.shell:not(.home-active)>.tabs-top{display:none}.shell:not(.home-active)>.page-layout{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:14px;align-items:start}.shell:not(.home-active)>.page-layout>.tabs-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:0;align-self:start;width:100%}.home-view .main-grid{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);grid-template-rows:auto;align-items:stretch}.home-view .main-grid>.voltage{grid-column:1;grid-row:1}.home-view .main-grid>.main-right{grid-column:2;grid-row:1}.home-view .main-right>.tabs-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:0;align-self:stretch;width:100%}}
         @container (max-width:959px){.home-view .main-grid{grid-template-columns:minmax(0,1fr);align-items:start}.home-view .main-right{display:contents}.home-view .main-right>.tabs-side{display:none}.home-view .main-right>.metrics{grid-column:1;grid-row:1}.home-view .main-grid>.voltage{grid-column:1;grid-row:2}.shell:not(.home-active)>.tabs-top{display:grid}.shell:not(.home-active)>.page-layout{display:block}.shell:not(.home-active)>.page-layout>.tabs-side{display:none}}
         @container (max-width:760px){.shell{padding:12px}.header{gap:11px;padding:5px 2px 14px}.logo{width:58px;height:58px;border-radius:17px}.logo .icon{width:38px;height:38px}.headright{gap:8px}.connection strong{font-size:14px}.connection small{font-size:10px}.tabs{margin-bottom:12px}.tab{gap:5px;padding:12px 3px;font-size:12px}.tab .tab-icon{font-size:19px}.tab .icon{width:20px;height:20px}.main-grid{grid-template-columns:1fr;gap:10px}.voltage{min-height:300px}.voltage-gauge{width:min(100%,420px)}.metrics{gap:10px}.metric{min-height:135px}.metric-icon .icon{width:38px;height:38px}.metric-label{font-size:15px}.chart-card{padding:13px 11px}.chart-head h2{font-size:19px}.periods{width:100%;margin:0}.period-button{flex:1;padding:8px 4px;font-size:13px}.bottom-status{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.info{min-height:100px;padding:12px 8px}.info .symbol .icon{width:30px;height:30px}.info .small{font-size:13px}.info strong{font-size:16px}.banner{padding:14px;min-height:70px}.banner-check{width:38px;height:38px}.banner-check .icon{width:28px;height:28px}.house-art{width:80px}.detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.detail-panel{padding:16px}.detail-panel h2{font-size:22px}.action-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
         @container (max-width:420px){.connection small{max-width:105px}.tab{font-size:11px}.tab .tab-icon{display:none}.metric{min-height:122px;padding:12px 8px}.metric-value{font-size:clamp(25px,8cqw,34px)}.info{gap:8px}.info .symbol .icon{width:26px;height:26px}.info .small{font-size:12px}.info strong{font-size:14px}.detail-grid{grid-template-columns:1fr}.setting{align-items:stretch}}
