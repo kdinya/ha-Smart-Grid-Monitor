@@ -101,7 +101,7 @@
       healthy: 'PZEM онлайн; якість напруги в межах порогів', quality_unknown: 'Якість напруги невідома', alarm_banner: 'Напруга поза заданим діапазоном', offline_banner: 'ESP недоступна',
       pzem_online: 'Дані PZEM доступні', pzem_offline: 'PZEM офлайн', source_unconfirmed: 'Джерело живлення не підтверджене', source_unknown: 'Джерело живлення невідоме', pzem_source_offline: 'PZEM офлайн; джерело живлення невідоме', pzem_offline_banner: 'PZEM не відповідає; джерело живлення невідоме',
       voltage: 'Напруга мережі', sag_state: 'Просідання', swell_state: 'Перенапруга', current: 'Струм', power: 'Потужність', frequency: 'Частота', pf: 'Коеф. потужності', normal: 'Норма', alarm: 'Поза нормою',
-      chart_title: 'Графік потужності', hour: 'Год', day: 'День', week: 'Тиждень', month: 'Місяць', loading: 'Завантаження історії…', no_history: 'Історія потужності поки недоступна',
+      chart_title: 'Детальний графік', stat_min: 'Мін.', stat_avg: 'Сер.', stat_max: 'Макс.', hour: 'Год', day: 'День', week: 'Тиждень', month: 'Місяць', loading: 'Завантаження історії…', no_history: 'Історія поки недоступна',
       mains: 'Зв’язок з PZEM', has_voltage: 'Дані доступні', no_voltage: 'Дані недоступні', source: 'Живлення ESP', from_mains: 'Мережа (не підтверджено)', from_inverter: 'Джерело невідоме', pzem_link: 'Зв’язок з PZEM', active: 'Онлайн', inactive: 'Офлайн', today_consumption: 'Споживання сьогодні',
       esp_power_connection: 'Схема живлення ESP', esp_power_shared: 'Від мережі разом із модулем', esp_power_after_avr: 'Після АВР', esp_power_independent: 'Незалежне живлення', esp_power_avr_note: 'ESP може живитися від інвертора', pzem_grid_note: 'PZEM вимірює мережу в усіх режимах',
       params_title: 'Електричні параметри', range_title: 'Діапазон напруги сьогодні', range_now: 'Зараз', energy_title: 'Енергія та вартість', settings_title: 'Налаштування та діагностика',
@@ -140,7 +140,7 @@
       healthy: 'PZEM online; voltage is within configured thresholds', quality_unknown: 'Voltage quality is unknown', alarm_banner: 'Voltage is outside the configured range', offline_banner: 'ESP is offline',
       pzem_online: 'PZEM data available', pzem_offline: 'PZEM offline', source_unconfirmed: 'Power source is not confirmed', source_unknown: 'Power source unknown', pzem_source_offline: 'PZEM offline; power source unknown', pzem_offline_banner: 'PZEM is not responding; power source is unknown',
       voltage: 'Grid voltage', sag_state: 'Sag', swell_state: 'Swell', current: 'Current', power: 'Power', frequency: 'Frequency', pf: 'Power factor', normal: 'Normal', alarm: 'Out of range',
-      chart_title: 'Power history', hour: 'Hour', day: 'Day', week: 'Week', month: 'Month', loading: 'Loading history…', no_history: 'Power history is not available yet',
+      chart_title: 'Detailed chart', stat_min: 'Min', stat_avg: 'Avg', stat_max: 'Max', hour: 'Hour', day: 'Day', week: 'Week', month: 'Month', loading: 'Loading history…', no_history: 'History is not available yet',
       mains: 'PZEM connection', has_voltage: 'Data available', no_voltage: 'Data unavailable', source: 'ESP power source', from_mains: 'Mains (not confirmed)', from_inverter: 'Source unknown', pzem_link: 'PZEM connection', active: 'Online', inactive: 'Offline', today_consumption: 'Consumption today',
       esp_power_connection: 'ESP power arrangement', esp_power_shared: 'Mains shared with the module', esp_power_after_avr: 'After AVR', esp_power_independent: 'Independent power', esp_power_avr_note: 'ESP may be powered by the inverter', pzem_grid_note: 'PZEM measures mains in every mode',
       params_title: 'Electrical parameters', range_title: 'Voltage range today', range_now: 'Now', energy_title: 'Energy and cost', settings_title: 'Settings and diagnostics',
@@ -175,6 +175,10 @@
   };
 
   const RANGES = { hour: 1, day: 24, week: 24 * 7, month: 24 * 30 };
+  const CHART_METRICS = {
+    power: { digits: 0, plausible: [0, MAX_PLAUSIBLE_POWER_W], unit: (lang) => (lang === 'uk' ? 'Вт' : 'W') },
+    voltage: { digits: 1, plausible: [50, 400], unit: (lang) => (lang === 'uk' ? 'В' : 'V') },
+  };
   // One shared geometry keeps the arc, ticks, tower and marker concentric.
   const GAUGE = { cx: 250, cy: 205, r: 185, start: 150, span: 240, min: 150, max: 280 };
   const gaugePoint = (degrees, radius = GAUGE.r) => {
@@ -754,6 +758,7 @@
       this._hass = null;
       this._activeTab = 'home';
       this._historyRange = 'hour';
+      this._chartMetric = 'power';
       this._history = [];
       this._historyKey = '';
       this._historyAt = 0;
@@ -1103,7 +1108,6 @@
             </div>
           </div>
         </div>
-        ${this._chart()}
         <div class="bottom-status">
           <div class="card info"><span class="symbol green">${this._svg('home')}</span><div><div class="small">${this._escape(this._t('pzem_link'))}</div><strong data-role="home-mains" class="${status.pzemOnline ? 'good' : ''}">${this._escape(mainsText)}</strong></div></div>
           <div class="card info"><span class="symbol blue">${this._svg('plug')}</span><div><div class="small">${this._escape(this._t('source'))}</div><strong data-role="home-source">${this._escape(sourceText)}</strong></div></div>
@@ -1246,7 +1250,35 @@
     _chart() {
       const labels = ['hour', 'day', 'week', 'month'];
       const buttons = labels.map((period) => `<button class="period-button ${this._historyRange === period ? 'active' : ''}" data-period="${period}" aria-pressed="${this._historyRange === period}">${this._escape(this._t(period))}</button>`).join('');
-      return `<section class="card chart-card"><div class="chart-head"><h2><span class="chart-icon">${this._svg('chart')}</span>${this._escape(this._t('chart_title'))}</h2><div class="periods" role="group" aria-label="${this._escape(this._t('chart_title'))}">${buttons}</div></div><div class="chart-plot" data-role="chart-plot">${this._chartSvg()}</div></section>`;
+      const metricButtons = Object.keys(CHART_METRICS).map((metric) => `<button class="period-button ${this._chartMetric === metric ? 'active' : ''}" data-metric="${metric}" aria-pressed="${this._chartMetric === metric}">${this._escape(this._t(metric))}</button>`).join('');
+      return `<section class="card chart-card detailed-chart"><div class="chart-head"><h2><span class="chart-icon">${this._svg('chart')}</span>${this._escape(this._t('chart_title'))}</h2><div class="periods" role="group" aria-label="${this._escape(this._t('chart_title'))}">${metricButtons}</div><div class="periods" role="group" aria-label="${this._escape(this._t('hour'))}">${buttons}</div></div><div class="chart-stats" data-role="chart-stats">${this._chartStatsHtml()}</div><div class="chart-plot" data-role="chart-plot">${this._chartSvg()}</div></section>`;
+    }
+
+    _chartStatsHtml() {
+      const metric = CHART_METRICS[this._chartMetric || 'power'];
+      const values = (Array.isArray(this._history) ? this._history : []).map((item) => item.value).filter((value) => Number.isFinite(value));
+      const fmt = (value) => (value === null ? '—' : value.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits }));
+      const min = values.length ? Math.min(...values) : null;
+      const max = values.length ? Math.max(...values) : null;
+      const avg = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+      const unit = metric.unit(this._lang());
+      const cell = (label, value) => `<div><span>${this._escape(label)}</span><b>${this._escape(value === null ? '—' : `${fmt(value)} ${unit}`)}</b></div>`;
+      return cell(this._t('stat_min'), min) + cell(this._t('stat_avg'), avg) + cell(this._t('stat_max'), max);
+    }
+
+    _chartScale(series) {
+      if (this._chartMetric === 'voltage') {
+        const values = series.map((point) => point.v);
+        const low = Math.min(...values); const high = Math.max(...values);
+        for (const step of [5, 10, 20, 25, 50]) {
+          const lo = Math.floor((low - 2) / step) * step;
+          const hi = Math.max(Math.ceil((high + 2) / step) * step, lo + step);
+          if ((hi - lo) / step <= 4) return { lo, max: hi, step, count: (hi - lo) / step };
+        }
+        const step = 50; const lo = Math.floor((low - 2) / step) * step;
+        return { lo, max: lo + 4 * step, step, count: 4 };
+      }
+      return { lo: 0, ...this._niceScale(Math.max(...series.map((point) => point.v), 0)) };
     }
 
     _niceScale(maximum) {
@@ -1318,19 +1350,21 @@
         this._chartPts = [];
         return `<div class="chart-empty">${this._escape(this._t('no_history'))}</div>`;
       }
-      const current = this._num('power');
+      const current = this._num(this._chartMetric || 'power');
       if (current !== null) series.push({ t: tEnd, v: current });
-      const scale = this._niceScale(Math.max(...series.map((point) => point.v), 0));
-      const unit = this._lang() === 'uk' ? 'Вт' : 'W';
+      const scale = this._chartScale(series);
+      const metric = CHART_METRICS[this._chartMetric || 'power'];
+      const unit = metric.unit(this._lang());
       const X = (t) => x0 + Math.min(1, Math.max(0, (t - tStart) / rangeMs)) * (x1 - x0);
-      const Y = (v) => y1 - (Math.max(0, Math.min(scale.max, v)) / scale.max) * (y1 - y0);
+      const Y = (v) => y1 - ((Math.max(scale.lo, Math.min(scale.max, v)) - scale.lo) / (scale.max - scale.lo)) * (y1 - y0);
       const pts = series.map((point) => ({ x: X(point.t), y: Y(point.v), v: point.v, t: point.t }));
       this._chartPts = pts;
       const line = this._smoothPath(pts, y0, y1);
       const area = `${line} L${pts[pts.length - 1].x.toFixed(1)} ${y1} L${pts[0].x.toFixed(1)} ${y1} Z`;
       const horizontal = Array.from({ length: scale.count + 1 }, (_, index) => {
-        const y = Y(index * scale.step);
-        return `<path d="M${x0} ${y.toFixed(1)}H${x1}"/><text x="${x0 - 10}" y="${(y + 4).toFixed(1)}" text-anchor="end">${this._escape((index * scale.step).toLocaleString(this._locale()))}${index === scale.count ? ` ${unit}` : ''}</text>`;
+        const tickValue = scale.lo + index * scale.step;
+        const y = Y(tickValue);
+        return `<path d="M${x0} ${y.toFixed(1)}H${x1}"/><text x="${x0 - 10}" y="${(y + 4).toFixed(1)}" text-anchor="end">${this._escape(tickValue.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits }))}${index === scale.count ? ` ${unit}` : ''}</text>`;
       }).join('');
       const longRange = this._historyRange === 'week' || this._historyRange === 'month';
       const vertical = [0, 1, 2, 3, 4].map((index) => {
@@ -1342,7 +1376,7 @@
       }).join('');
       const last = pts[pts.length - 1];
       const hasCurrent = current !== null;
-      const latest = hasCurrent ? `${current.toLocaleString(this._locale(), { maximumFractionDigits: 0 })} ${unit}` : '';
+      const latest = hasCurrent ? `${current.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits })} ${unit}` : '';
       const tagX = Math.min(Math.max(last.x - 42, x0 - 8), width - 86);
       const tagY = Math.max(2, last.y - 44);
       return `<svg class="chart" data-chart-max="${scale.max}" data-chart-w="${width}" data-chart-x0="${x0}" data-chart-x1="${x1}" data-chart-y0="${y0}" data-chart-y1="${y1}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${this._escape(this._t('chart_title'))}"><defs><linearGradient id="${this._id('area')}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#0a96ff" stop-opacity=".5"/><stop offset="1" stop-color="#0a96ff" stop-opacity=".02"/></linearGradient><filter id="${this._id('line-glow')}" x="-5%" y="-30%" width="110%" height="160%"><feGaussianBlur stdDeviation="3"/></filter></defs><g class="chart-grid">${horizontal}${vertical}</g><path d="${area}" fill="url(#${this._id('area')})"/><path d="${line}" class="chart-glow" filter="url(#${this._id('line-glow')})"/><path d="${line}" class="chart-line"/><path class="chart-cross" data-role="chart-cross" d="M${last.x.toFixed(1)} ${y0}V${y1}" visibility="hidden"/><circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="6" class="chart-dot" data-role="chart-dot" visibility="${hasCurrent ? 'visible' : 'hidden'}"/><rect x="${tagX.toFixed(1)}" y="${tagY.toFixed(1)}" width="84" height="30" rx="10" class="chart-tag" data-role="chart-tag" visibility="${hasCurrent ? 'visible' : 'hidden'}"/><text x="${(tagX + 42).toFixed(1)}" y="${(tagY + 20).toFixed(1)}" text-anchor="middle" class="chart-tag-text" data-role="chart-tag-text" visibility="${hasCurrent ? 'visible' : 'hidden'}">${this._escape(latest)}</text><text x="${(tagX + 42).toFixed(1)}" y="${(tagY + 37).toFixed(1)}" text-anchor="middle" class="chart-tag-sub" data-role="chart-tag-sub" visibility="hidden"></text></svg>`;
@@ -1373,11 +1407,12 @@
       const x = (event.clientX - rect.left) * ((Number(chart.dataset.chartW) || rect.width) / rect.width);
       let best = this._chartPts[0];
       this._chartPts.forEach((point) => { if (Math.abs(point.x - x) < Math.abs(best.x - x)) best = point; });
-      const unit = this._lang() === 'uk' ? 'Вт' : 'W';
+      const metric = CHART_METRICS[this._chartMetric || 'power'];
+      const unit = metric.unit(this._lang());
       const longRange = this._historyRange === 'week' || this._historyRange === 'month';
       const when = new Date(best.t);
       const sub = longRange ? when.toLocaleDateString(this._locale(), { day: '2-digit', month: '2-digit' }) + ' ' + when.toLocaleTimeString(this._locale(), { hour: '2-digit', minute: '2-digit', hour12: false }) : when.toLocaleTimeString(this._locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
-      this._setChartMarker(chart, best.x, best.y, `${best.v.toLocaleString(this._locale(), { maximumFractionDigits: 0 })} ${unit}`, sub);
+      this._setChartMarker(chart, best.x, best.y, `${best.v.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits })} ${unit}`, sub);
       const cross = chart.querySelector('[data-role="chart-cross"]');
       if (cross) {
         cross.setAttribute('d', `M${best.x.toFixed(1)} ${chart.dataset.chartY0}V${chart.dataset.chartY1}`);
@@ -1394,32 +1429,34 @@
     }
 
     _ensureHistory() {
-      if (!this._hass || !this._config || this._activeTab !== 'home' || this._historyLoading) return;
-      const key = `${this._historyRange}:${this._entity('power')}`;
+      if (!this._hass || !this._config || this._activeTab !== 'params' || this._historyLoading) return;
+      const key = `${this._historyRange}:${this._chartMetric || 'power'}:${this._entity(this._chartMetric || 'power')}`;
       if (key === this._historyKey && Date.now() - this._historyAt < 60000) return;
       this._loadHistory(key);
     }
 
-    async _loadHistory(key = `${this._historyRange}:${this._entity('power')}`) {
+    async _loadHistory(key = `${this._historyRange}:${this._chartMetric || 'power'}:${this._entity(this._chartMetric || 'power')}`) {
       if (!this._hass || this._historyLoading) return;
       this._historyLoading = true;
       this._historyError = false;
       const request = ++this._historyRequest;
       const hass = this._hass;
       const range = this._historyRange;
+      const metricKey = this._chartMetric || 'power';
       const end = new Date();
       const start = new Date(end.getTime() - RANGES[range] * 60 * 60 * 1000);
       this._refreshChart();
       try {
         if (typeof hass.callApi !== 'function') throw new Error('History API unavailable');
-        const entity = encodeURIComponent(this._entity('power'));
+        const entity = encodeURIComponent(this._entity(metricKey));
         const path = `history/period/${encodeURIComponent(start.toISOString())}?filter_entity_id=${entity}&end_time=${encodeURIComponent(end.toISOString())}&minimal_response`;
         const response = await hass.callApi('GET', path);
         if (request !== this._historyRequest) return;
         const series = Array.isArray(response?.[0]) ? response[0] : [];
         this._history = series.map((item) => {
           const value = Number(item.state);
-          const plausible = Number.isFinite(value) && value >= 0 && value <= MAX_PLAUSIBLE_POWER_W;
+          const [minValid, maxValid] = CHART_METRICS[metricKey].plausible;
+          const plausible = Number.isFinite(value) && value >= minValid && value <= maxValid;
           return { time: new Date(item.last_changed || item.last_updated), value: plausible ? value : null };
         })
           .filter((item) => Number.isFinite(item.time.getTime()))
@@ -1444,6 +1481,8 @@
     _refreshChart() {
       const plot = this.shadowRoot.querySelector('[data-role="chart-plot"]');
       if (plot) plot.innerHTML = this._chartSvg();
+      const stats = this.shadowRoot.querySelector('[data-role="chart-stats"]');
+      if (stats) stats.innerHTML = this._chartStatsHtml();
     }
 
     _rangeLayout() {
@@ -1476,7 +1515,7 @@
     }
 
     _params() {
-      return `<section class="detail-panel"><h2>${this._escape(this._t('params_title'))}</h2>${this._rangeCard()}<div class="detail-grid">
+      return `<section class="detail-panel"><h2>${this._escape(this._t('params_title'))}</h2>${this._chart()}${this._rangeCard()}<div class="detail-grid">
         ${this._detail('apparent_power', this._t('apparent'), 0)}${this._detail('reactive_power', this._t('reactive'), 0)}${this._detail('phase_angle', this._t('phase'), 1)}
         ${this._detail('voltage_deviation', this._t('deviation'), 1)}${this._detail('voltage_average', this._t('average'), 1)}${this._detail('voltage_status', this._t('voltage_state'), 0)}
         ${this._detail('voltage_min', this._t('min_voltage'), 1)}${this._detail('voltage_max', this._t('max_voltage'), 1)}${this._detail('current_max', this._t('max_current'), 2)}${this._detail('power_peak', this._t('peak_power'), 0)}
@@ -1780,7 +1819,7 @@
         this._finishDialog(dialogAction.dataset.dialogAction === 'confirm' || dialogAction.dataset.dialogAction === 'close');
         return;
       }
-      const target = event.target?.closest?.('[data-tab], [data-period], [data-action], [data-number-save], [data-switch]');
+      const target = event.target?.closest?.('[data-tab], [data-period], [data-metric], [data-action], [data-number-save], [data-switch]');
       if (!target) return;
       if (target.dataset.tab) {
         if (target.dataset.tab === this._activeTab) return;
@@ -1801,6 +1840,22 @@
         if (view) view.innerHTML = this._activeContent();
         this._queueChartMeasure();
         this._ensureHistory();
+        return;
+      }
+      if (target.dataset.metric) {
+        if (this._chartMetric === target.dataset.metric) return;
+        this._historyRequest += 1;
+        this._historyLoading = false;
+        this._chartMetric = target.dataset.metric;
+        this._historyKey = '';
+        this._history = [];
+        this.shadowRoot.querySelectorAll('[data-metric]').forEach((button) => {
+          const active = button.dataset.metric === this._chartMetric;
+          button.classList.toggle('active', active);
+          button.setAttribute('aria-pressed', String(active));
+        });
+        this._refreshChart();
+        this._loadHistory();
         return;
       }
       if (target.dataset.period) {
@@ -1846,7 +1901,10 @@
         if (this._activeTab === 'home') this._updateHomeStatus();
       }
       if (this._activeTab === 'home') this._updateHome(changed);
-      if (this._activeTab === 'params') this._updateRange();
+      if (this._activeTab === 'params') {
+        this._updateRange();
+        if (changed.has(this._chartMetric || 'power')) this._refreshChart();
+      }
       if (this._activeTab === 'energy') this._updateEnergy(changed);
       if (this._activeTab === 'settings') this._updateSettings(changed);
     }
@@ -1877,7 +1935,7 @@
       const voltage = this.shadowRoot.querySelector('[data-role="voltage-card"]');
       const indicator = this.shadowRoot.querySelector('[data-role="state-indicator"]');
       const banner = this.shadowRoot.querySelector('[data-role="home-banner"]');
-      if (shell) shell.className = `shell ${status.stateClass}${this._hasRendered ? ' render-ready' : ''}`;
+      if (shell) shell.className = `shell ${status.stateClass}${this._hasRendered ? ' render-ready' : ''}${this._activeTab === 'home' ? ' home-active' : ''}`;
       if (voltage) voltage.className = `card voltage ${status.stateClass}`;
       if (indicator) indicator.className = `state-indicator ${status.stateClass}`;
       const indicatorLabel = indicator?.querySelector('[data-role="state-label"]');
@@ -2176,8 +2234,9 @@
         .bottom-status{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:13px;margin-top:14px}.info{padding:17px 12px;min-height:128px;display:flex;align-items:center;justify-content:center;gap:12px;min-width:0}.info .symbol{font-size:38px;flex:none;color:var(--green);filter:drop-shadow(0 0 10px #35ed9166)}.info .symbol .icon{width:42px;height:42px}.info .symbol.blue{color:#91b8e9}.info .symbol.amber{color:var(--amber)}.info .small{color:#b6c9e2;font-size:16px}.info strong{display:block;font-size:20px;margin-top:5px;overflow-wrap:anywhere}.info .good{color:var(--green)}.info .cost-line{margin-top:3px}
         .banner{margin-top:14px;padding:18px 24px;min-height:88px;display:flex;align-items:center;gap:18px;border:1px solid #39d77e;background:linear-gradient(90deg,#0c302a,#0c2631 68%,#102b42);box-shadow:0 0 24px #28d87920}.banner.inverter{border-color:#ffb51b;background:linear-gradient(90deg,#382711,#18283a 80%);box-shadow:0 0 24px #ffb51b20}.banner.pzem-offline{border-color:#ffb51b;background:linear-gradient(90deg,#382711,#18283a 80%);box-shadow:0 0 24px #ffb51b20}.banner.alarm,.banner.offline{border-color:#ff526d;background:linear-gradient(90deg,#3a1420,#18283a 80%);box-shadow:0 0 24px #ff526d20}.banner.unknown{border-color:#53677e;background:linear-gradient(90deg,#1a2939,#101e30)}.banner-check{width:48px;height:48px;border-radius:50%;background:var(--green);color:#052116;display:grid;place-items:center;flex:none;box-shadow:0 0 18px #35ed9166}.banner-check .icon{width:36px;height:36px}.banner.inverter .banner-check{background:var(--amber);color:#392400}.banner.pzem-offline .banner-check{background:var(--amber);color:#392400}.banner.alarm .banner-check,.banner.offline .banner-check{background:var(--red);color:#390711}.banner.unknown .banner-check{background:#53677e;color:#d6e5f6}.banner strong{color:#4df29a;font-size:clamp(17px,2cqw,24px)}.banner.inverter strong{color:#ffd078}.banner.pzem-offline strong{color:#ffd078}.banner.alarm strong,.banner.offline strong{color:#ff8a9a}.banner.unknown strong{color:#b4c7df}.house-art{margin-left:auto;width:130px;max-width:22%;flex:none;filter:drop-shadow(0 0 11px #1b8fff)}.house-art svg{display:block;width:100%;height:auto}
         .detail-panel{padding:22px;margin-top:2px}.detail-panel h2{margin:0 0 18px;font-size:25px}.detail-panel h2.subheading{margin:24px 0 14px;font-size:19px}.detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.detail{padding:16px;border-radius:16px;background:#13243a;border:1px solid #2b4562;min-width:0}.detail>span,.detail label>span{display:block;color:#9fb5d1;font-size:14px;margin-bottom:7px}.detail b{font-size:22px;overflow-wrap:anywhere}.setting{display:flex;align-items:end;gap:10px}.setting label{flex:1;min-width:0}.setting-input{display:flex;align-items:center;gap:8px}.setting-input input{width:100%;min-width:0;background:#091727;border:1px solid #37526f;border-radius:9px;color:var(--text);padding:10px;font:inherit;font-size:18px}.setting-input small{color:#9fb5d1;white-space:nowrap}.save-button,.switch-button,.action-button{border:1px solid #278ed0;background:#092645;color:#d7efff;border-radius:10px;padding:9px 12px;font:inherit;cursor:pointer}.save-button:hover,.switch-button:hover,.action-button:hover{background:#0c3962}.save-button:disabled,.switch-button:disabled,.action-button:disabled{opacity:.45;cursor:not-allowed}.switch-setting{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.switch-setting>span{color:#9fb5d1;font-size:14px}.switch-setting>strong{font-size:16px}.switch-button{grid-column:1/-1;display:flex;align-items:center;gap:8px;justify-content:center}.switch-button .icon{width:20px;height:20px}.switch-button.on{border-color:#35ed91;color:#35ed91}.action-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.action-button{min-height:68px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;font-size:13px;border-color:#2b8ed0}.action-button span{font-size:22px;color:#45bdff}.action-button .icon{width:25px;height:25px}.footer{display:flex;justify-content:space-between;gap:10px;margin:14px 2px 0;color:#6885a2;font-size:11px}.footer span:last-child{max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .chart-head .periods+.periods{margin-left:0}.chart-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:4px 0 10px}.chart-stats>div{background:#13243a;border:1px solid #2b4562;border-radius:14px;padding:9px 12px;min-width:0}.chart-stats span{display:block;color:#9fb5d1;font-size:13px}.chart-stats b{display:block;font-size:19px;margin-top:3px;overflow-wrap:anywhere}
         .voltage-brand{display:flex;align-items:center;gap:18px;align-self:flex-start;min-width:0;max-width:100%}.voltage-brand .brand h1{font-size:clamp(20px,2.6cqw,32px)}.voltage-brand .brand p{font-size:clamp(13px,1.5cqw,16px)}.voltage .voltage-gauge{margin:auto 0}.main-right{display:flex;flex-direction:column;gap:14px;min-width:0}.main-right .home-status{margin:0 2px 0 auto}.main-right>.metrics{flex:1}
-        @container (min-width:960px){.shell.home-active>.tabs-top{display:none}.home-view .main-grid{grid-template-columns:minmax(0,1.03fr) minmax(0,1fr);grid-template-rows:auto;align-items:stretch}.home-view .main-grid>.voltage{grid-column:1;grid-row:1}.home-view .main-grid>.main-right{grid-column:2;grid-row:1}.home-view .main-right>.tabs-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:0;align-self:stretch;width:100%}}
+        @container (min-width:960px){.shell.home-active>.tabs-top{display:none}.home-view .main-grid{grid-template-columns:minmax(0,1.03fr) minmax(0,1fr);grid-template-rows:minmax(580px,auto);align-items:stretch}.home-view .main-grid>.voltage{grid-column:1;grid-row:1}.home-view .main-grid>.main-right{grid-column:2;grid-row:1}.home-view .main-right>.tabs-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:0;align-self:stretch;width:100%}}
         @container (max-width:760px){.shell{padding:12px}.header{gap:11px;padding:5px 2px 14px}.logo{width:58px;height:58px;border-radius:17px}.logo .icon{width:38px;height:38px}.headright{gap:8px}.connection strong{font-size:14px}.connection small{font-size:10px}.wifi-icon{font-size:21px;padding-left:10px}.wifi-icon .icon{width:24px;height:24px}.tabs{margin-bottom:12px}.tab{gap:5px;padding:12px 3px;font-size:12px}.tab .tab-icon{font-size:19px}.tab .icon{width:20px;height:20px}.main-grid{grid-template-columns:1fr;gap:10px}.voltage{min-height:300px}.voltage-gauge{width:min(100%,420px)}.metrics{gap:10px}.metric{min-height:135px}.metric-icon .icon{width:38px;height:38px}.metric-label{font-size:15px}.chart-card{padding:13px 11px}.chart-head h2{font-size:19px}.periods{width:100%;margin:0}.period-button{flex:1;padding:8px 4px;font-size:13px}.bottom-status{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.info{min-height:100px;padding:12px 8px}.info .symbol .icon{width:30px;height:30px}.info .small{font-size:13px}.info strong{font-size:16px}.banner{padding:14px;min-height:70px}.banner-check{width:38px;height:38px}.banner-check .icon{width:28px;height:28px}.house-art{width:80px}.detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.detail-panel{padding:16px}.detail-panel h2{font-size:22px}.action-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
         @container (max-width:420px){.headright .wifi-icon{display:none}.connection small{max-width:105px}.tab{font-size:11px}.tab .tab-icon{display:none}.metric{min-height:122px;padding:12px 8px}.metric-value{font-size:clamp(25px,8cqw,34px)}.info{gap:8px}.info .symbol .icon{width:26px;height:26px}.info .small{font-size:12px}.info strong{font-size:14px}.detail-grid{grid-template-columns:1fr}.setting{align-items:stretch}}
         /* Premium instrument finish: layered glass, metal highlights and soft depth. */
