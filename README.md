@@ -87,6 +87,10 @@ hacs.json                  # HACS frontend metadata
 
 Both interfaces cover the firmware's live electrical values, energy and cost counters, tariff settings, voltage quality, daily minimum and maximum values, PZEM communication outage counts and durations, ESP diagnostics, configuration numbers, two-zone tariff switch, reset buttons (including the daily min/max reset) and restart button. The frontend reads entities exposed by ESPHome; it does not infer inverter operation from a PZEM timeout.
 
+## Statistics start
+
+In the card's **Settings** tab, the **Statistics** section lets you pick a date and time. After applying it, the chart gets a «From HH:MM» period, and the minimum, maximum and peak values on the tiles and range cards are calculated from Home Assistant history since that moment. Clearing the field returns to the firmware's daily values. The setting is stored per browser.
+
 ## Electrical safety
 
 The PZEM module is connected to mains-voltage wiring. Use an enclosed, strain-relieved installation, keep the low-voltage and mains sections isolated, and work only with the breaker disconnected. Have a qualified electrician verify the CT and mains wiring if anything is uncertain.
