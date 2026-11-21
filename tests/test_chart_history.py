@@ -568,9 +568,20 @@ const liveResponse = [[
   { state: '100', last_changed: new Date(liveStart - 60e3).toISOString() },
   { state: '102', last_changed: new Date(liveEnd).toISOString() },
 ]];
+card._state = () => ({ last_changed: new Date(liveEnd).toISOString() });
 const live = card._parseCumulativeHistory(liveResponse, 'energy_total', { start: liveStart, end: liveEnd }, 103);
 assert.equal(live.at(-1).time.getTime(), liveEnd);
 assert.equal(live.at(-1).value, 3);
+
+// A recent custom range must not consume a state updated after its end boundary.
+const recentPastEnd = Date.now() - 30e3;
+const recentPastStart = recentPastEnd - 20 * 60e3;
+card._state = () => ({ last_changed: new Date(recentPastEnd + 30e3).toISOString() });
+const recentPast = card._parseCumulativeHistory([[
+  { state: '100', last_changed: new Date(recentPastStart - 60e3).toISOString() },
+  { state: '102', last_changed: new Date(recentPastEnd).toISOString() },
+]], 'energy_total', { start: recentPastStart, end: recentPastEnd }, 103);
+assert.equal(recentPast.at(-1).value, 2);
 
 // Bucketing retains the terminal cumulative value instead of dropping its zero-duration endpoint.
 card._chartW = 280;

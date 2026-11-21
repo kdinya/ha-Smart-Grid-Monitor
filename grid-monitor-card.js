@@ -2886,7 +2886,8 @@
         lastTime = item.time.getTime();
         result.push({ time: new Date(lastTime), value: cumulative });
       }
-      if (Number.isFinite(currentValue) && currentValue >= minimum && currentValue <= maximum && end >= Date.now() - 60e3) {
+      const currentStateTime = Date.parse(this._state(metricKey)?.last_changed || '');
+      if (Number.isFinite(currentValue) && currentValue >= minimum && currentValue <= maximum && Number.isFinite(currentStateTime) && currentStateTime <= end) {
         if (previous === undefined) previous = currentValue;
         else cumulative += currentValue >= previous ? currentValue - previous : currentValue;
       }
