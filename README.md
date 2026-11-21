@@ -4,6 +4,18 @@ ESPHome firmware and Home Assistant interfaces for an ESP32-C3 + PZEM-004T v3.0 
 
 The repository now provides two supported interface paths. The recommended path is the HACS-installable `Smart Grid Monitor Card`, a responsive dark-neon frontend card. The dependency-free native Lovelace dashboard remains available as a fallback for installations where custom frontend resources are not desired.
 
+## Preview
+
+| Home (desktop) | Home (phone) |
+| --- | --- |
+| ![Home dashboard](docs/screenshots/home-desktop.jpg) | ![Home dashboard on a phone](docs/screenshots/home-mobile.jpg) |
+
+| Parameters | Settings and diagnostics |
+| --- | --- |
+| ![Parameters tab](docs/screenshots/parameters-desktop.jpg) | ![Settings tab](docs/screenshots/settings-desktop.jpg) |
+
+The previews are rendered from the card with sample data; they are not live Home Assistant captures.
+
 ## ESPHome setup and secret safety
 
 1. Copy `esphome/secrets.example.yaml` to `esphome/secrets.yaml`.

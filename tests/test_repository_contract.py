@@ -60,6 +60,24 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn(".shell.home-active>.tabs-top{display:none}", card)
         self.assertIn(".home-view .main-grid>.tabs-side{display:grid;grid-column:2;grid-row:1;", card)
 
+    def test_gauge_arc_ticks_and_marker_share_one_geometry(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        self.assertIn("const GAUGE = {", card)
+        self.assertIn("const gaugeMarker = (progress)", card)
+        # The marker used to be computed on a different centre than the arc.
+        self.assertNotIn("(180 + progress * 1.8)", card)
+
+    def test_chart_is_measured_and_rescaled_to_the_card_width(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        self.assertIn("new ResizeObserver(() => this._queueChartMeasure())", card)
+        self.assertIn("this._chartW", card)
+        self.assertIn("hour12: false", card)
+
+    def test_unavailable_values_use_compact_placeholders(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        self.assertIn(".metric-value.empty{", card)
+        self.assertIn(".voltage-value.empty{", card)
+
     def test_dashboard_shows_explicit_voltage_status_not_stale_alarm(self):
         dashboard = yaml.load(
             (ROOT / "home-assistant/lovelace/grid-monitor-dashboard.yaml").read_text(encoding="utf-8"),

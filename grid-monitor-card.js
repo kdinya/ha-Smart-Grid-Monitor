@@ -97,7 +97,7 @@
       chart_title: 'Графік потужності', hour: 'Год', day: 'День', week: 'Тиждень', month: 'Місяць', loading: 'Завантаження історії…', no_history: 'Історія потужності поки недоступна',
       mains: 'Зв’язок з PZEM', has_voltage: 'Дані доступні', no_voltage: 'Дані недоступні', source: 'Живлення ESP', from_mains: 'Мережа (не підтверджено)', from_inverter: 'Джерело невідоме', pzem_link: 'Зв’язок з PZEM', active: 'Онлайн', inactive: 'Офлайн', today_consumption: 'Споживання сьогодні',
       esp_power_connection: 'Схема живлення ESP', esp_power_shared: 'Від мережі разом із модулем', esp_power_after_avr: 'Після АВР', esp_power_independent: 'Незалежне живлення', esp_power_avr_note: 'ESP може живитися від інвертора', pzem_grid_note: 'PZEM вимірює мережу в усіх режимах',
-      params_title: 'Електричні параметри', energy_title: 'Енергія та вартість', settings_title: 'Налаштування та діагностика',
+      params_title: 'Електричні параметри', range_title: 'Діапазон напруги сьогодні', range_now: 'Зараз', energy_title: 'Енергія та вартість', settings_title: 'Налаштування та діагностика',
       apparent: 'Повна потужність', reactive: 'Реактивна потужність', phase: 'Кут фази', deviation: 'Відхилення напруги', average: 'Середня напруга за 5 хв', min_voltage: 'Мінімальна напруга сьогодні', max_voltage: 'Максимальна напруга сьогодні', max_current: 'Максимальний струм сьогодні', peak_power: 'Пікова потужність сьогодні', voltage_state: 'Статус напруги',
       today: 'Сьогодні', energy_month: 'Споживання за місяць', energy_total: 'Загальна енергія PZEM', cost_today: 'Вартість сьогодні', cost_month: 'Вартість за місяць', cost_total: 'Загальна розрахована вартість', tariff: 'Поточний тариф', cost_rate: 'Вартість за годину', two_zone: 'Двозонний облік',
       estimated_cost: 'Орієнтовна вартість', current_load: 'Поточне навантаження', tariff_compare: 'Порівняння тарифів', current_rate: 'Активний тариф', night: 'Ніч', device_name: 'Grid Monitor · ESP32-C3', device_description: 'Контролер ESPHome · PZEM-004T', diagnostics: 'Діагностика',
@@ -136,7 +136,7 @@
       chart_title: 'Power history', hour: 'Hour', day: 'Day', week: 'Week', month: 'Month', loading: 'Loading history…', no_history: 'Power history is not available yet',
       mains: 'PZEM connection', has_voltage: 'Data available', no_voltage: 'Data unavailable', source: 'ESP power source', from_mains: 'Mains (not confirmed)', from_inverter: 'Source unknown', pzem_link: 'PZEM connection', active: 'Online', inactive: 'Offline', today_consumption: 'Consumption today',
       esp_power_connection: 'ESP power arrangement', esp_power_shared: 'Mains shared with the module', esp_power_after_avr: 'After AVR', esp_power_independent: 'Independent power', esp_power_avr_note: 'ESP may be powered by the inverter', pzem_grid_note: 'PZEM measures mains in every mode',
-      params_title: 'Electrical parameters', energy_title: 'Energy and cost', settings_title: 'Settings and diagnostics',
+      params_title: 'Electrical parameters', range_title: 'Voltage range today', range_now: 'Now', energy_title: 'Energy and cost', settings_title: 'Settings and diagnostics',
       apparent: 'Apparent power', reactive: 'Reactive power', phase: 'Phase angle', deviation: 'Voltage deviation', average: '5-minute average voltage', min_voltage: 'Minimum voltage today', max_voltage: 'Maximum voltage today', max_current: 'Maximum current today', peak_power: 'Peak power today', voltage_state: 'Voltage status',
       today: 'Today', energy_month: 'Consumption this month', energy_total: 'Total PZEM energy', cost_today: 'Cost today', cost_month: 'Cost this month', cost_total: 'Total calculated cost', tariff: 'Current tariff', cost_rate: 'Cost per hour', two_zone: 'Two-zone tariff',
       estimated_cost: 'Estimated cost', current_load: 'Current load', tariff_compare: 'Tariff comparison', current_rate: 'Active tariff', night: 'Night', device_name: 'Grid Monitor · ESP32-C3', device_description: 'ESPHome controller · PZEM-004T', diagnostics: 'Diagnostics',
@@ -168,6 +168,19 @@
   };
 
   const RANGES = { hour: 1, day: 24, week: 24 * 7, month: 24 * 30 };
+  // One shared geometry keeps the arc, ticks, tower and marker concentric.
+  const GAUGE = { cx: 250, cy: 205, r: 185, start: 150, span: 240, min: 150, max: 280 };
+  const gaugePoint = (degrees, radius = GAUGE.r) => {
+    const angle = degrees * Math.PI / 180;
+    return [GAUGE.cx + radius * Math.cos(angle), GAUGE.cy + radius * Math.sin(angle)];
+  };
+  const gaugeArcPath = () => {
+    const [x1, y1] = gaugePoint(GAUGE.start);
+    const [x2, y2] = gaugePoint(GAUGE.start + GAUGE.span);
+    return `M${x1.toFixed(1)} ${y1.toFixed(1)}A${GAUGE.r} ${GAUGE.r} 0 1 1 ${x2.toFixed(1)} ${y2.toFixed(1)}`;
+  };
+  const gaugeProgress = (voltage) => (voltage === null ? 0 : Math.max(0, Math.min(100, ((voltage - GAUGE.min) / (GAUGE.max - GAUGE.min)) * 100)));
+  const gaugeMarker = (progress) => gaugePoint(GAUGE.start + (progress / 100) * GAUGE.span);
   const ICONS = {
     bolt: '<path d="M28 3 10 26h12l-2 19 19-26H26z" fill="currentColor"/>',
     current: '<path d="M4 25h10l6-17 9 33 6-18h9" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',
@@ -746,7 +759,44 @@
       this._updateScheduled = false;
       this._dialogResolver = null;
       this._renderPending = false;
+      this._chartW = 0;
+      this._chartPts = [];
+      this._measureQueued = false;
       this.shadowRoot.addEventListener('click', (event) => this._handleCardClick(event));
+      this.shadowRoot.addEventListener('pointermove', (event) => {
+        if (event.target?.closest?.('[data-role="chart-plot"]')) this._chartHover(event);
+      });
+      this.shadowRoot.addEventListener('pointerout', (event) => {
+        const plot = event.target?.closest?.('[data-role="chart-plot"]');
+        if (plot && !(event.relatedTarget && plot.contains(event.relatedTarget))) this._updateChartCurrent();
+      });
+    }
+
+    connectedCallback() {
+      if (typeof ResizeObserver !== 'function' || this._resizeObserver) return;
+      this._resizeObserver = new ResizeObserver(() => this._queueChartMeasure());
+      this._resizeObserver.observe(this);
+    }
+
+    disconnectedCallback() {
+      this._resizeObserver?.disconnect();
+      this._resizeObserver = null;
+    }
+
+    _queueChartMeasure() {
+      if (this._measureQueued) return;
+      this._measureQueued = true;
+      const run = () => {
+        this._measureQueued = false;
+        const plot = this.shadowRoot.querySelector('[data-role="chart-plot"]');
+        const width = plot ? Math.round(plot.clientWidth) : 0;
+        if (width > 120 && Math.abs(width - this._chartW) > 6) {
+          this._chartW = width;
+          this._refreshChart();
+        }
+      };
+      if (typeof window.requestAnimationFrame === 'function') window.requestAnimationFrame(run);
+      else window.setTimeout(run, 0);
     }
 
     setConfig(config) {
@@ -883,6 +933,11 @@
         }
         return raw;
       }
+      if (key === 'uptime' && this._state(key)?.attributes?.unit_of_measurement === 's') {
+        const u = this._lang() === 'uk' ? { d: 'д', h: 'год', m: 'хв' } : { d: 'd', h: 'h', m: 'min' };
+        const days = Math.floor(n / 86400); const hours = Math.floor((n % 86400) / 3600); const minutes = Math.floor((n % 3600) / 60);
+        return days ? `${days} ${u.d} ${hours} ${u.h}` : hours ? `${hours} ${u.h} ${minutes} ${u.m}` : `${minutes} ${u.m}`;
+      }
       const value = n.toLocaleString(this._locale(), { maximumFractionDigits: digits });
       return `${value}${this._unit(key) ? ` ${this._unit(key)}` : ''}`;
     }
@@ -933,11 +988,11 @@
     _home() {
       const status = this._displayStatus();
       const voltage = this._num('voltage');
-      const progress = voltage === null ? 0 : Math.max(0, Math.min(100, ((voltage - 150) / 130) * 100));
+      const progress = gaugeProgress(voltage);
       const voltageNumber = voltage === null ? this._formatted('voltage') : voltage.toLocaleString(this._locale(), { maximumFractionDigits: 1 });
       const voltageUnit = voltage === null ? '' : this._unit('voltage') || (this._lang() === 'uk' ? 'В' : 'V');
-      const gaugeAngle = (180 + progress * 1.8) * Math.PI / 180;
-      const gaugeDot = `<circle class="gauge-dot" data-role="gauge-dot" cx="${(250 + 190 * Math.cos(gaugeAngle)).toFixed(1)}" cy="${(270 + 190 * Math.sin(gaugeAngle)).toFixed(1)}" r="7" visibility="${voltage === null ? 'hidden' : 'visible'}"/>`;
+      const [markerX, markerY] = gaugeMarker(progress);
+      const gaugeDot = `<circle class="gauge-dot" data-role="gauge-dot" cx="${markerX.toFixed(1)}" cy="${markerY.toFixed(1)}" r="9" visibility="${voltage === null ? 'hidden' : 'visible'}"/>`;
       const mainsText = status.pzemOnline ? this._t('pzem_online') : status.pzemOffline ? this._t('pzem_offline') : this._t('detecting');
       const sourceText = status.source;
       const voltageQuality = this._formatted('voltage_status');
@@ -947,25 +1002,24 @@
       return `<section class="home-view">
         <div class="main-grid">
           <div class="card voltage ${status.stateClass}" data-role="voltage-card">
-            <svg class="voltage-gauge" viewBox="0 0 500 360" role="img" aria-label="${this._escape(this._t('voltage'))}">
+            <svg class="voltage-gauge" viewBox="0 0 500 345" role="img" aria-label="${this._escape(this._t('voltage'))}">
               <defs>
-                <linearGradient id="${this._id('arc')}" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#078bff"/><stop offset=".52" stop-color="#08d6e7"/><stop offset="1" stop-color="#39ef83"/></linearGradient>
-                <radialGradient id="${this._id('glow')}"><stop stop-color="#087de0" stop-opacity=".32"/><stop offset="1" stop-color="#087de0" stop-opacity="0"/></radialGradient>
-                <filter id="${this._id('blur')}"><feGaussianBlur stdDeviation="7"/></filter>
-                <linearGradient id="${this._id('tower-metal')}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e4f8ff"/><stop offset=".34" stop-color="#58b9e9"/><stop offset=".68" stop-color="#174c79"/><stop offset="1" stop-color="#b7edff"/></linearGradient>
-                <linearGradient id="${this._id('tower-face')}" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#0b3458"/><stop offset=".5" stop-color="#71d3ff"/><stop offset="1" stop-color="#123b61"/></linearGradient>
+                <linearGradient id="${this._id('arc')}" gradientUnits="userSpaceOnUse" x1="62" y1="0" x2="438" y2="0"><stop class="arc-a" stop-color="#0a84ff"/><stop class="arc-b" offset=".5" stop-color="#12d3e8"/><stop class="arc-c" offset="1" stop-color="#3cf08a"/></linearGradient>
+                <radialGradient id="${this._id('glow')}"><stop stop-color="#0a8cff" stop-opacity=".34"/><stop offset="1" stop-color="#0a8cff" stop-opacity="0"/></radialGradient>
+                <filter id="${this._id('blur')}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="6"/></filter>
               </defs>
-              <ellipse cx="250" cy="170" rx="190" ry="150" fill="url(#${this._id('glow')})"/>
-              <path d="M76 246Q148 205 218 229T356 221T424 243V270H76Z" fill="#08223a" opacity=".62"/>
-              <g class="distant-trees" fill="#0d4771"><path d="M89 239l10-37 10 37zm22 0 12-48 12 48zm258 0 10-41 10 41zm22 0 12-49 12 49z"/></g>
-              <path d="M72 270 A190 190 0 1 1 428 270" fill="none" stroke="#19334f" stroke-width="28" stroke-linecap="round" pathLength="100"/>
-              <path d="M72 270 A190 190 0 1 1 428 270" fill="none" stroke="#75cfff" stroke-opacity=".16" stroke-width="34" stroke-linecap="round" pathLength="100"/>
+              <ellipse cx="250" cy="165" rx="175" ry="140" fill="url(#${this._id('glow')})"/>
+              <path d="${gaugeArcPath()}" fill="none" stroke="#10243b" stroke-width="30" stroke-linecap="round"/>
+              <path d="${gaugeArcPath()}" fill="none" stroke="url(#${this._id('arc')})" stroke-opacity=".24" stroke-width="26" stroke-linecap="round"/>
               ${this._gaugeTicks(progress)}
-              <path data-role="gauge-progress" d="M72 270 A190 190 0 1 1 428 270" fill="none" stroke="url(#${this._id('arc')})" stroke-width="28" stroke-linecap="round" stroke-dasharray="${progress} 100" pathLength="100"/>
-              ${gaugeDot}
+              <path class="gauge-fill-glow" data-role="gauge-progress-glow" visibility="${voltage === null ? 'hidden' : 'visible'}" d="${gaugeArcPath()}" fill="none" stroke="url(#${this._id('arc')})" stroke-width="30" stroke-linecap="round" stroke-dasharray="${progress} 100" pathLength="100" filter="url(#${this._id('blur')})" opacity=".55"/>
+              <path data-role="gauge-progress" visibility="${voltage === null ? 'hidden' : 'visible'}" d="${gaugeArcPath()}" fill="none" stroke="url(#${this._id('arc')})" stroke-width="26" stroke-linecap="round" stroke-dasharray="${progress} 100" pathLength="100"/>
               ${this._towerArtwork()}
-              <text x="250" y="286" text-anchor="middle" class="voltage-value"><tspan data-role="voltage-number">${this._escape(voltageNumber)}</tspan> <tspan class="voltage-unit" data-role="voltage-unit">${this._escape(voltageUnit)}</tspan></text>
-              <text x="250" y="322" text-anchor="middle" class="voltage-label">${this._escape(this._t('voltage'))}</text>
+              ${gaugeDot}
+              <text x="250" y="283" text-anchor="middle" class="voltage-value${voltage === null ? ' empty' : ''}" data-role="voltage-text"><tspan data-role="voltage-number">${this._escape(voltageNumber)}</tspan> <tspan class="voltage-unit" data-role="voltage-unit">${this._escape(voltageUnit)}</tspan></text>
+              <text x="250" y="315" text-anchor="middle" class="voltage-label">${this._escape(this._t('voltage'))}</text>
+              <text x="${gaugePoint(GAUGE.start)[0].toFixed(0)}" y="335" text-anchor="middle" class="gauge-end">${GAUGE.min}</text>
+              <text x="${gaugePoint(GAUGE.start + GAUGE.span)[0].toFixed(0)}" y="335" text-anchor="middle" class="gauge-end">${GAUGE.max}</text>
             </svg>
             <div class="state-indicator ${status.stateClass}" data-role="state-indicator"><span class="check-mark">${this._svg('check')}</span><span data-role="state-label">${this._escape(status.status)}</span></div>
           </div>
@@ -992,37 +1046,48 @@
     _id(name) { return `gm-${this._instanceId}-${name}`; }
     _gaugeTicks(progress) {
       return Array.from({ length: 25 }, (_, index) => {
-        const angle = (180 + index * 7.5) * Math.PI / 180;
+        const angle = GAUGE.start + (index / 24) * GAUGE.span;
         const major = index % 4 === 0;
-        const inner = major ? 178 : 183;
-        const outer = major ? 200 : 197;
-        const x1 = 250 + inner * Math.cos(angle); const y1 = 270 + inner * Math.sin(angle);
-        const x2 = 250 + outer * Math.cos(angle); const y2 = 270 + outer * Math.sin(angle);
+        const [x1, y1] = gaugePoint(angle, major ? 154 : 158);
+        const [x2, y2] = gaugePoint(angle, 166);
         const active = index / 24 * 100 <= progress ? ' active' : '';
-        return `<path class="dial-tick${active}" data-gauge-tick="${index}" d="M${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}"/>`;
+        return `<path class="dial-tick${major ? ' major' : ''}${active}" data-gauge-tick="${index}" d="M${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}"/>`;
       }).join('');
     }
-        _towerArtwork() {
+    _towerArtwork() {
+      const apex = 80; const base = 198; const half = 38;
+      const hw = (y) => half * (y - apex) / (base - apex);
+      const levels = [apex, 110, 138, 166, base];
+      const legs = `M250 ${apex}L${250 - half} ${base}M250 ${apex}L${250 + half} ${base}M250 ${apex}V66`;
+      const braces = levels.slice(1).map((y) => `M${(250 - hw(y)).toFixed(1)} ${y}H${(250 + hw(y)).toFixed(1)}`).join('');
+      const diagonals = levels.slice(1, -1).map((ya, i) => {
+        const yb = levels[i + 2];
+        return `M${(250 - hw(ya)).toFixed(1)} ${ya}L${(250 + hw(yb)).toFixed(1)} ${yb}M${(250 + hw(ya)).toFixed(1)} ${ya}L${(250 - hw(yb)).toFixed(1)} ${yb}`;
+      }).join('');
+      const arms = [[98, 40], [124, 54]];
+      const armPath = arms.map(([y, w]) => `M${250 - w} ${y}H${250 + w}`).join('');
+      const struts = arms.map(([y, w]) => `M${250 - w} ${y}L${(250 - hw(y + 16)).toFixed(1)} ${y + 16}M${250 + w} ${y}L${(250 + hw(y + 16)).toFixed(1)} ${y + 16}`).join('');
+      const insulators = arms.map(([y, w]) => `M${250 - w} ${y}v11M${250 + w} ${y}v11`).join('');
+      const wires = arms.map(([y, w]) => `M${250 - w} ${y + 11}Q${250 - w - 34} ${y + 24} ${250 - w - 72} ${y + 15}M${250 + w} ${y + 11}Q${250 + w + 34} ${y + 24} ${250 + w + 72} ${y + 15}`).join('');
+      const trees = [148, 162, 176, 192, 208, 292, 308, 324, 338, 352].map((x, i) => {
+        const h = [24, 34, 22, 30, 20][i % 5];
+        return `M${x - 8} 200L${x} ${200 - h}L${x + 8} 200Z`;
+      }).join('');
       return `<g class="tower-illustration">
-        <path class="tower-shadow" d="M250 60 202 212h96z"/>
-        <g class="tower-halo" filter="url(#${this._id('blur')})" fill="none" stroke="#38bdff" stroke-width="5" opacity=".58">
-          <path d="M250 60 202 212M250 60 298 212M250 60v152M177 116h146M187 151h126M202 183h96M177 116 323 151 187 151 323 116M187 151 298 183 202 183 298 151M202 183 250 212 298 183"/>
+        <ellipse cx="250" cy="201" rx="112" ry="7" fill="#0a9bff" opacity=".2"/>
+        <path d="${trees}" fill="#0b3558" opacity=".9"/>
+        <g class="tower-halo" filter="url(#${this._id('blur')})" fill="none" stroke="#38bdff" stroke-width="4" opacity=".5">
+          <path d="${legs}${armPath}${braces}"/>
         </g>
-        <g class="tower-frame" fill="none" stroke="url(#${this._id('tower-metal')})" stroke-linecap="round" stroke-linejoin="round">
-          <path class="tower-rail" d="M250 60 202 212M250 60 298 212M250 60v152"/>
-          <path d="M177 116h146M187 151h126M202 183h96M202 212h96"/>
-          <path d="M177 116 313 151M323 116 187 151M187 151 288 183M313 151 202 183M202 183 278 212M298 183 202 212"/>
-          <path class="tower-arm" d="M157 108h186M168 143h164M230 94h40"/>
-          <path class="tower-crossarm" d="M157 108 177 116M343 108 323 116M168 143 187 151M332 143 313 151"/>
-          <path class="tower-insulator" d="M165 108v12m-4-8h8m-8 5h8M335 108v12m-4-8h8m-8 5h8M176 143v10m-4-7h8m-8 5h8M324 143v10m-4-7h8m-8 5h8"/>
-          <path class="tower-wire" d="M124 108h33m186 0h33M142 143h26m164 0h26"/>
-          <!-- Drooping 330kV transmission power lines with natural catenary sag -->
-          <path d="M72 118 Q115 125 157 112 M343 112 Q385 125 428 118" fill="none" stroke="#68d5ff" stroke-width="1.6" opacity=".75"/>
-          <path d="M72 153 Q118 160 168 147 M332 147 Q382 160 428 153" fill="none" stroke="#68d5ff" stroke-width="1.6" opacity=".75"/>
-          <path d="M216 212 250 60l34 152" opacity=".65"/>
+        <g class="tower-frame" fill="none" stroke="#c4efff" stroke-linecap="round" stroke-linejoin="round">
+          <path class="tower-rail" d="${legs}"/>
+          <path d="${braces}${diagonals}"/>
+          <path class="tower-arm" d="${armPath}"/>
+          <path class="tower-crossarm" d="${struts}"/>
+          <path class="tower-insulator" d="${insulators}"/>
+          <path class="tower-wire" d="${wires}"/>
         </g>
-        <circle cx="250" cy="57" r="3.5" fill="#ff3b5c" class="tower-beacon" filter="drop-shadow(0 0 6px #ff1a40)"/>
-        <path class="tower-foot" d="M195 215h110"/>
+        <circle cx="250" cy="64" r="3.5" fill="#ff3b5c" class="tower-beacon"/>
       </g>`;
     }
     _houseArt() {
@@ -1103,7 +1168,7 @@
       const display = value === null ? this._escape(this._formatted(key, digits)) : value.toLocaleString(this._locale(), { maximumFractionDigits: digits });
       const unit = this._unit(key);
       const extraClass = key === 'power_factor' ? 'pf' : key;
-      return `<div class="card metric ${extraClass}"><div class="metric-icon">${this._svg(icon)}</div><div class="metric-value" data-metric-key="${key}" data-metric-digits="${digits}"><span data-role="metric-number">${display}</span><span class="unit" data-role="metric-unit" style="${unit ? '' : 'display:none'}">${this._escape(unit)}</span></div><div class="metric-label">${this._escape(this._t(key === 'power_factor' ? 'pf' : key))}</div></div>`;
+      return `<div class="card metric ${extraClass}"><div class="metric-icon">${this._svg(icon)}</div><div class="metric-value${value === null ? ' empty' : ''}" data-metric-key="${key}" data-metric-digits="${digits}"><span data-role="metric-number">${display}</span><span class="unit" data-role="metric-unit" style="${unit ? '' : 'display:none'}">${this._escape(unit)}</span></div><div class="metric-label">${this._escape(this._t(key === 'power_factor' ? 'pf' : key))}</div></div>`;
     }
 
     _chart() {
@@ -1112,34 +1177,110 @@
       return `<section class="card chart-card"><div class="chart-head"><h2><span class="chart-icon">${this._svg('chart')}</span>${this._escape(this._t('chart_title'))}</h2><div class="periods" role="group" aria-label="${this._escape(this._t('chart_title'))}">${buttons}</div></div><div class="chart-plot" data-role="chart-plot">${this._chartSvg()}</div></section>`;
     }
 
+    _niceScale(maximum) {
+      const target = Math.max(maximum * 1.06, 50);
+      for (const step of [20, 25, 50, 100, 200, 250, 500, 1000, 2000, 2500, 5000, 10000]) {
+        const count = Math.ceil(target / step);
+        if (count <= 4) return { step, count: Math.max(2, count), max: Math.max(2, count) * step };
+      }
+      const step = Math.ceil(target / 4 / 10000) * 10000;
+      return { step, count: 4, max: step * 4 };
+    }
+
+    _smoothPath(points, lowest, highest) {
+      if (!points.length) return '';
+      const fix = (n) => n.toFixed(1);
+      const clampY = (y) => Math.min(highest, Math.max(lowest, y));
+      let d = `M${fix(points[0].x)} ${fix(points[0].y)}`;
+      for (let i = 0; i < points.length - 1; i += 1) {
+        const p0 = points[i - 1] || points[i]; const p1 = points[i]; const p2 = points[i + 1]; const p3 = points[i + 2] || p2;
+        d += ` C${fix(p1.x + (p2.x - p0.x) / 6)} ${fix(clampY(p1.y + (p2.y - p0.y) / 6))} ${fix(p2.x - (p3.x - p1.x) / 6)} ${fix(clampY(p2.y - (p3.y - p1.y) / 6))} ${fix(p2.x)} ${fix(p2.y)}`;
+      }
+      return d;
+    }
+
     _chartSvg() {
       if (this._historyLoading && !this._history.length) return `<div class="chart-empty">${this._escape(this._t('loading'))}</div>`;
-      const points = this._downsample(this._history, 100);
-      if (!points.length) return `<div class="chart-empty">${this._escape(this._t('no_history'))}</div>`;
-      const x0 = 78; const x1 = 985; const y0 = 18; const y1 = 174;
-      const maximum = Math.max(250, Math.ceil(Math.max(...points.map((point) => point.value)) / 250) * 250);
-      const line = points.map((point, index) => {
-        const x = x0 + (index / Math.max(1, points.length - 1)) * (x1 - x0);
-        const y = y1 - (Math.max(0, point.value) / maximum) * (y1 - y0);
-        return `${index ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`;
-      }).join(' ');
-      const area = `${line} L${x1} ${y1} L${x0} ${y1} Z`;
-      const horizontal = [0, 1, 2, 3].map((index) => {
-        const y = y1 - index * ((y1 - y0) / 3);
-        const value = Math.round(index * maximum / 3);
-        return `<path d="M${x0} ${y.toFixed(1)}H${x1}"/><text x="9" y="${(y + 5).toFixed(1)}">${this._escape(value.toLocaleString(this._locale()))} ${this._lang() === 'uk' ? 'Вт' : 'W'}</text>`;
+      const width = Math.max(280, Math.round(this._chartW || 985));
+      const narrow = width < 520;
+      const height = narrow ? 200 : 228;
+      const x0 = narrow ? 56 : 70; const x1 = width - (narrow ? 14 : 20); const y0 = 26; const y1 = height - 30;
+      const rangeMs = RANGES[this._historyRange] * 3600e3;
+      const tEnd = Date.now(); const tStart = tEnd - rangeMs;
+      const buckets = narrow ? 48 : 96;
+      const sums = new Array(buckets).fill(0); const counts = new Array(buckets).fill(0);
+      this._history.forEach((point) => {
+        const index = Math.min(buckets - 1, Math.max(0, Math.floor((point.time.getTime() - tStart) / rangeMs * buckets)));
+        sums[index] += point.value; counts[index] += 1;
+      });
+      const series = [];
+      for (let i = 0; i < buckets; i += 1) if (counts[i]) series.push({ t: tStart + (i + 0.5) / buckets * rangeMs, v: sums[i] / counts[i] });
+      if (!series.length) return `<div class="chart-empty">${this._escape(this._t('no_history'))}</div>`;
+      const current = this._num('power');
+      if (current !== null) series.push({ t: tEnd, v: current });
+      const scale = this._niceScale(Math.max(...series.map((point) => point.v), 0));
+      const unit = this._lang() === 'uk' ? 'Вт' : 'W';
+      const X = (t) => x0 + Math.min(1, Math.max(0, (t - tStart) / rangeMs)) * (x1 - x0);
+      const Y = (v) => y1 - (Math.max(0, Math.min(scale.max, v)) / scale.max) * (y1 - y0);
+      const pts = series.map((point) => ({ x: X(point.t), y: Y(point.v), v: point.v, t: point.t }));
+      this._chartPts = pts;
+      const line = this._smoothPath(pts, y0, y1);
+      const area = `${line} L${pts[pts.length - 1].x.toFixed(1)} ${y1} L${pts[0].x.toFixed(1)} ${y1} Z`;
+      const horizontal = Array.from({ length: scale.count + 1 }, (_, index) => {
+        const y = Y(index * scale.step);
+        return `<path d="M${x0} ${y.toFixed(1)}H${x1}"/><text x="${x0 - 10}" y="${(y + 4).toFixed(1)}" text-anchor="end">${this._escape((index * scale.step).toLocaleString(this._locale()))}${index === scale.count ? ` ${unit}` : ''}</text>`;
       }).join('');
-      const start = points[0].time; const end = points[points.length - 1].time;
+      const longRange = this._historyRange === 'week' || this._historyRange === 'month';
       const vertical = [0, 1, 2, 3, 4].map((index) => {
         const x = x0 + index * ((x1 - x0) / 4);
-        const time = new Date(start.getTime() + (end.getTime() - start.getTime()) * index / 4);
-        const label = this._historyRange === 'hour' ? time.toLocaleTimeString(this._locale(), { hour: '2-digit', minute: '2-digit' }) : time.toLocaleDateString(this._locale(), { day: '2-digit', month: '2-digit' });
-        return `<path d="M${x.toFixed(1)} ${y0}V${y1}"/><text x="${x.toFixed(1)}" y="198" text-anchor="${index === 0 ? 'start' : index === 4 ? 'end' : 'middle'}">${this._escape(label)}</text>`;
+        const time = new Date(tStart + rangeMs * index / 4);
+        const label = longRange ? time.toLocaleDateString(this._locale(), { day: '2-digit', month: '2-digit' }) : time.toLocaleTimeString(this._locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
+        const show = !narrow || index % 2 === 0;
+        return `<path d="M${x.toFixed(1)} ${y0}V${y1}"/>${show ? `<text x="${x.toFixed(1)}" y="${height - 8}" text-anchor="${index === 0 ? 'start' : index === 4 ? 'end' : 'middle'}">${this._escape(label)}</text>` : ''}`;
       }).join('');
-      const current = this._num('power');
-      const latest = current === null ? '' : current.toLocaleString(this._locale(), { maximumFractionDigits: 0 });
-      const currentY = current === null ? y1 : y1 - (Math.max(0, current) / maximum) * (y1 - y0);
-      return `<svg class="chart" data-chart-max="${maximum}" viewBox="0 0 1000 210" role="img" aria-label="${this._escape(this._t('chart_title'))}"><defs><linearGradient id="${this._id('area')}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#078ff0" stop-opacity=".55"/><stop offset="1" stop-color="#078ff0" stop-opacity=".04"/></linearGradient><filter id="${this._id('line-glow')}"><feGaussianBlur stdDeviation="3"/></filter></defs><g class="chart-grid">${horizontal}${vertical}</g><path d="${area}" fill="url(#${this._id('area')})"/><path d="${line}" class="chart-glow" filter="url(#${this._id('line-glow')})"/><path d="${line}" class="chart-line"/><circle cx="${x1}" cy="${currentY.toFixed(1)}" r="7" class="chart-dot" data-role="chart-dot" visibility="${current === null ? 'hidden' : 'visible'}"/><rect x="908" y="${Math.max(4, currentY - 44).toFixed(1)}" width="82" height="30" rx="9" class="chart-tag" data-role="chart-tag" visibility="${latest ? 'visible' : 'hidden'}"/><text x="949" y="${Math.max(24, currentY - 24).toFixed(1)}" text-anchor="middle" class="chart-tag-text" data-role="chart-tag-text" visibility="${latest ? 'visible' : 'hidden'}">${this._escape(latest)} ${this._lang() === 'uk' ? 'Вт' : 'W'}</text></svg>`;
+      const last = pts[pts.length - 1];
+      const hasCurrent = current !== null;
+      const latest = hasCurrent ? `${current.toLocaleString(this._locale(), { maximumFractionDigits: 0 })} ${unit}` : '';
+      const tagX = Math.min(Math.max(last.x - 42, x0 - 8), width - 86);
+      const tagY = Math.max(2, last.y - 44);
+      return `<svg class="chart" data-chart-max="${scale.max}" data-chart-w="${width}" data-chart-x0="${x0}" data-chart-x1="${x1}" data-chart-y0="${y0}" data-chart-y1="${y1}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${this._escape(this._t('chart_title'))}"><defs><linearGradient id="${this._id('area')}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#0a96ff" stop-opacity=".5"/><stop offset="1" stop-color="#0a96ff" stop-opacity=".02"/></linearGradient><filter id="${this._id('line-glow')}" x="-5%" y="-30%" width="110%" height="160%"><feGaussianBlur stdDeviation="3"/></filter></defs><g class="chart-grid">${horizontal}${vertical}</g><path d="${area}" fill="url(#${this._id('area')})"/><path d="${line}" class="chart-glow" filter="url(#${this._id('line-glow')})"/><path d="${line}" class="chart-line"/><path class="chart-cross" data-role="chart-cross" d="M${last.x.toFixed(1)} ${y0}V${y1}" visibility="hidden"/><circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="6" class="chart-dot" data-role="chart-dot" visibility="${hasCurrent ? 'visible' : 'hidden'}"/><rect x="${tagX.toFixed(1)}" y="${tagY.toFixed(1)}" width="84" height="30" rx="10" class="chart-tag" data-role="chart-tag" visibility="${hasCurrent ? 'visible' : 'hidden'}"/><text x="${(tagX + 42).toFixed(1)}" y="${(tagY + 20).toFixed(1)}" text-anchor="middle" class="chart-tag-text" data-role="chart-tag-text" visibility="${hasCurrent ? 'visible' : 'hidden'}">${this._escape(latest)}</text><text x="${(tagX + 42).toFixed(1)}" y="${(tagY + 37).toFixed(1)}" text-anchor="middle" class="chart-tag-sub" data-role="chart-tag-sub" visibility="hidden"></text></svg>`;
+    }
+
+    _setChartMarker(chart, x, y, text, sub = '') {
+      const width = Number(chart.dataset.chartW) || 1000;
+      const left = Number(chart.dataset.chartX0) || 0;
+      const boxW = sub ? 92 : 84; const boxH = sub ? 46 : 30;
+      const boxX = Math.min(Math.max(x - boxW / 2, left - 8), width - boxW - 2);
+      const boxY = Math.max(2, y - boxH - 14);
+      const dot = chart.querySelector('[data-role="chart-dot"]');
+      const tag = chart.querySelector('[data-role="chart-tag"]');
+      const label = chart.querySelector('[data-role="chart-tag-text"]');
+      const subLabel = chart.querySelector('[data-role="chart-tag-sub"]');
+      const visible = text ? 'visible' : 'hidden';
+      if (dot) { dot.setAttribute('cx', x.toFixed(1)); dot.setAttribute('cy', y.toFixed(1)); dot.setAttribute('visibility', visible); }
+      if (tag) { tag.setAttribute('x', boxX.toFixed(1)); tag.setAttribute('y', boxY.toFixed(1)); tag.setAttribute('width', boxW); tag.setAttribute('height', boxH); tag.setAttribute('visibility', visible); }
+      if (label) { label.setAttribute('x', (boxX + boxW / 2).toFixed(1)); label.setAttribute('y', (boxY + 20).toFixed(1)); label.textContent = text; label.setAttribute('visibility', visible); }
+      if (subLabel) { subLabel.setAttribute('x', (boxX + boxW / 2).toFixed(1)); subLabel.setAttribute('y', (boxY + 37).toFixed(1)); subLabel.textContent = sub; subLabel.setAttribute('visibility', sub ? 'visible' : 'hidden'); }
+    }
+
+    _chartHover(event) {
+      const chart = this.shadowRoot.querySelector('svg.chart');
+      if (!chart || !this._chartPts.length) return;
+      const rect = chart.getBoundingClientRect();
+      if (!rect.width) return;
+      const x = (event.clientX - rect.left) * ((Number(chart.dataset.chartW) || rect.width) / rect.width);
+      let best = this._chartPts[0];
+      this._chartPts.forEach((point) => { if (Math.abs(point.x - x) < Math.abs(best.x - x)) best = point; });
+      const unit = this._lang() === 'uk' ? 'Вт' : 'W';
+      const longRange = this._historyRange === 'week' || this._historyRange === 'month';
+      const when = new Date(best.t);
+      const sub = longRange ? when.toLocaleDateString(this._locale(), { day: '2-digit', month: '2-digit' }) + ' ' + when.toLocaleTimeString(this._locale(), { hour: '2-digit', minute: '2-digit', hour12: false }) : when.toLocaleTimeString(this._locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
+      this._setChartMarker(chart, best.x, best.y, `${best.v.toLocaleString(this._locale(), { maximumFractionDigits: 0 })} ${unit}`, sub);
+      const cross = chart.querySelector('[data-role="chart-cross"]');
+      if (cross) {
+        cross.setAttribute('d', `M${best.x.toFixed(1)} ${chart.dataset.chartY0}V${chart.dataset.chartY1}`);
+        cross.setAttribute('visibility', 'visible');
+      }
     }
 
     _downsample(points, limit) {
@@ -1199,8 +1340,37 @@
       if (plot) plot.innerHTML = this._chartSvg();
     }
 
+    _rangeLayout() {
+      const pct = (value) => (value === null ? null : Math.max(0, Math.min(100, ((value - GAUGE.min) / (GAUGE.max - GAUGE.min)) * 100)));
+      const low = pct(this._num('voltage_min')); const high = pct(this._num('voltage_max'));
+      const sag = pct(this._num('sag_threshold')); const swell = pct(this._num('swell_threshold'));
+      const now = pct(this._num('voltage'));
+      const box = (left, width) => (left === null || width === null ? 'display:none' : `left:${left.toFixed(1)}%;width:${Math.max(0, width).toFixed(1)}%`);
+      return {
+        zoneLow: sag === null ? 'display:none' : box(0, sag),
+        zoneHigh: swell === null ? 'display:none' : box(swell, 100 - swell),
+        span: low === null || high === null ? 'display:none' : box(low, Math.max(high - low, 1.2)),
+        now: now === null ? 'display:none' : `left:${now.toFixed(1)}%`,
+      };
+    }
+
+    _rangeCard() {
+      const layout = this._rangeLayout();
+      return `<div class="range-card" data-role="range-card">
+        <div class="range-head"><h3>${this._escape(this._t('range_title'))}</h3><div class="range-values"><span>${this._escape(this._t('min_voltage'))} <b data-value-key="voltage_min" data-value-digits="1">${this._escape(this._formatted('voltage_min', 1))}</b></span><span>${this._escape(this._t('max_voltage'))} <b data-value-key="voltage_max" data-value-digits="1">${this._escape(this._formatted('voltage_max', 1))}</b></span></div></div>
+        <div class="range-track"><i class="range-zone low" data-role="range-zone-low" style="${layout.zoneLow}"></i><i class="range-zone high" data-role="range-zone-high" style="${layout.zoneHigh}"></i><i class="range-span" data-role="range-span" style="${layout.span}"></i><b class="range-now" data-role="range-now" style="${layout.now}"></b></div>
+        <div class="range-scale"><span>${GAUGE.min}</span><span>${Math.round((GAUGE.min + GAUGE.max) / 2)}</span><span>${GAUGE.max}</span></div>
+      </div>`;
+    }
+
+    _updateRange() {
+      const layout = this._rangeLayout();
+      const apply = (role, style) => { const node = this.shadowRoot.querySelector(`[data-role="${role}"]`); if (node) node.setAttribute('style', style); };
+      apply('range-zone-low', layout.zoneLow); apply('range-zone-high', layout.zoneHigh); apply('range-span', layout.span); apply('range-now', layout.now);
+    }
+
     _params() {
-      return `<section class="detail-panel"><h2>${this._escape(this._t('params_title'))}</h2><div class="detail-grid">
+      return `<section class="detail-panel"><h2>${this._escape(this._t('params_title'))}</h2>${this._rangeCard()}<div class="detail-grid">
         ${this._detail('apparent_power', this._t('apparent'), 0)}${this._detail('reactive_power', this._t('reactive'), 0)}${this._detail('phase_angle', this._t('phase'), 1)}
         ${this._detail('voltage_deviation', this._t('deviation'), 1)}${this._detail('voltage_average', this._t('average'), 1)}${this._detail('voltage_status', this._t('voltage_state'), 0)}
         ${this._detail('voltage_min', this._t('min_voltage'), 1)}${this._detail('voltage_max', this._t('max_voltage'), 1)}${this._detail('current_max', this._t('max_current'), 2)}${this._detail('power_peak', this._t('peak_power'), 0)}
@@ -1493,6 +1663,7 @@
       </main>`;
       this._hasRendered = true;
       this._renderedLanguage = this._lang();
+      this._queueChartMeasure();
     }
 
     _activeContent() {
@@ -1518,6 +1689,7 @@
         });
         const view = this.shadowRoot.querySelector('.view');
         if (view) view.innerHTML = this._activeContent();
+        this._queueChartMeasure();
         this._ensureHistory();
         return;
       }
@@ -1564,6 +1736,7 @@
         if (this._activeTab === 'home') this._updateHomeStatus();
       }
       if (this._activeTab === 'home') this._updateHome(changed);
+      if (this._activeTab === 'params') this._updateRange();
       if (this._activeTab === 'energy') this._updateEnergy(changed);
       if (this._activeTab === 'settings') this._updateSettings(changed);
     }
@@ -1606,15 +1779,18 @@
 
     _updateGauge() {
       const voltage = this._num('voltage');
-      const progress = voltage === null ? 0 : Math.max(0, Math.min(100, ((voltage - 150) / 130) * 100));
+      const progress = gaugeProgress(voltage);
       const number = voltage === null ? this._formatted('voltage') : voltage.toLocaleString(this._locale(), { maximumFractionDigits: 1 });
       const unit = voltage === null ? '' : this._unit('voltage') || (this._lang() === 'uk' ? 'В' : 'V');
       const numberNode = this.shadowRoot.querySelector('[data-role="voltage-number"]');
       const unitNode = this.shadowRoot.querySelector('[data-role="voltage-unit"]');
       if (numberNode) numberNode.textContent = number;
       if (unitNode) unitNode.textContent = unit;
-      const arc = this.shadowRoot.querySelector('[data-role="gauge-progress"]');
-      if (arc) arc.setAttribute('stroke-dasharray', `${progress} 100`);
+      this.shadowRoot.querySelectorAll('[data-role="gauge-progress"], [data-role="gauge-progress-glow"]').forEach((arc) => {
+        arc.setAttribute('stroke-dasharray', `${progress} 100`);
+        arc.setAttribute('visibility', voltage === null ? 'hidden' : 'visible');
+      });
+      this.shadowRoot.querySelector('[data-role="voltage-text"]')?.classList.toggle('empty', voltage === null);
       this.shadowRoot.querySelectorAll('[data-gauge-tick]').forEach((tick) => {
         tick.classList.toggle('active', voltage !== null && Number(tick.dataset.gaugeTick) / 24 * 100 <= progress);
       });
@@ -1622,9 +1798,9 @@
       if (dot) {
         if (voltage === null) dot.setAttribute('visibility', 'hidden');
         else {
-          const angle = (180 + progress * 1.8) * Math.PI / 180;
-          dot.setAttribute('cx', (250 + 190 * Math.cos(angle)).toFixed(1));
-          dot.setAttribute('cy', (270 + 190 * Math.sin(angle)).toFixed(1));
+          const [markerX, markerY] = gaugeMarker(progress);
+          dot.setAttribute('cx', markerX.toFixed(1));
+          dot.setAttribute('cy', markerY.toFixed(1));
           dot.setAttribute('visibility', 'visible');
         }
       }
@@ -1637,6 +1813,7 @@
       const value = this._num(key);
       const number = metric.querySelector('[data-role="metric-number"]');
       const unitNode = metric.querySelector('[data-role="metric-unit"]');
+      metric.classList.toggle('empty', value === null);
       if (number) number.textContent = value === null ? this._formatted(key, digits) : value.toLocaleString(this._locale(), { maximumFractionDigits: digits });
       if (unitNode) {
         const unit = this._unit(key);
@@ -1649,22 +1826,14 @@
       const chart = this.shadowRoot.querySelector('.chart');
       if (!chart) return;
       const current = this._num('power');
-      const maximum = Math.max(250, Number(chart.dataset.chartMax) || 250);
-      const y = current === null ? 174 : 174 - (Math.max(0, current) / maximum) * (174 - 18);
-      const dot = chart.querySelector('[data-role="chart-dot"]');
-      const tag = chart.querySelector('[data-role="chart-tag"]');
-      const label = chart.querySelector('[data-role="chart-tag-text"]');
-      if (dot) {
-        dot.setAttribute('cy', y.toFixed(1));
-        dot.setAttribute('visibility', current === null ? 'hidden' : 'visible');
-      }
-      if (tag) tag.setAttribute('y', Math.max(4, y - 44).toFixed(1));
-      if (label) {
-        label.setAttribute('y', Math.max(24, y - 24).toFixed(1));
-        label.textContent = current === null ? '' : `${current.toLocaleString(this._locale(), { maximumFractionDigits: 0 })} ${this._lang() === 'uk' ? 'Вт' : 'W'}`;
-        label.setAttribute('visibility', current === null ? 'hidden' : 'visible');
-      }
-      if (tag) tag.setAttribute('visibility', current === null ? 'hidden' : 'visible');
+      const maximum = Math.max(1, Number(chart.dataset.chartMax) || 250);
+      const y0 = Number(chart.dataset.chartY0) || 26; const y1 = Number(chart.dataset.chartY1) || 170;
+      const x1 = Number(chart.dataset.chartX1) || 980;
+      const cross = chart.querySelector('[data-role="chart-cross"]');
+      if (cross) cross.setAttribute('visibility', 'hidden');
+      if (current === null) { this._setChartMarker(chart, x1, y1, ''); return; }
+      const y = y1 - (Math.max(0, Math.min(maximum, current)) / maximum) * (y1 - y0);
+      this._setChartMarker(chart, x1, y, `${current.toLocaleString(this._locale(), { maximumFractionDigits: 0 })} ${this._lang() === 'uk' ? 'Вт' : 'W'}`);
     }
 
     _updateHomeStatus() {
@@ -1926,6 +2095,200 @@
         .app-dialog h2{margin:0;color:#bdeaff;font-size:20px;line-height:1.3}.app-dialog p{margin:12px 0 22px;color:#c6d7ea;font-size:15px;line-height:1.55;white-space:pre-line;overflow-wrap:anywhere}
         .dialog-actions{display:flex;justify-content:center;gap:10px}.dialog-button{min-width:118px;min-height:44px;padding:10px 16px;border:1px solid transparent;border-radius:12px;font:inherit;font-weight:700;cursor:pointer;transition:transform .16s,box-shadow .16s,background .16s}.dialog-button:hover{transform:translateY(-1px)}.dialog-button:focus-visible{outline:2px solid #bcecff;outline-offset:3px}.dialog-button.primary{border-color:#36afff;background:linear-gradient(120deg,#0da8f4,#0867cb);color:#fff;box-shadow:0 6px 18px #008eff45}.dialog-button.secondary{border-color:#58718c;background:#182a3f;color:#d7e6f6}.dialog-button.secondary:hover{background:#213b58}
         @media(max-width:480px){.app-dialog{padding:20px 16px;border-radius:18px}.dialog-actions{flex-direction:column-reverse}.dialog-button{width:100%}}
+        /* ===== Design refinement: gauge, tiles, status row, banner, chart, mobile ===== */
+        .header{padding:4px 2px 18px}
+        .brand{flex:1 1 auto}
+        .brand h1{font-weight:800;text-shadow:0 2px 18px #0a8cff40}
+        .brand p{color:#8fb2dc;letter-spacing:.2px}
+        .connection strong{font-weight:800;letter-spacing:.2px}
+        .connection small{font-size:12px;opacity:.85}
+
+        .tab{font-weight:650}
+        .tab:not(.active):hover{background:#ffffff0d;color:#e6f4ff}
+
+        .main-grid{gap:16px}
+        .voltage{min-height:0;padding:20px 16px 18px;justify-content:center}
+        .voltage-gauge{width:min(100%,540px);margin-top:2px}
+        .voltage-value{font-size:72px;font-weight:800;letter-spacing:-2px}
+        .voltage-unit{font-size:40px;font-weight:700;fill:#dcecff}
+        .voltage-label{font-size:22px;fill:#a9c2e2;letter-spacing:.3px}
+        .gauge-end{font-size:14px;fill:#6f8db1;letter-spacing:.3px}
+        .gauge-fill-glow{mix-blend-mode:screen}
+        .gauge-dot{fill:#fff;stroke:#1aa6ff;stroke-width:5}
+        .dial-tick{stroke:#6d8fb5;stroke-opacity:.5;stroke-width:1.6;stroke-linecap:round}
+        .dial-tick.major{stroke-width:2.2;stroke-opacity:.72}
+        .dial-tick.active{stroke:#d9fbff;stroke-opacity:1}
+        .tower-frame{stroke-width:1.5}
+        .tower-frame .tower-rail{stroke-width:2.4}
+        .tower-frame .tower-arm{stroke-width:2.4}
+        .tower-halo{opacity:.6}
+        .voltage.alarm .arc-a{stop-color:#ffb51b}
+        .voltage.alarm .arc-b{stop-color:#ff8a3d}
+        .voltage.alarm .arc-c{stop-color:#ff526d}
+        .voltage.pzem-offline .arc-a,.voltage.inverter .arc-a{stop-color:#ffd25a}
+        .voltage.pzem-offline .arc-b,.voltage.inverter .arc-b{stop-color:#ffb51b}
+        .voltage.pzem-offline .arc-c,.voltage.inverter .arc-c{stop-color:#ff8a3d}
+        .voltage.offline .arc-a,.voltage.offline .arc-b,.voltage.offline .arc-c,.voltage.unknown .arc-a,.voltage.unknown .arc-b,.voltage.unknown .arc-c{stop-color:#6a7f99}
+        .state-indicator{margin-top:-6px;padding:7px 18px 7px 9px;border-radius:999px;background:#ffffff0a;border:1px solid #ffffff14;font-size:22px}
+
+        .metrics{gap:16px}
+        .metric{min-height:0;padding:20px 12px 18px;gap:0}
+        .metric:before{right:-50px;top:-60px;width:180px;height:180px;background:radial-gradient(circle,var(--mc,#12aaff)44,transparent 68%)}
+        .metric.power{--mc:#12aaff}
+        .metric.current{--mc:#13d5f4}
+        .metric.frequency{--mc:#1ee3c4}
+        .metric.pf{--mc:#b56aff}
+        .metric-icon .icon{width:46px;height:46px}
+        .metric-value{display:flex;align-items:baseline;justify-content:center;gap:.22em;flex-wrap:wrap;font-size:clamp(30px,4.2cqw,54px);margin:6px 0 4px;letter-spacing:-1px}
+        .metric-value .unit{margin:0;font-size:.52em;font-weight:700;color:#cfe4ff;opacity:.92}
+        .metric-label{font-size:17px;color:#a9c2e2}
+
+        .chart-card{margin-top:16px;padding:18px 22px 14px}
+        .chart-head h2{font-size:22px;font-weight:750}
+        .periods{background:#0c1a2b;border:1px solid #ffffff12;box-shadow:inset 0 2px 5px #0006}
+        .period-button{font-weight:600}
+        .chart-plot{touch-action:pan-y;position:relative}
+        .chart{overflow:visible}
+        .chart-grid{stroke:#7fb2e133}
+        .chart-grid text{fill:#8fa9c9;font-size:12.5px;letter-spacing:.2px}
+        .chart-line{stroke:#25c2ff;stroke-width:3}
+        .chart-dot{fill:#fff;stroke:#18baff;stroke-width:3.5}
+        .chart-cross{fill:none;stroke:#8fd6ff;stroke-opacity:.6;stroke-dasharray:3 4}
+        .chart-tag{fill:#0b1d33;stroke:#1aa6ff;stroke-width:1.2}
+        .chart-tag-text{font-size:14px!important}
+        .chart-tag-sub{fill:#9fb7d6;font-size:11.5px;stroke:none}
+
+        .bottom-status{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:16px}
+        .info{min-height:0;padding:16px 16px;justify-content:flex-start;align-items:center;gap:14px;text-align:left}
+        .info>div{min-width:0}
+        .info .symbol{width:54px;height:54px;flex:none;display:grid;place-items:center;border-radius:17px;font-size:0;background:radial-gradient(circle at 30% 18%,#ffffff1f,#ffffff06);border:1px solid #ffffff1c;filter:none;box-shadow:0 8px 18px #0005,inset 0 1px 0 #ffffff1c}
+        .info .symbol .icon{width:28px;height:28px}
+        .info .symbol.green{background:radial-gradient(circle at 30% 18%,#35ed9130,#35ed9108);border-color:#35ed9144}
+        .info .symbol.blue{color:#7fc4ff;background:radial-gradient(circle at 30% 18%,#2f9bff30,#2f9bff08);border-color:#2f9bff44}
+        .info .symbol.amber{background:radial-gradient(circle at 30% 18%,#ffb51b30,#ffb51b08);border-color:#ffb51b44}
+        .info .small{font-size:13px;line-height:1.3;color:#9fb7d6}
+        .info strong{font-size:17px;line-height:1.25;margin-top:4px;overflow-wrap:break-word;word-break:normal;hyphens:auto}
+        .info .cost-line{font-size:13px;color:#9fb7d6;margin-top:4px}
+        .info:nth-child(3){grid-column:1/-1;order:9;padding:12px 18px}
+        .info:nth-child(3) .symbol{width:44px;height:44px;border-radius:14px}
+        .info:nth-child(3) .symbol .icon{width:24px;height:24px}
+        .info:nth-child(3)>div{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 14px}
+        .info:nth-child(3) .small:first-child{flex:none}
+        .info:nth-child(3) strong{margin-top:0}
+
+        .banner{margin-top:16px;padding:12px 22px;min-height:84px;gap:16px}
+        .banner strong{font-size:clamp(16px,1.9cqw,22px);font-weight:750}
+        .house-art{width:min(22%,140px);margin:-4px -2px -8px auto}
+
+        .footer{margin-top:16px;font-size:12px;color:#5f7f9f}
+
+        @container (min-width:960px){
+          .home-view .main-grid>.tabs-side{padding:8px;gap:6px}
+          .home-view .main-grid>.tabs-side .tab{padding:15px 8px}
+          .home-view .main-grid>.metrics{align-content:stretch}
+        }
+
+        @container (max-width:900px){
+          .bottom-status{grid-template-columns:repeat(2,minmax(0,1fr))}
+        }
+
+        @container (max-width:760px){
+          .main-grid{gap:12px}
+          .voltage{padding:16px 10px 14px}
+          .metrics{gap:12px}
+          .metric{padding:16px 8px 14px}
+          .metric-icon .icon{width:38px;height:38px}
+          .bottom-status{gap:10px}
+          .info{padding:14px 12px}
+          .chart-card{padding:14px 12px 10px}
+        }
+
+        @container (max-width:520px){
+          .shell{padding:12px 10px;border-radius:24px}
+          .header{gap:10px;padding:2px 2px 12px}
+          .brand h1{font-size:clamp(19px,5.6cqw,24px);letter-spacing:-.4px}
+          .brand p{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+          .connection strong{font-size:14px}
+          .connection small{font-size:11px}
+          .dot{width:10px;height:10px;margin-right:7px}
+          .tabs{padding:5px;gap:3px}
+          .tab{flex-direction:column;gap:4px;padding:9px 2px;font-size:clamp(10px,2.9cqw,12.5px);letter-spacing:-.1px;min-width:0}
+          .tab .tab-icon{display:block;font-size:20px}
+          .tab .icon{width:21px;height:21px}
+          .voltage-value{font-size:70px}
+          .state-indicator{font-size:19px}
+          .metric-value{font-size:clamp(26px,8.4cqw,36px)}
+          .metric-label{font-size:14px}
+          .bottom-status{gap:9px}
+          .info{flex-direction:column;align-items:flex-start;gap:10px;padding:14px 13px}
+          .info .symbol{width:44px;height:44px;border-radius:14px}
+          .info .symbol .icon{width:24px;height:24px}
+          .info strong{font-size:16px}
+          .info:nth-child(3){flex-direction:row;align-items:center;gap:12px}
+          .info:nth-child(3)>div{display:block}
+          .banner{padding:12px 14px;min-height:76px;gap:12px}
+          .banner strong{max-width:none}
+          .house-art{width:88px;margin:-2px -2px -6px auto}
+          .logo{width:50px;height:50px;border-radius:15px}
+          .logo .icon{width:32px;height:32px}
+          .chart-head h2{font-size:19px}
+          .footer{font-size:11px}
+        }
+
+        /* ===== Placeholders, parameters, settings ===== */
+        .voltage-value.empty{font-size:34px;letter-spacing:0;fill:#9fb7d6}
+        .metric-value.empty{font-size:clamp(17px,2.2cqw,21px);font-weight:700;letter-spacing:0;color:#9fb7d6;margin:14px 0 12px;text-shadow:none}
+        .metric-value.empty .unit{display:none!important}
+
+        .detail-panel{padding:24px}
+        .detail-panel h2{font-size:24px;font-weight:800;letter-spacing:-.3px}
+        .detail-panel h2.subheading{margin:26px 0 14px;font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#8fb2dc;display:flex;align-items:center;gap:12px}
+        .detail-panel h2.subheading:after{content:"";flex:1;height:1px;background:linear-gradient(90deg,#5d96ca55,transparent)}
+        .detail{position:relative;padding:15px 16px 15px 20px;background:linear-gradient(145deg,#182d46,#0d1c30);border-color:#5d96ca33;box-shadow:inset 0 1px 0 #ffffff14,0 8px 18px #0004;overflow:hidden}
+        .detail:before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:0 3px 3px 0;background:linear-gradient(#12aaff,#13d5f4);box-shadow:0 0 10px #12aaff80}
+        .detail>span,.detail label>span{font-size:13px;color:#9fb7d6;margin-bottom:6px}
+        .detail b{font-size:21px;font-weight:750;letter-spacing:-.2px}
+
+        .range-card{position:relative;padding:18px 20px 14px;margin:0 0 16px;border-radius:18px;background:linear-gradient(145deg,#1a3350,#0b1a2d);border:1px solid #5d96ca3a;box-shadow:inset 0 1px 0 #ffffff1a,0 12px 26px #0005}
+        .range-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 18px;margin-bottom:22px}
+        .range-head h3{margin:0;font-size:16px;font-weight:750}
+        .range-values{display:flex;flex-wrap:wrap;gap:4px 18px;color:#9fb7d6;font-size:13px}
+        .range-values b{color:#f3f7ff;font-size:15px;margin-left:4px}
+        .range-track{position:relative;height:14px;border-radius:99px;background:#0a1626;box-shadow:inset 0 2px 5px #000a;border:1px solid #ffffff10}
+        .range-track i,.range-track b{position:absolute;top:0;bottom:0}
+        .range-zone{background:repeating-linear-gradient(135deg,#ff526d55 0 4px,#ff526d22 4px 8px)}
+        .range-zone.low{border-radius:99px 0 0 99px}
+        .range-zone.high{border-radius:0 99px 99px 0}
+        .range-span{border-radius:99px;background:linear-gradient(90deg,#0a84ff,#12d3e8 55%,#3cf08a);box-shadow:0 0 14px #12d3e880;min-width:6px}
+        .range-now{width:20px;height:20px;top:50%!important;bottom:auto!important;margin:-10px 0 0 -10px;border-radius:50%;background:#fff;border:4px solid #1aa6ff;box-shadow:0 0 14px #1aa6ff;box-sizing:border-box}
+        .range-scale{display:flex;justify-content:space-between;margin-top:9px;color:#6f8db1;font-size:12px}
+
+        .setting-input input{background:#07121f;border-color:#3f6288;border-radius:11px;font-weight:650;transition:border-color .2s,box-shadow .2s}
+        .setting-input input:focus{outline:none;border-color:#1aa6ff;box-shadow:0 0 0 3px #1aa6ff30}
+        .save-button{background:linear-gradient(145deg,#0f4a84,#0a2f57);border-color:#2b9cf0;font-weight:650}
+        .switch-setting>strong{display:none}
+        .switch-setting{grid-template-columns:1fr;align-content:center}
+        .switch-button{position:relative;grid-column:auto;justify-content:flex-start;gap:12px;padding:10px 12px 10px 66px;min-height:44px;background:#07121f;border-color:#3f6288;color:#c5d8ef;font-weight:650}
+        .switch-button .icon{display:none}
+        .switch-button:before{content:"";position:absolute;left:12px;top:50%;width:42px;height:24px;margin-top:-12px;border-radius:99px;background:#26394f;box-shadow:inset 0 2px 4px #0008;transition:background .2s}
+        .switch-button:after{content:"";position:absolute;left:15px;top:50%;width:18px;height:18px;margin-top:-9px;border-radius:50%;background:#dbe8f7;box-shadow:0 2px 5px #0008;transition:transform .2s,background .2s}
+        .switch-button.on{color:#7dffbc;border-color:#35ed9199}
+        .switch-button.on:before{background:linear-gradient(90deg,#14b86a,#35ed91)}
+        .switch-button.on:after{transform:translateX(18px);background:#fff}
+        .switch-button:hover{transform:none}
+
+        .action-button{min-height:74px;font-weight:600;line-height:1.25}
+        .action-grid .action-button:nth-child(-n+3){border-color:#ffb51b66;background:linear-gradient(145deg,#2b2412,#0d1b2e)}
+        .action-grid .action-button:nth-child(-n+3) span{color:#ffc54d}
+        .action-grid .action-button:nth-child(4){border-color:#ff526d80;background:linear-gradient(145deg,#2c1520,#0d1b2e)}
+        .action-grid .action-button:nth-child(4) span{color:#ff8a9a}
+
+        @container (max-width:520px){
+          .detail-panel{padding:16px 12px}
+          .range-card{padding:14px 14px 12px}
+          .detail b{font-size:19px}
+        }
+
       `;
     }
   }

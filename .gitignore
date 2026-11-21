@@ -4,3 +4,4 @@ node_modules/
 secrets.yaml
 .esphome/
 .pytest_cache/
+__pycache__/
