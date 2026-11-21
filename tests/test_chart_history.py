@@ -838,7 +838,7 @@ card._state = () => ({ attributes: { unit_of_measurement: 'kWh' } });
 card._locale = () => 'en-US';
 card._lang = () => 'en';
 card._currencyCode = () => 'UAH';
-card._t = (key) => ({ stat_min: 'Min', stat_avg: 'Avg', stat_max: 'Max' })[key] || key;
+card._t = (key) => ({ stat_min: 'Min', stat_avg: 'Avg', stat_max: 'Max', energy_max_hour: 'Max per hour', energy_max_day: 'Max per day' })[key] || key;
 card._escape = (value) => String(value);
 card._formatChartStatTimestamp = () => 'time';
 const energy = card._parseCumulativeHistory([[
@@ -854,7 +854,7 @@ assert.equal(energyBars[0].value, 6, 'pre-start counter growth is excluded while
 const energyHtml = card._chartStatsHtml('energy_total', energy, 'energy');
 assert.match(energyHtml, /Min<\/span><b>6 kWh<\/b>/);
 assert.match(energyHtml, /Avg<\/span><b>6 kWh<\/b>/);
-assert.match(energyHtml, /Max<\/span><b>6 kWh<\/b>/);
+assert.match(energyHtml, /Max per hour<\/span><b>6 kWh<\/b>/);
 assert.doesNotMatch(energyHtml, /2,998,606/);
 
 const cost = card._parseCumulativeHistory([[
@@ -866,6 +866,63 @@ const cost = card._parseCumulativeHistory([[
 const costBars = card._energyHistoryBars(cost, bounds, 'custom');
 assert.equal(costBars[0].value, 75, 'cost history also includes only increments after the statistics start');
 assert.match(card._chartStatsHtml('cost_total', cost, 'energy'), /75 UAH/);
+"""
+        result = subprocess.run(
+            ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
+            capture_output=True,
+            text=True,
+            check=False,
+            env={**os.environ, "TZ": "UTC"},
+        )
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_energy_max_stat_is_the_largest_hour_or_day_bucket_not_period_total(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = {
+  window: { customCards: [] },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+};
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+card._state = () => ({ attributes: { unit_of_measurement: 'kWh' } });
+card._locale = () => 'en-US';
+card._lang = () => 'en';
+card._currencyCode = () => 'UAH';
+card._t = (key) => ({ stat_min: 'Min', stat_avg: 'Avg', energy_max_hour: 'Max per hour', energy_max_day: 'Max per day' })[key] || key;
+card._escape = String;
+card._formatChartStatTimestamp = () => 'time';
+card._energyCustomRange = null;
+
+const start = Date.parse('2026-11-21T00:00:00Z');
+const hourlyHistory = [
+  { time: new Date(start), value: 0 },
+  { time: new Date(start + 3600e3), value: 1.2 },
+  { time: new Date(start + 2 * 3600e3), value: 2.96 },
+];
+card._energyHistoryRange = 'day';
+card._energyHistoryBounds = () => ({ start, end: start + 2 * 3600e3 });
+const hourlyBars = card._energyHistoryBars(hourlyHistory, card._energyHistoryBounds(), 'day');
+assert.equal(hourlyBars.reduce((sum, bar) => sum + bar.value, 0), 2.96);
+assert.equal(Math.max(...hourlyBars.map((bar) => bar.value)), 1.76);
+const hourlyStats = card._chartStatsHtml('energy_total', hourlyHistory, 'energy');
+assert.match(hourlyStats, /Max per hour<\/span><b>1\.76 kWh<\/b>/);
+
+const dayEnd = start + 2 * 24 * 3600e3;
+const dailyHistory = [
+  { time: new Date(start), value: 0 },
+  { time: new Date(start + 24 * 3600e3), value: 1.2 },
+  { time: new Date(dayEnd), value: 2.96 },
+];
+card._energyHistoryRange = 'week';
+card._energyHistoryBounds = () => ({ start, end: dayEnd });
+const dailyStats = card._chartStatsHtml('energy_total', dailyHistory, 'energy');
+assert.match(dailyStats, /Max per day<\/span><b>1\.76 kWh<\/b>/);
 """
         result = subprocess.run(
             ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
