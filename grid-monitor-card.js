@@ -1151,7 +1151,7 @@
               ${this._towerArtwork()}
               ${gaugeDot}
               <text x="250" y="258" text-anchor="middle" class="voltage-value${voltage === null ? ' empty' : ''}" data-role="voltage-text"><tspan data-role="voltage-number">${this._escape(voltageNumber)}</tspan> <tspan class="voltage-unit" data-role="voltage-unit">${this._escape(voltageUnit)}</tspan></text>
-              <text x="250" y="286" text-anchor="middle" class="voltage-label">${this._escape(this._t('voltage'))}</text>
+              <text x="250" y="293" text-anchor="middle" class="voltage-label">${this._escape(this._t('voltage'))}</text>
               <text x="${gaugePoint(GAUGE.start)[0].toFixed(0)}" y="322" text-anchor="middle" class="gauge-end">${GAUGE.min}</text>
               <text x="${gaugePoint(GAUGE.start + GAUGE.span)[0].toFixed(0)}" y="322" text-anchor="middle" class="gauge-end">${GAUGE.max}</text>
             </svg>
@@ -3410,6 +3410,8 @@
           .banner strong{font-size:clamp(14px,4cqw,17px);line-height:1.3}
           .banner-system strong{font-size:14px!important}
         }
+        .voltage .voltage-brand{margin-top:12px}
+        .voltage .state-indicator{top:-8px}
       `;
     }
   }
