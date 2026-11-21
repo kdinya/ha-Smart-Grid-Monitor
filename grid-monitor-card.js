@@ -213,10 +213,10 @@
     const angle = degrees * Math.PI / 180;
     return [GAUGE.cx + radius * Math.cos(angle), GAUGE.cy + radius * Math.sin(angle)];
   };
-  const gaugeArcPath = () => {
-    const [x1, y1] = gaugePoint(GAUGE.start);
-    const [x2, y2] = gaugePoint(GAUGE.start + GAUGE.span);
-    return `M${x1.toFixed(1)} ${y1.toFixed(1)}A${GAUGE.r} ${GAUGE.r} 0 1 1 ${x2.toFixed(1)} ${y2.toFixed(1)}`;
+  const gaugeArcPath = (radius = GAUGE.r) => {
+    const [x1, y1] = gaugePoint(GAUGE.start, radius);
+    const [x2, y2] = gaugePoint(GAUGE.start + GAUGE.span, radius);
+    return `M${x1.toFixed(1)} ${y1.toFixed(1)}A${radius} ${radius} 0 1 1 ${x2.toFixed(1)} ${y2.toFixed(1)}`;
   };
   const gaugeProgress = (voltage) => (voltage === null ? 0 : Math.max(0, Math.min(100, ((voltage - GAUGE.min) / (GAUGE.max - GAUGE.min)) * 100)));
   const gaugeMarker = (progress) => gaugePoint(GAUGE.start + (progress / 100) * GAUGE.span);
@@ -1121,7 +1121,7 @@
       const voltageNumber = voltage === null ? this._formatted('voltage') : voltage.toLocaleString(this._locale(), { maximumFractionDigits: 1 });
       const voltageUnit = voltage === null ? '' : this._unit('voltage') || (this._lang() === 'uk' ? 'В' : 'V');
       const [markerX, markerY] = gaugeMarker(progress);
-      const gaugeDot = `<circle class="gauge-dot" data-role="gauge-dot" cx="${markerX.toFixed(1)}" cy="${markerY.toFixed(1)}" r="9" visibility="${voltage === null ? 'hidden' : 'visible'}"/>`;
+      const gaugeDot = `<circle class="gauge-dot" data-role="gauge-dot" fill="url(#${this._id('knob')})" cx="${markerX.toFixed(1)}" cy="${markerY.toFixed(1)}" r="9" visibility="${voltage === null ? 'hidden' : 'visible'}"/>`;
       const mainsText = status.esp === 'off' ? this._t('no_voltage') : status.pzemOnline ? this._t('pzem_online') : status.pzemOffline ? this._t('pzem_offline') : this._t('detecting');
       const sourceText = status.source;
       const voltageQuality = this._formatted('voltage_status');
@@ -1137,9 +1137,13 @@
                 <linearGradient id="${this._id('arc')}" gradientUnits="userSpaceOnUse" x1="62" y1="0" x2="438" y2="0"><stop class="arc-a" stop-color="#0a84ff"/><stop class="arc-b" offset=".5" stop-color="#12d3e8"/><stop class="arc-c" offset="1" stop-color="#3cf08a"/></linearGradient>
                 <radialGradient id="${this._id('glow')}"><stop stop-color="#0a8cff" stop-opacity=".34"/><stop offset="1" stop-color="#0a8cff" stop-opacity="0"/></radialGradient>
                 <filter id="${this._id('blur')}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="6"/></filter>
+                <radialGradient id="${this._id('knob')}" cx=".36" cy=".3" r=".8"><stop stop-color="#ffffff"/><stop offset=".35" stop-color="#bfeaff"/><stop offset="1" stop-color="#0b6fb8"/></radialGradient>
+                <linearGradient id="${this._id('groove')}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#020812"/><stop offset="1" stop-color="#10273f"/></linearGradient>
               </defs>
               <ellipse cx="250" cy="165" rx="175" ry="140" fill="url(#${this._id('glow')})"/>
-              <path d="${gaugeArcPath()}" fill="none" stroke="#10243b" stroke-width="30" stroke-linecap="round"/>
+              <path d="${gaugeArcPath()}" fill="none" stroke="#7fc4f0" stroke-opacity=".12" stroke-width="34" stroke-linecap="round"/>
+              <path d="${gaugeArcPath()}" fill="none" stroke="url(#${this._id('groove')})" stroke-width="31" stroke-linecap="round"/>
+              <path d="${gaugeArcPath(GAUGE.r - 14)}" fill="none" stroke="#000" stroke-opacity=".55" stroke-width="2"/>
               <path d="${gaugeArcPath()}" fill="none" stroke="url(#${this._id('arc')})" stroke-opacity=".24" stroke-width="26" stroke-linecap="round"/>
               ${this._gaugeTicks(progress)}
               <path class="gauge-fill-glow" data-role="gauge-progress-glow" visibility="${voltage === null ? 'hidden' : 'visible'}" d="${gaugeArcPath()}" fill="none" stroke="url(#${this._id('arc')})" stroke-width="30" stroke-linecap="round" stroke-dasharray="${progress} 100" pathLength="100" filter="url(#${this._id('blur')})" opacity=".55"/>
@@ -1185,39 +1189,111 @@
       }).join('');
     }
     _towerArtwork() {
-      const apex = 72; const base = 204; const half = 42;
-      const hw = (y) => half * (y - apex) / (base - apex);
-      const levels = [apex, 106, 138, 170, base];
-      const legs = `M250 ${apex}L${250 - half} ${base}M250 ${apex}L${250 + half} ${base}M250 ${apex}V58`;
-      const braces = levels.slice(1).map((y) => `M${(250 - hw(y)).toFixed(1)} ${y}H${(250 + hw(y)).toFixed(1)}`).join('');
-      const diagonals = levels.slice(1, -1).map((ya, i) => {
-        const yb = levels[i + 2];
-        return `M${(250 - hw(ya)).toFixed(1)} ${ya}L${(250 + hw(yb)).toFixed(1)} ${yb}M${(250 + hw(ya)).toFixed(1)} ${ya}L${(250 - hw(yb)).toFixed(1)} ${yb}`;
-      }).join('');
-      const arms = [[92, 44], [122, 58]];
-      const armPath = arms.map(([y, w]) => `M${250 - w} ${y}H${250 + w}`).join('');
-      const struts = arms.map(([y, w]) => `M${250 - w} ${y}L${(250 - hw(y + 16)).toFixed(1)} ${y + 16}M${250 + w} ${y}L${(250 + hw(y + 16)).toFixed(1)} ${y + 16}`).join('');
-      const insulators = arms.map(([y, w]) => `M${250 - w} ${y}v11M${250 + w} ${y}v11`).join('');
-      const wires = arms.map(([y, w]) => `M${250 - w} ${y + 11}Q${250 - w - 34} ${y + 24} ${250 - w - 72} ${y + 15}M${250 + w} ${y + 11}Q${250 + w + 34} ${y + 24} ${250 + w + 72} ${y + 15}`).join('');
-      const trees = [142, 158, 174, 190, 206, 294, 310, 326, 342, 358].map((x, i) => {
-        const h = [24, 34, 22, 30, 20][i % 5];
-        return `M${x - 8} 206L${x} ${206 - h}L${x + 8} 206Z`;
-      }).join('');
+      const id = (name) => this._id(name);
+      let seed = 11;
+      const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+      const R = 152;
+      const dome = `M${250 - R} 205A${R} ${R} 0 0 1 ${250 + R} 205Z`;
+      const f = (n) => n.toFixed(1);
+      const stars = Array.from({ length: 22 }, () => `<circle cx="${f(130 + rnd() * 240)}" cy="${f(58 + rnd() * 62)}" r="${(0.35 + rnd() * 0.55).toFixed(2)}" opacity="${(0.25 + rnd() * 0.55).toFixed(2)}"/>`).join('');
+      const pines = (baseY, from, to, step, hMin, hMax) => {
+        let d = '';
+        for (let x = from; x <= to; x += step * (0.7 + rnd() * 0.6)) {
+          const h = hMin + rnd() * (hMax - hMin); const w = h * 0.2;
+          d += `M${f(x - w)} ${baseY}L${f(x - w * 0.55)} ${f(baseY - h * 0.42)}L${f(x - w * 0.8)} ${f(baseY - h * 0.42)}L${f(x - w * 0.3)} ${f(baseY - h * 0.75)}L${f(x - w * 0.5)} ${f(baseY - h * 0.75)}L${f(x)} ${f(baseY - h)}L${f(x + w * 0.5)} ${f(baseY - h * 0.75)}L${f(x + w * 0.3)} ${f(baseY - h * 0.75)}L${f(x + w * 0.8)} ${f(baseY - h * 0.42)}L${f(x + w * 0.55)} ${f(baseY - h * 0.42)}L${f(x + w)} ${baseY}Z`;
+        }
+        return d;
+      };
+      const forestFar = pines(188, 96, 404, 5, 6, 11);
+      const forestMid = pines(197, 96, 404, 6, 9, 17);
+      // Lattice tower in local coordinates: ground at y=0, peak at y=-150, centred on x=0.
+      const profile = [[0, 40], [-76, 15], [-112, 9], [-142, 3]];
+      const hw = (y) => {
+        for (let i = 1; i < profile.length; i += 1) {
+          if (y >= profile[i][0]) { const [y0, w0] = profile[i - 1]; const [y1, w1] = profile[i]; return w0 + (w1 - w0) * (y - y0) / (y1 - y0); }
+        }
+        return 3;
+      };
+      const levels = [0, -30, -54, -76, -96, -114, -130, -142];
+      const arms = [{ y: -120, w: 46 }, { y: -96, w: 60 }, { y: -72, w: 72 }];
+      const INS = 17;
+      const legs = [-1, 1].map((s) => levels.map((y, i) => `${i ? 'L' : 'M'}${f(s * hw(y))} ${y}`).join('')).join('') + 'M-3 -142L0 -150L3 -142';
+      const chords = levels.map((y) => `M${f(-hw(y))} ${y}H${f(hw(y))}`).join('');
+      const diagonals = levels.slice(0, -1).map((a, i) => { const b = levels[i + 1]; return `M${f(-hw(a))} ${a}L${f(hw(b))} ${b}M${f(hw(a))} ${a}L${f(-hw(b))} ${b}`; }).join('');
+      const armTruss = arms.map(({ y, w }) => [-1, 1].map((s) => {
+        const top = (t) => [s * (hw(y) + (w - hw(y)) * t), y + 3 * t];
+        const bot = (t) => [s * (hw(y + 16) + (w - hw(y + 16)) * t), y + 16 - 13 * t];
+        const pt = ([x, yy]) => `${f(x)} ${f(yy)}`;
+        let d = `M${pt(top(0))}L${pt(top(1))}M${pt(bot(0))}L${pt(bot(1))}`;
+        for (let k = 0; k < 4; k += 1) d += `M${pt(top(k / 4))}L${pt(bot((k + 1) / 4))}M${pt(bot(k / 4))}L${pt(top(k / 4))}`;
+        return d;
+      }).join('')).join('');
+      const insulators = arms.map(({ y, w }) => [-1, 1].map((s) => {
+        let d = `M${s * w} ${y + 3}V${y + 3 + INS - 2}`;
+        for (let k = 0; k < 7; k += 1) d += `M${s * w - 2.6} ${f(y + 6 + k * 1.8)}H${s * w + 2.6}`;
+        return d;
+      }).join('')).join('');
+      const feet = [-1, 1].map((s) => `<rect x="${s * 40 - 3.5}" y="-2" width="7" height="4" rx="1" fill="#7f95a8"/>`).join('');
+      const tower = `<g class="tower-halo" filter="url(#${id('blur')})" fill="none" stroke="#38bdff" stroke-width="3.5" opacity=".28"><path d="${legs}${armTruss}"/></g>
+          <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <g transform="translate(1.1 .8)" stroke="#040b15" stroke-opacity=".7"><path stroke-width="3.2" d="${legs}"/><path stroke-width="1.5" d="${chords}${diagonals}${armTruss}"/></g>
+            <path stroke="url(#${id('steel')})" stroke-width="2.8" d="${legs}"/>
+            <path stroke="#b9cbdb" stroke-width="1.15" d="${chords}${diagonals}"/>
+            <path stroke="#c8d8e6" stroke-width="1.05" d="${armTruss}"/>
+            <path stroke="#eef9ff" stroke-opacity=".55" stroke-width=".7" transform="translate(-.7 -.3)" d="${legs}"/>
+            <path stroke="#cfe9f4" stroke-width="1" d="${insulators}"/>
+          </g>${feet}`;
+      const towerFar = `<g fill="none" stroke="#2a5578" stroke-linecap="round" stroke-linejoin="round"><path stroke-width="3" d="${legs}"/><path stroke-width="1.6" d="${chords}${diagonals}${armTruss}${insulators}"/></g>`;
+      const tip = (cx, gy, sc, s, arm) => [cx + s * arm.w * sc, gy + (arm.y + INS + 1) * sc];
+      const wire = (a, b, sag) => `M${f(a[0])} ${f(a[1])}Q${f((a[0] + b[0]) / 2)} ${f((a[1] + b[1]) / 2 + sag * 2)} ${f(b[0])} ${f(b[1])}`;
+      const farX = [140, 360]; const farBase = 200; const farScale = 0.3;
+      let nearWires = ''; let farWires = '';
+      arms.forEach((arm) => {
+        [-1, 1].forEach((s) => {
+          const farCx = s < 0 ? farX[0] : farX[1];
+          const a = tip(250, 204, 1, s, arm);
+          const b = tip(farCx, farBase, farScale, -s, arm);
+          const c = tip(farCx, farBase, farScale, s, arm);
+          const edge = [250 + s * (R + 8), c[1] + 8];
+          nearWires += wire(a, b, 6);
+          farWires += wire(c, edge, 2);
+        });
+      });
       return `<g class="tower-illustration">
-        <ellipse cx="250" cy="206" rx="118" ry="7" fill="#0a9bff" opacity=".2"/>
-        <path d="${trees}" fill="#0b3558" opacity=".9"/>
-        <g class="tower-halo" filter="url(#${this._id('blur')})" fill="none" stroke="#38bdff" stroke-width="4" opacity=".5">
-          <path d="${legs}${armPath}${braces}"/>
+        <defs>
+          <linearGradient id="${id('sky')}" gradientUnits="userSpaceOnUse" x1="0" y1="55" x2="0" y2="205"><stop stop-color="#050f22"/><stop offset=".42" stop-color="#0b2a4b"/><stop offset=".8" stop-color="#1b6a92"/><stop offset="1" stop-color="#6fc0cf"/></linearGradient>
+          <radialGradient id="${id('horizon')}" gradientUnits="userSpaceOnUse" cx="250" cy="200" r="120"><stop stop-color="#bfe9ee" stop-opacity=".55"/><stop offset="1" stop-color="#bfe9ee" stop-opacity="0"/></radialGradient>
+          <linearGradient id="${id('steel')}" gradientUnits="userSpaceOnUse" x1="-42" y1="0" x2="42" y2="0"><stop stop-color="#e3f0fa"/><stop offset=".5" stop-color="#9db3c6"/><stop offset="1" stop-color="#53697d"/></linearGradient>
+          <linearGradient id="${id('ground')}" gradientUnits="userSpaceOnUse" x1="0" y1="186" x2="0" y2="205"><stop stop-color="#0a2338"/><stop offset="1" stop-color="#030a13"/></linearGradient>
+          <radialGradient id="${id('vignette')}" gradientUnits="userSpaceOnUse" cx="250" cy="205" r="${R}"><stop offset=".68" stop-color="#050f1d" stop-opacity="0"/><stop offset="1" stop-color="#050f1d" stop-opacity=".85"/></radialGradient>
+          <linearGradient id="${id('sheen')}" gradientUnits="userSpaceOnUse" x1="140" y1="60" x2="300" y2="170"><stop stop-color="#fff" stop-opacity=".14"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+          <filter id="${id('haze')}" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="4"/></filter>
+          <clipPath id="${id('dome')}"><path d="${dome}"/></clipPath>
+        </defs>
+        <g clip-path="url(#${id('dome')})">
+          <rect x="90" y="50" width="320" height="156" fill="url(#${id('sky')})"/>
+          <g fill="#dff6ff">${stars}</g>
+          <ellipse cx="250" cy="200" rx="150" ry="70" fill="url(#${id('horizon')})"/>
+          <g fill="#9fd3e6" opacity=".16" filter="url(#${id('haze')})"><ellipse cx="170" cy="132" rx="52" ry="5"/><ellipse cx="338" cy="112" rx="46" ry="4"/><ellipse cx="300" cy="150" rx="64" ry="5"/></g>
+          <path d="M98 205V186C122 178 148 183 172 178S214 172 240 177S290 186 316 179S372 174 402 184V205Z" fill="#164a6c" opacity=".9"/>
+          <path d="${forestFar}" fill="#123d5c"/>
+          <g transform="translate(${farX[0]} ${farBase}) scale(${farScale})">${towerFar}</g>
+          <g transform="translate(${farX[1]} ${farBase}) scale(${farScale})">${towerFar}</g>
+          <path d="${farWires}" fill="none" stroke="#1f4a6c" stroke-width=".6"/>
+          <path d="M98 205V194C128 189 150 192 178 190S230 185 258 190S318 196 346 191S384 190 402 194V205Z" fill="#0c2e49"/>
+          <path d="${forestMid}" fill="#081f34"/>
+          <ellipse cx="250" cy="203" rx="96" ry="6" fill="#02070d" opacity=".55"/>
+          <g transform="translate(250 204)">${tower}</g>
+          <path d="${nearWires}" fill="none" stroke="#030a13" stroke-width="1.5" stroke-linecap="round" transform="translate(0 .7)" opacity=".7"/>
+          <path d="${nearWires}" fill="none" stroke="#4a6578" stroke-width="1.1" stroke-linecap="round"/>
+          <path d="${nearWires}" fill="none" stroke="#b6dcf2" stroke-opacity=".5" stroke-width=".4" stroke-linecap="round" transform="translate(0 -.5)"/>
+          <path d="M98 205V200C140 197 190 201 250 199S360 197 402 201V205Z" fill="url(#${id('ground')})"/>
+          <circle class="tower-beacon" cx="250" cy="57" r="2.6" fill="#ff3b5c"/>
+          <rect x="90" y="50" width="320" height="156" fill="url(#${id('vignette')})"/>
+          <path d="M120 195C130 120 190 66 262 62C210 86 160 130 150 205Z" fill="url(#${id('sheen')})"/>
         </g>
-        <g class="tower-frame" fill="none" stroke="#c4efff" stroke-linecap="round" stroke-linejoin="round">
-          <path class="tower-rail" d="${legs}"/>
-          <path d="${braces}${diagonals}"/>
-          <path class="tower-arm" d="${armPath}"/>
-          <path class="tower-crossarm" d="${struts}"/>
-          <path class="tower-insulator" d="${insulators}"/>
-          <path class="tower-wire" d="${wires}"/>
-        </g>
-        <circle cx="250" cy="56" r="3.5" fill="#ff3b5c" class="tower-beacon"/>
+        <path d="M${250 - R} 205A${R} ${R} 0 0 1 ${250 + R} 205" fill="none" stroke="#9adcff" stroke-opacity=".32" stroke-width="1.4"/>
+        <path d="M${250 - R + 2} 205A${R - 2} ${R - 2} 0 0 1 ${250 + R - 2} 205" fill="none" stroke="#000" stroke-opacity=".5" stroke-width="2"/>
       </g>`;
     }
     _houseArt() {
@@ -2933,7 +3009,7 @@
         .card:before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;border-radius:inherit;background:linear-gradient(128deg,#ffffff12,transparent 23%,transparent 72%,#1da9ff0c)}.card:after{content:"";position:absolute;left:9%;right:9%;top:0;height:1px;z-index:0;pointer-events:none;background:linear-gradient(90deg,transparent,#c5ecff55,transparent)}.card>*{position:relative;z-index:1}
         .logo{position:relative;overflow:hidden;background:radial-gradient(circle at 34% 20%,#2580d0,#0a2c59 50%,#061428 82%);border-color:#3aaef2a8;box-shadow:0 0 0 4px #009bff12,0 14px 32px #007fff4a,inset 0 2px 13px #ffffff35,inset 0 -8px 18px #0007}.logo:after{content:"";position:absolute;inset:-65% 28% 28% -30%;transform:rotate(35deg);background:linear-gradient(90deg,transparent,#ffffff22,transparent);pointer-events:none}.logo .icon{filter:drop-shadow(0 0 10px #23baff) drop-shadow(0 4px 3px #0008)}
         .tabs{border:1px solid #79b7e34d;border-radius:23px;background:linear-gradient(180deg,#1a304beF,#091627f5);box-shadow:inset 0 1px 0 #ffffff20,0 12px 28px #0006}.tab.active{background:linear-gradient(120deg,#12b9ff,#087be9 52%,#1559c9);box-shadow:0 7px 22px #0090ff60,inset 0 1px 0 #ffffff65,inset 0 -2px 5px #003e9c80}
-        .voltage{isolation:isolate;background:radial-gradient(ellipse at 50% 42%,#0093ff30,transparent 48%),linear-gradient(145deg,#173553,#071323 72%);border-color:#72b8ea4f;box-shadow:0 18px 38px #0007,inset 0 2px 0 #ffffff22,inset 0 -12px 28px #0007}.voltage:before{background:linear-gradient(125deg,#ffffff14,transparent 30%,transparent 72%,#26aeff12)}.voltage:after{content:"";position:absolute;inset:9px;z-index:0;pointer-events:none;border:1px solid #9fdfff13;border-radius:17px;box-shadow:inset 0 0 34px #0091ff18}.voltage-gauge{position:relative;z-index:1;filter:drop-shadow(0 14px 18px #0006);overflow:visible}.dial-tick{fill:none;stroke:#81b5d2;stroke-opacity:.54;stroke-width:1.7}.dial-tick.active{stroke:#b5f7ff;stroke-opacity:.96;filter:drop-shadow(0 0 4px #19bdff)}.gauge-dot{fill:#f3ffff;stroke:#08aaff;stroke-width:5;filter:drop-shadow(0 0 8px #08c5ff)}.tower-shadow{fill:#031322;opacity:.54}.tower-frame{stroke-width:1.55}.tower-frame .tower-rail{stroke-width:3}.tower-frame .tower-arm{stroke-width:2.7}.tower-frame .tower-crossarm{stroke-width:1.4;opacity:.78}.tower-frame .tower-insulator{stroke:#c8f6ff;stroke-width:1.1}.tower-frame .tower-wire{stroke:#5bc8ff;stroke-width:1;opacity:.65}.tower-foot{fill:none;stroke:#c0eeff;stroke-width:2.6;filter:drop-shadow(0 0 5px #09aaff)}.voltage-value{filter:drop-shadow(0 3px 8px #0009)}.state-indicator{position:relative;z-index:1;text-shadow:0 0 16px currentColor}.state-indicator .check-mark{box-shadow:0 0 0 5px #3fffa411,0 0 24px #3fffa070,inset 0 2px 4px #ffffff66}
+        .voltage{isolation:isolate;background:radial-gradient(ellipse at 50% 42%,#0093ff30,transparent 48%),linear-gradient(145deg,#173553,#071323 72%);border-color:#72b8ea4f;box-shadow:0 18px 38px #0007,inset 0 2px 0 #ffffff22,inset 0 -12px 28px #0007}.voltage:before{background:linear-gradient(125deg,#ffffff14,transparent 30%,transparent 72%,#26aeff12)}.voltage:after{content:"";position:absolute;inset:9px;z-index:0;pointer-events:none;border:1px solid #9fdfff13;border-radius:17px;box-shadow:inset 0 0 34px #0091ff18}.voltage-gauge{position:relative;z-index:1;filter:drop-shadow(0 14px 18px #0006);overflow:visible}.dial-tick{fill:none;stroke:#a9c4d8;stroke-opacity:.62;stroke-width:1.7;filter:drop-shadow(0 1px 0 #000a)}.dial-tick.active{stroke:#b5f7ff;stroke-opacity:.96;filter:drop-shadow(0 0 4px #19bdff)}.gauge-dot{stroke:#d6f4ff;stroke-width:2.5;filter:drop-shadow(0 3px 5px #000a) drop-shadow(0 0 8px #08c5ff)}.voltage-value{filter:drop-shadow(0 3px 8px #0009)}.state-indicator{position:relative;z-index:1;text-shadow:0 0 16px currentColor}.state-indicator .check-mark{box-shadow:0 0 0 5px #3fffa411,0 0 24px #3fffa070,inset 0 2px 4px #ffffff66}
         .metric{background:linear-gradient(145deg,#1c3452,#091628);border-color:#70aee247;box-shadow:inset 0 1px 0 #ffffff20,0 14px 28px #0006,inset 0 -8px 17px #0005}.metric:before{content:"";position:absolute;right:-62px;top:-76px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,#00aeff40,transparent 70%);pointer-events:none}.metric-icon{filter:drop-shadow(0 5px 9px #00a6ff65)}.metric-value{text-shadow:0 3px 14px #0007}.info{background:linear-gradient(145deg,#1a314d,#081425);border-color:#69a4d944;box-shadow:inset 0 1px 0 #ffffff1d,0 12px 27px #0006,inset 0 -7px 16px #0005}.info .symbol{filter:drop-shadow(0 5px 8px #0006) drop-shadow(0 0 10px currentColor)}
         .chart-card{background:linear-gradient(145deg,#142b45f7,#071221fa);box-shadow:0 18px 36px #0007,inset 0 1px 0 #ffffff20,inset 0 -9px 20px #0005}.chart-line{filter:drop-shadow(0 0 3px #05baff)}.chart-tag{filter:drop-shadow(0 5px 8px #0008)}
         .banner{position:relative;overflow:hidden;background:linear-gradient(105deg,#07362bf7,#082830f7 55%,#082038f7);border-color:#43f5a0b3;box-shadow:0 0 0 1px #43f5a01a,0 0 30px #29dc8621,inset 0 1px 0 #ffffff2e,inset 0 -8px 20px #0005}.banner strong{text-shadow:0 2px 12px #24ff9d45}.banner .banner-check{box-shadow:0 0 0 6px #3fffa414,0 0 24px #3fffa078,inset 0 2px 4px #ffffff5c}.banner.inverter{background:linear-gradient(105deg,#403014f7,#222a32f7 58%,#10233af7)}.banner.pzem-offline{background:linear-gradient(105deg,#403014f7,#222a32f7 58%,#10233af7)}.banner.alarm,.banner.offline{background:linear-gradient(105deg,#401b27f7,#202336f7 62%,#171c2af7)}
@@ -2971,14 +3047,9 @@
         .voltage-label{font-size:22px;fill:#a9c2e2;letter-spacing:.3px}
         .gauge-end{font-size:14px;fill:#6f8db1;letter-spacing:.3px}
         .gauge-fill-glow{mix-blend-mode:screen}
-        .gauge-dot{fill:#fff;stroke:#1aa6ff;stroke-width:5}
-        .dial-tick{stroke:#6d8fb5;stroke-opacity:.5;stroke-width:1.6;stroke-linecap:round}
+        .dial-tick{stroke:#9db8cd;stroke-opacity:.6;stroke-width:1.6;stroke-linecap:round}
         .dial-tick.major{stroke-width:2.2;stroke-opacity:.72}
         .dial-tick.active{stroke:#d9fbff;stroke-opacity:1}
-        .tower-frame{stroke-width:1.5}
-        .tower-frame .tower-rail{stroke-width:2.4}
-        .tower-frame .tower-arm{stroke-width:2.4}
-        .tower-halo{opacity:.6}
         .voltage.alarm .arc-a{stop-color:#ffb51b}
         .voltage.alarm .arc-b{stop-color:#ff8a3d}
         .voltage.alarm .arc-c{stop-color:#ff526d}
