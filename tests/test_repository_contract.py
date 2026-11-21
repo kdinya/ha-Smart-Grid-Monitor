@@ -203,6 +203,8 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertEqual(action_grid.count("this._action("), 5)
         cleanup = card.split("    _historyCleanupActions() {", 1)[1].split("    _updateHistoryCleanupControls()", 1)[0]
         self.assertEqual(cleanup.count('class=\"action-button\"'), 2)
+        self.assertIn("<span>${this._svg('chart')}</span>${this._escape(this._t('history_purge_button'))}", cleanup)
+        self.assertIn("<span>${this._svg('chart')}</span>${this._escape(this._t('history_stats_button'))}", cleanup)
         self.assertNotIn("history-delete-button", card)
         self.assertNotIn("history-cleanup-actions", card)
         self.assertIn("history_cleanup_hint", settings)
