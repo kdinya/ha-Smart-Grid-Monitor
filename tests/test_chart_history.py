@@ -525,6 +525,112 @@ assert.ok(!chartHtml.includes('Period'), 'chart does not display Period button o
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
 
+    def test_cumulative_energy_and_cost_history_tracks_deltas_and_counter_resets(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = {
+  window: { customCards: [] },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+};
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+const start = Date.parse('2026-10-01T00:00:00Z');
+const end = Date.parse('2026-10-01T00:50:00Z');
+const response = [[
+  { state: '10', last_changed: '2026-09-30T23:59:00Z' },
+  { state: '12', last_changed: '2026-10-01T00:10:00Z' },
+  { state: '15', last_changed: '2026-10-01T00:20:00Z' },
+  { state: '2', last_changed: '2026-10-01T00:30:00Z' },
+  { state: '5', last_changed: '2026-10-01T00:40:00Z' },
+]];
+for (const metric of ['energy_total', 'cost_total']) {
+  const history = card._parseCumulativeHistory(response, metric, { start, end }, 999);
+  assert.equal(JSON.stringify(history.map(({ value }) => value)), JSON.stringify([0, 2, 5, 7, 10, 10]));
+  assert.equal(JSON.stringify(history.map(({ time }) => time.getTime())), JSON.stringify([
+    start, Date.parse('2026-10-01T00:10:00Z'), Date.parse('2026-10-01T00:20:00Z'),
+    Date.parse('2026-10-01T00:30:00Z'), Date.parse('2026-10-01T00:40:00Z'), end,
+  ]));
+}
+
+// A live counter must not be appended to a custom range that ended in the past.
+const past = card._parseCumulativeHistory(response, 'energy_total', { start, end }, 5000);
+assert.equal(past.at(-1).value, 10);
+"""
+        result = subprocess.run(
+            ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_energy_period_state_and_statistics_are_independent_from_parameters(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = {
+  window: { customCards: [] },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+};
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+card._historyRange = 'month';
+card._historyCustomRange = null;
+card._statsStart = Date.parse('2026-10-01T00:00:00Z');
+card._energyHistoryRange = 'day';
+card._energyCustomRange = null;
+card._entity = (key) => `sensor.${key}`;
+card._updateChartDateRangeControls = () => {};
+card._closeChartDateRangePopover = () => {};
+card._clearEnergyHistory = () => {};
+card._refreshEnergyCharts = () => {};
+card._ensureEnergyHistory = () => {};
+const customStart = Date.parse('2026-09-20T00:00:00Z');
+const customEnd = Date.parse('2026-09-21T00:00:00Z');
+card._setCustomChartRange(customStart, customEnd, 'energy');
+assert.equal(card._energyHistoryRange, 'custom');
+assert.equal(JSON.stringify(card._energyHistoryBounds()), JSON.stringify({ start: customStart, end: customEnd }));
+assert.equal(card._historyRange, 'month');
+assert.equal(card._historyCustomRange, null);
+
+// Settings' start-time filter must not clip Energy tab series or summary statistics.
+card._energyHistoryRange = 'day';
+card._energyCustomRange = null;
+const beforeStats = Date.parse('2026-09-30T23:00:00Z');
+const afterStats = Date.parse('2026-10-01T01:00:00Z');
+card._energyHistoryBounds = () => ({ start: beforeStats, end: afterStats });
+card._chartData = () => ({ series: [{ v: 1, t: beforeStats }, { v: 5, t: afterStats }] });
+card._locale = () => 'en-US';
+card._lang = () => 'en';
+card._t = (key) => ({ stat_min: 'Min', stat_avg: 'Avg', stat_max: 'Max' })[key] || key;
+card._escape = (value) => String(value);
+card._formatChartStatTimestamp = () => 'time';
+const html = card._chartStatsHtml('energy_total', [
+  { time: new Date(beforeStats), value: 1 },
+  { time: new Date(afterStats), value: 5 },
+], 'energy');
+assert.match(html, /Min<\/span><b>1 kWh<\/b>/);
+assert.match(html, /Avg<\/span><b>3 kWh<\/b>/);
+assert.match(html, /Max<\/span><b>5 kWh<\/b>/);
+"""
+        result = subprocess.run(
+            ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
+            capture_output=True,
+            text=True,
+            check=False,
+            env={**os.environ, "TZ": "UTC"},
+        )
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
     def test_single_touch_scrubs_chart_and_updates_slider_synchronously(self):
         script = r"""
 const assert = require('node:assert/strict');

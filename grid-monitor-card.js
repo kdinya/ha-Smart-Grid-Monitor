@@ -138,7 +138,7 @@
       healthy: 'PZEM онлайн; якість напруги в межах порогів', quality_unknown: 'Якість напруги невідома', alarm_banner: 'Напруга поза заданим діапазоном', offline_banner: 'ESP недоступна',
       pzem_online: 'Дані PZEM доступні', pzem_offline: 'PZEM офлайн', source_unconfirmed: 'Джерело живлення не підтверджене', source_unknown: 'Джерело живлення невідоме', pzem_source_offline: 'PZEM офлайн; джерело живлення невідоме', pzem_offline_banner: 'PZEM не відповідає; джерело живлення невідоме',
       voltage: 'Напруга мережі', sag_state: 'Просідання', swell_state: 'Перенапруга', current: 'Струм', power: 'Потужність', frequency: 'Частота', pf: 'Коеф. потужності', normal: 'Норма', alarm: 'Поза нормою',
-      chart_title: 'Детальний графік', since: 'Період', stats_title: 'Статистика', stats_start_label: 'Початок статистики',
+      chart_title: 'Детальний графік', energy_chart_title: 'Споживання електроенергії', cost_chart_title: 'Вартість електроенергії', chart_period: 'Період графіків', since: 'Період', stats_title: 'Статистика', stats_start_label: 'Початок статистики',
       stats_hint: 'Оберіть дату й час: графіки та мінімум/максимум рахуватимуться від цього моменту. Без значення діють добові дані.',
       stats_active: 'Графіки та мін/макс рахуються від', stats_apply: 'Застосувати', stats_clear: 'Скинути', chart_date_error_earlier: 'Дата не може бути раніше виставленого початку статистики',
       stats_error: 'Вкажіть коректні дату й час у минулому.', stats_note: 'Мін/макс від', power_range_period: 'Діапазон потужності за період', max_current_period: 'Максимальний струм за період', peak_power_period: 'Пікова потужність за період', stat_min: 'Мін.', stat_avg: 'Сер.', stat_max: 'Макс.', hour: 'Год', day: 'День', week: 'Тиждень', month: 'Місяць', loading: 'Завантаження історії…', no_history: 'Історія поки недоступна',
@@ -183,7 +183,7 @@
       healthy: 'PZEM online; voltage is within configured thresholds', quality_unknown: 'Voltage quality is unknown', alarm_banner: 'Voltage is outside the configured range', offline_banner: 'ESP is offline',
       pzem_online: 'PZEM data available', pzem_offline: 'PZEM offline', source_unconfirmed: 'Power source is not confirmed', source_unknown: 'Power source unknown', pzem_source_offline: 'PZEM offline; power source unknown', pzem_offline_banner: 'PZEM is not responding; power source is unknown',
       voltage: 'Grid voltage', sag_state: 'Sag', swell_state: 'Swell', current: 'Current', power: 'Power', frequency: 'Frequency', pf: 'Power factor', normal: 'Normal', alarm: 'Out of range',
-      chart_title: 'Detailed chart', since: 'Period', stats_title: 'Statistics', stats_start_label: 'Statistics start',
+      chart_title: 'Detailed chart', energy_chart_title: 'Electricity consumption', cost_chart_title: 'Electricity cost', chart_period: 'Chart period', since: 'Period', stats_title: 'Statistics', stats_start_label: 'Statistics start',
       stats_hint: 'Pick a date and time: charts and min/max will be calculated from that moment. Empty means daily values.',
       stats_active: 'Charts and min/max are calculated from', stats_apply: 'Apply', stats_clear: 'Reset', chart_date_error_earlier: 'Date cannot be earlier than the statistics start time',
       stats_error: 'Enter a valid date and time in the past.', stats_note: 'Min/max since', power_range_period: 'Power range for the period', max_current_period: 'Peak current for the period', peak_power_period: 'Peak power for the period', stat_min: 'Min', stat_avg: 'Avg', stat_max: 'Max', hour: 'Hour', day: 'Day', week: 'Week', month: 'Month', loading: 'Loading history…', no_history: 'History is not available yet',
@@ -227,6 +227,8 @@
   const CHART_METRICS = {
     power: { digits: 0, plausible: [0, MAX_PLAUSIBLE_POWER_W], unit: (lang) => (lang === 'uk' ? 'Вт' : 'W') },
     voltage: { digits: 1, plausible: [50, 400], unit: (lang) => (lang === 'uk' ? 'В' : 'V') },
+    energy_total: { digits: 3, plausible: [0, 1e7], unit: () => 'kWh' },
+    cost_total: { digits: 2, plausible: [0, 1e9], unit: (lang) => (lang === 'uk' ? 'грн' : 'UAH') },
   };
   const CHART_READINGS = [
     { key: 'current', label: 'current', digits: 2, plausible: [0, 100] },
@@ -847,6 +849,14 @@
       this._hass = null;
       this._activeTab = 'home';
       this._historyRange = 'hour';
+      this._energyHistoryRange = 'day';
+      this._energyCustomRange = null;
+      this._energyReturnRange = 'day';
+      this._energyHistory = { energy_total: [], cost_total: [] };
+      this._energyHistoryKeys = { energy_total: '', cost_total: '' };
+      this._energyHistoryAt = { energy_total: 0, cost_total: 0 };
+      this._energyHistoryLoading = { energy_total: false, cost_total: false };
+      this._energyHistoryRequests = { energy_total: 0, cost_total: 0 };
       this._statsStart = null;
       this._statsStartApplied = false;
       this._statsExtremes = null;
@@ -900,6 +910,15 @@
       this._measureQueued = false;
       this._heartbeatTimer = null;
       this.shadowRoot.addEventListener('click', (event) => this._handleCardClick(event));
+      this.shadowRoot.addEventListener('toggle', (event) => {
+        const panel = event.target;
+        if (!panel?.matches?.('.chart-date-range-panel')) return;
+        let isOpen = false;
+        try { isOpen = panel.matches(':popover-open'); } catch (_error) { isOpen = !panel.hidden; }
+        const trigger = this.shadowRoot.querySelector(`[aria-controls="${panel.id}"]`);
+        if (trigger) trigger.setAttribute('aria-expanded', String(isOpen));
+        if (!isOpen) panel.hidden = true;
+      }, true);
       this.shadowRoot.addEventListener('pointerdown', (event) => this._chartPointerDown(event));
       this.shadowRoot.addEventListener('pointermove', (event) => {
         if (this._chartPan) { this._chartPointerMove(event); return; }
@@ -1036,6 +1055,7 @@
       }
       this._scheduleHeartbeatExpiry();
       this._ensureHistory();
+      this._ensureEnergyHistory();
       this._ensureStatsExtremes();
     }
 
@@ -1770,18 +1790,50 @@
       return new Date(timestamp - when.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
     }
 
-    _chartDateRangeHtml() {
-      const { start, end } = this._historyBounds();
-      const minAttr = Number.isFinite(this._statsStart) ? ` min="${this._formatDateTimeInput(this._statsStart)}"` : '';
-      const isCustom = this._historyRange === 'custom';
-      return `<details class="chart-date-range ${isCustom ? 'active' : ''}"><summary class="period-button ${isCustom ? 'active' : ''}" role="button" aria-haspopup="dialog" aria-expanded="false">${this._escape(this._t('chart_date_range'))}</summary><div class="chart-date-range-panel" role="region"><label>${this._escape(this._t('chart_from'))}<input type="datetime-local" data-chart-date-start${minAttr} value="${this._formatDateTimeInput(start)}"></label><label>${this._escape(this._t('chart_to'))}<input type="datetime-local" data-chart-date-end${minAttr} value="${this._formatDateTimeInput(end)}"></label><button type="button" class="chart-date-apply" data-chart-date-apply>${this._escape(this._t('chart_apply'))}</button><small data-role="chart-date-error" aria-live="polite"></small></div></details>`;
+    _chartDateRangeHtml(scope = 'params') {
+      const isEnergy = scope === 'energy';
+      const bounds = isEnergy ? this._energyHistoryBounds() : this._historyBounds();
+      const startKey = isEnergy ? 'data-energy-chart-date-start' : 'data-chart-date-start';
+      const endKey = isEnergy ? 'data-energy-chart-date-end' : 'data-chart-date-end';
+      const minAttr = !isEnergy && Number.isFinite(this._statsStart) ? ` min="${this._formatDateTimeInput(this._statsStart)}"` : '';
+      const isCustom = isEnergy ? this._energyHistoryRange === 'custom' : this._historyRange === 'custom';
+      const popoverId = `${this._instanceId}-${scope}-chart-date-range`;
+      return `<div class="chart-date-range ${isCustom ? 'active' : ''}"><button type="button" class="period-button ${isCustom ? 'active' : ''}" data-chart-date-toggle data-chart-scope="${scope}" aria-controls="${popoverId}" aria-haspopup="dialog" aria-expanded="false">${this._escape(this._t('chart_date_range'))}</button><div class="chart-date-range-panel" id="${popoverId}" data-range-scope="${scope}" popover="auto" hidden role="dialog" aria-label="${this._escape(this._t('chart_date_range'))}"><label>${this._escape(this._t('chart_from'))}<input type="datetime-local" ${startKey}${minAttr} value="${this._formatDateTimeInput(bounds.start)}"></label><label>${this._escape(this._t('chart_to'))}<input type="datetime-local" ${endKey}${minAttr} value="${this._formatDateTimeInput(bounds.end)}"></label><button type="button" class="chart-date-apply" data-chart-date-apply data-chart-scope="${scope}">${this._escape(this._t('chart_apply'))}</button><small data-role="chart-date-error" aria-live="polite"></small></div></div>`;
     }
 
-    _updateChartDateRangeControls() {
-      const bounds = this._historyBounds();
-      const start = this.shadowRoot.querySelector('[data-chart-date-start]');
-      const end = this.shadowRoot.querySelector('[data-chart-date-end]');
-      const minVal = Number.isFinite(this._statsStart) ? this._formatDateTimeInput(this._statsStart) : '';
+    _closeChartDateRangePopover(panel = null) {
+      const panels = panel ? [panel] : [...this.shadowRoot.querySelectorAll('.chart-date-range-panel')];
+      panels.forEach((item) => {
+        try { if (item.matches(':popover-open')) item.hidePopover(); } catch (_error) {}
+        item.hidden = true;
+        const trigger = this.shadowRoot.querySelector(`[aria-controls="${item.id}"]`);
+        if (trigger) trigger.setAttribute('aria-expanded', 'false');
+      });
+    }
+
+    _positionChartDateRangePopover(trigger, panel) {
+      if (!trigger || !panel) return;
+      const anchor = trigger.getBoundingClientRect();
+      panel.hidden = false;
+      if (typeof panel.showPopover === 'function') panel.showPopover();
+      else panel.removeAttribute('popover');
+      const size = panel.getBoundingClientRect();
+      const margin = 8;
+      const left = Math.max(margin, Math.min(anchor.right - size.width, window.innerWidth - size.width - margin));
+      const below = anchor.bottom + margin;
+      const top = below + size.height <= window.innerHeight - margin
+        ? below : Math.max(margin, anchor.top - size.height - margin);
+      panel.style.left = `${left}px`;
+      panel.style.top = `${top}px`;
+      trigger.setAttribute('aria-expanded', 'true');
+    }
+
+    _updateChartDateRangeControls(scope = 'params') {
+      const isEnergy = scope === 'energy';
+      const bounds = isEnergy ? this._energyHistoryBounds() : this._historyBounds();
+      const start = this.shadowRoot.querySelector(isEnergy ? '[data-energy-chart-date-start]' : '[data-chart-date-start]');
+      const end = this.shadowRoot.querySelector(isEnergy ? '[data-energy-chart-date-end]' : '[data-chart-date-end]');
+      const minVal = !isEnergy && Number.isFinite(this._statsStart) ? this._formatDateTimeInput(this._statsStart) : '';
       if (start) {
         start.value = this._formatDateTimeInput(bounds.start);
         if (minVal) start.setAttribute('min', minVal); else start.removeAttribute('min');
@@ -1790,30 +1842,44 @@
         end.value = this._formatDateTimeInput(bounds.end);
         if (minVal) end.setAttribute('min', minVal); else end.removeAttribute('min');
       }
-      const error = this.shadowRoot.querySelector('[data-role="chart-date-error"]');
+      const scopePanel = this.shadowRoot.querySelector(`.chart-date-range-panel[data-range-scope="${scope}"]`);
+      const error = scopePanel?.querySelector('[data-role="chart-date-error"]');
       if (error) error.textContent = '';
     }
 
-    _applyChartDateRange() {
-      const startValue = this.shadowRoot.querySelector('[data-chart-date-start]')?.value;
-      const endValue = this.shadowRoot.querySelector('[data-chart-date-end]')?.value;
+    _applyChartDateRange(scope = 'params') {
+      const isEnergy = scope === 'energy';
+      const startValue = this.shadowRoot.querySelector(isEnergy ? '[data-energy-chart-date-start]' : '[data-chart-date-start]')?.value;
+      const endValue = this.shadowRoot.querySelector(isEnergy ? '[data-energy-chart-date-end]' : '[data-chart-date-end]')?.value;
       const start = startValue ? new Date(startValue).getTime() : NaN;
       const end = endValue ? new Date(endValue).getTime() : NaN;
-      const error = this.shadowRoot.querySelector('[data-role="chart-date-error"]');
+      const scopePanel = this.shadowRoot.querySelector(`.chart-date-range-panel[data-range-scope="${scope}"]`);
+      const error = scopePanel?.querySelector('[data-role="chart-date-error"]');
       if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || end > Date.now()) {
         if (error) error.textContent = this._t('chart_date_error');
         return;
       }
-      if (Number.isFinite(this._statsStart) && start < this._statsStart) {
+      if (!isEnergy && Number.isFinite(this._statsStart) && start < this._statsStart) {
         if (error) error.textContent = this._t('chart_date_error_earlier') || this._t('chart_date_error');
         return;
       }
       if (error) error.textContent = '';
-      this._setCustomChartRange(start, end);
+      this._setCustomChartRange(start, end, scope);
     }
 
-    _setCustomChartRange(start, end) {
+    _setCustomChartRange(start, end, scope = 'params') {
       if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return;
+      if (scope === 'energy') {
+        if (this._energyHistoryRange !== 'custom') this._energyReturnRange = this._energyHistoryRange;
+        this._energyCustomRange = { start, end };
+        this._energyHistoryRange = 'custom';
+        this._updateChartDateRangeControls('energy');
+        this._closeChartDateRangePopover();
+        this._clearEnergyHistory();
+        this._refreshEnergyCharts();
+        this._ensureEnergyHistory();
+        return;
+      }
       if (Number.isFinite(this._statsStart)) {
         start = Math.max(start, this._statsStart);
         if (end <= start) end = Math.min(Date.now(), start + 60e3);
@@ -1823,8 +1889,7 @@
       this._historyRange = 'custom';
       this._clearChartScrub();
       this._updateChartDateRangeControls();
-      const picker = this.shadowRoot.querySelector('.chart-date-range');
-      if (picker) picker.open = false;
+      this._closeChartDateRangePopover();
       this._reloadChartHistory();
     }
 
@@ -1911,26 +1976,29 @@
         : this._chartReadingsError || !hasValue ? this._t('chart_readings_unavailable') : '';
     }
 
-    _formatChartStatTimestamp(timestamp) {
+    _formatChartStatTimestamp(timestamp, range = this._historyRange, customRange = this._historyCustomRange) {
       if (!Number.isFinite(timestamp)) return '';
       const when = new Date(timestamp);
-      if (this._historyRange === 'week' || this._historyRange === 'month') {
+      if (range === 'week' || range === 'month') {
         return when.toLocaleDateString(this._locale(), { day: '2-digit', month: '2-digit', year: 'numeric' });
       }
-      if ((this._historyRange === 'custom' && this._historyCustomRange?.end - this._historyCustomRange?.start >= 24 * 3600e3) || (this._historyRange === 'since' && Number.isFinite(this._statsStart) && Date.now() - this._statsStart >= 24 * 3600e3)) {
+      if ((range === 'custom' && customRange?.end - customRange?.start >= 24 * 3600e3) || (range === 'since' && Number.isFinite(this._statsStart) && Date.now() - this._statsStart >= 24 * 3600e3)) {
         return when.toLocaleString(this._locale(), { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
       }
       return when.toLocaleTimeString(this._locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
     }
 
-    _chartStatsHtml() {
-      const metricKey = this._chartMetric || 'power';
+    _chartStatsHtml(metricKey = this._chartMetric || 'power', history = this._history, scope = 'params') {
+      const isEnergy = scope === 'energy';
       const metric = CHART_METRICS[metricKey];
-      const data = this._chartData();
-      const plottedPoints = (data?.series || []).filter((point) => Number.isFinite(point.v) && (!Number.isFinite(this._statsStart) || point.t >= this._statsStart));
+      const range = isEnergy ? this._energyHistoryRange : this._historyRange;
+      const customRange = isEnergy ? this._energyCustomRange : this._historyCustomRange;
+      const bounds = isEnergy ? this._energyHistoryBounds() : this._historyBounds();
+      const data = this._chartData(history, metricKey, { range, customRange, bounds, includeCurrent: !isEnergy });
+      const plottedPoints = (data?.series || []).filter((point) => Number.isFinite(point.v) && (isEnergy || !Number.isFinite(this._statsStart) || point.t >= this._statsStart));
       const minimumPoints = metricKey === 'power' ? plottedPoints.filter((point) => point.v > 0) : plottedPoints;
-      const historyValues = (Array.isArray(this._history) ? this._history : [])
-        .filter((item) => !Number.isFinite(this._statsStart) || (item.time && item.time.getTime() >= this._statsStart))
+      const historyValues = (Array.isArray(history) ? history : [])
+        .filter((item) => isEnergy || !Number.isFinite(this._statsStart) || (item.time && item.time.getTime() >= this._statsStart))
         .map((item) => item.value)
         .filter(Number.isFinite);
       const fmt = (value) => value.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits });
@@ -1950,17 +2018,17 @@
       const avg = historyValues.length ? historyValues.reduce((sum, value) => sum + value, 0) / historyValues.length : null;
       const unit = metric.unit(this._lang());
       const cell = (label, value, formatter = fmt, point = null) => {
-        const timestamp = Number.isFinite(point?.t) ? `<small>${this._escape(this._formatChartStatTimestamp(point.t))}</small>` : '';
+        const timestamp = Number.isFinite(point?.t) ? `<small>${this._escape(this._formatChartStatTimestamp(point.t, range, customRange))}</small>` : '';
         return `<div><span>${this._escape(label)}</span><b>${this._escape(value === null ? '—' : `${formatter(value)} ${unit}`)}</b>${timestamp}</div>`;
       };
       return cell(this._t('stat_min'), min, formatMinimum, minPoint) + cell(this._t('stat_avg'), avg) + cell(this._t('stat_max'), max, fmt, maxPoint);
     }
 
-    _historyBounds(range = this._historyRange, now = Date.now()) {
+    _historyBounds(range = this._historyRange, now = Date.now(), customRange = this._historyCustomRange) {
       if (range === 'since' && Number.isFinite(this._statsStart)) return { start: this._statsStart, end: now };
-      if (range === 'custom' && this._historyCustomRange) {
-        let start = this._historyCustomRange.start;
-        let end = this._historyCustomRange.end;
+      if (range === 'custom' && customRange) {
+        let start = customRange.start;
+        let end = customRange.end;
         if (Number.isFinite(this._statsStart)) {
           start = Math.max(start, this._statsStart);
           end = Math.max(end, start);
@@ -2238,20 +2306,23 @@
       this._ensureHistory();
     }
 
-    _chartData(history = this._history, metricKey = this._chartMetric || 'power') {
+    _chartData(history = this._history, metricKey = this._chartMetric || 'power', options = {}) {
       const width = Math.max(280, Math.round(this._chartW || 985));
-      const { start: tStart, end: tEnd } = this._historyBounds(this._historyRange);
+      const range = options.range ?? this._historyRange;
+      const customRange = options.customRange ?? this._historyCustomRange;
+      const bounds = options.bounds || this._historyBounds(range, Date.now(), customRange);
+      const { start: tStart, end: tEnd } = bounds;
       const rangeMs = tEnd - tStart;
       const series = this._bucketHistory(tStart, tEnd, width < 520 ? 48 : 96, history);
       if (!series.length) return null;
-      const current = this._num(metricKey);
+      const current = Object.hasOwn(options, 'currentValue') ? options.currentValue : options.includeCurrent === false ? null : this._num(metricKey);
       const [minValid, maxValid] = CHART_METRICS[metricKey].plausible;
-      if (current !== null && current >= minValid && current <= maxValid && tEnd >= Date.now() - 60e3) series.push({ t: tEnd, v: current });
+      if (current !== null && Number.isFinite(current) && current >= minValid && current <= maxValid && (options.includeCurrent === false || tEnd >= Date.now() - 60e3)) series.push({ t: tEnd, v: current });
       return { series, tStart, tEnd, rangeMs };
     }
 
-    _chartScale(series) {
-      if (this._chartMetric === 'voltage') {
+    _chartScale(series, metricKey = this._chartMetric || 'power') {
+      if (metricKey === 'voltage') {
         const values = series.map((point) => point.v);
         const low = Math.min(...values); const high = Math.max(...values);
         for (const step of [5, 10, 20, 25, 50]) {
@@ -2340,26 +2411,29 @@
       });
     }
 
-    _chartSvg() {
-      if (this._historyLoading && !this._history.length) return `<div class="chart-empty">${this._escape(this._t('loading'))}</div>`;
+    _chartSvg(metricKey = this._chartMetric || 'power', history = this._history, scope = 'params', loading = this._historyLoading) {
+      if (loading && !history.length) return `<div class="chart-empty">${this._escape(this._t('loading'))}</div>`;
+      const isEnergy = scope === 'energy';
+      const range = isEnergy ? this._energyHistoryRange : this._historyRange;
+      const customRange = isEnergy ? this._energyCustomRange : this._historyCustomRange;
+      const bounds = isEnergy ? this._energyHistoryBounds() : this._historyBounds();
       const width = Math.max(280, Math.round(this._chartW || 985));
       const narrow = width < 520;
       const height = narrow ? 200 : 228;
       const x0 = narrow ? 56 : 70; const x1 = width - (narrow ? 14 : 20); const y0 = 26; const y1 = height - 30;
-      const data = this._chartData();
+      const data = this._chartData(history, metricKey, { range, customRange, bounds, includeCurrent: !isEnergy });
       if (!data) {
-        this._chartPts = [];
+        if (!isEnergy) this._chartPts = [];
         return `<div class="chart-empty">${this._escape(this._t('no_history'))}</div>`;
       }
-      const { series, tStart, rangeMs } = data;
-      const scale = this._chartScale(series);
-      const metricKey = this._chartMetric || 'power';
+      const { series, tStart, tEnd, rangeMs } = data;
+      const scale = this._chartScale(series, metricKey);
       const metric = CHART_METRICS[metricKey];
       const unit = metric.unit(this._lang());
       const X = (t) => x0 + Math.min(1, Math.max(0, (t - tStart) / rangeMs)) * (x1 - x0);
       const Y = (v) => y1 - ((Math.max(scale.lo, Math.min(scale.max, v)) - scale.lo) / (scale.max - scale.lo)) * (y1 - y0);
       const pts = series.map((point) => ({ x: X(point.t), y: Y(point.v), v: point.v, t: point.t }));
-      this._chartPts = pts;
+      if (!isEnergy) this._chartPts = pts;
       const line = this._smoothPath(pts, y0, y1);
       const area = `${line} L${pts[pts.length - 1].x.toFixed(1)} ${y1} L${pts[0].x.toFixed(1)} ${y1} Z`;
       const horizontal = Array.from({ length: scale.count + 1 }, (_, index) => {
@@ -2367,7 +2441,7 @@
         const y = Y(tickValue);
         return `<path d="M${x0} ${y.toFixed(1)}H${x1}"/><text x="${x0 - 10}" y="${(y + 4).toFixed(1)}" text-anchor="end">${this._escape(tickValue.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits }))}${index === scale.count ? ` ${unit}` : ''}</text>`;
       }).join('');
-      const longRange = this._historyRange === 'week' || this._historyRange === 'month' || (this._historyRange === 'custom' || this._historyRange === 'since') && rangeMs >= 24 * 3600e3;
+      const longRange = range === 'week' || range === 'month' || (range === 'custom' || range === 'since') && rangeMs >= 24 * 3600e3;
       const vertical = [0, 1, 2, 3, 4].map((index) => {
         const x = x0 + index * ((x1 - x0) / 4);
         const time = new Date(tStart + rangeMs * index / 4);
@@ -2376,13 +2450,15 @@
         return `<path d="M${x.toFixed(1)} ${y0}V${y1}"/>${show ? `<text data-time-tick="${index}" x="${x.toFixed(1)}" y="${height - 8}" text-anchor="${index === 0 ? 'start' : index === 4 ? 'end' : 'middle'}">${this._escape(label)}</text>` : ''}`;
       }).join('');
       const last = pts[pts.length - 1];
-      const current = this._num(metricKey);
+      const current = isEnergy ? (series[series.length - 1]?.v ?? null) : this._num(metricKey);
       const [minValid, maxValid] = metric.plausible;
-      const hasCurrent = current !== null && current >= minValid && current <= maxValid;
+      const hasCurrent = current !== null && current >= minValid && current <= maxValid && (isEnergy || tEnd >= Date.now() - 60e3);
       const latest = hasCurrent ? `${current.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits })} ${unit}` : '';
       const tagX = Math.min(Math.max(last.x - 42, x0 - 8), width - 86);
       const tagY = Math.max(2, last.y - 44);
-      return `<svg class="chart" data-chart-min="${scale.lo}" data-chart-max="${scale.max}" data-chart-start="${tStart}" data-chart-end="${tStart + rangeMs}" data-chart-w="${width}" data-chart-x0="${x0}" data-chart-x1="${x1}" data-chart-y0="${y0}" data-chart-y1="${y1}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${this._escape(this._t('chart_title'))}"><defs><linearGradient id="${this._id('area')}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#0a96ff" stop-opacity=".5"/><stop offset="1" stop-color="#0a96ff" stop-opacity=".02"/></linearGradient><filter id="${this._id('line-glow')}" x="-5%" y="-30%" width="110%" height="160%"><feGaussianBlur stdDeviation="3"/></filter><clipPath id="${this._id('plot-clip')}"><rect x="${x0}" y="0" width="${x1 - x0}" height="${height}"/></clipPath></defs><g class="chart-grid">${horizontal}${vertical}</g><g class="chart-data" data-role="chart-data" clip-path="url(#${this._id('plot-clip')})"><path d="${area}" fill="url(#${this._id('area')})"/><path d="${line}" class="chart-glow" filter="url(#${this._id('line-glow')})"/><path d="${line}" class="chart-line"/></g><path class="chart-cross" data-role="chart-cross" d="M${last.x.toFixed(1)} ${y0}V${y1}" visibility="hidden"/><circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="6" class="chart-dot" data-role="chart-dot" visibility="${hasCurrent ? 'visible' : 'hidden'}"/><rect x="${tagX.toFixed(1)}" y="${tagY.toFixed(1)}" width="84" height="30" rx="10" class="chart-tag" data-role="chart-tag" visibility="${hasCurrent ? 'visible' : 'hidden'}"/><text x="${(tagX + 42).toFixed(1)}" y="${(tagY + 20).toFixed(1)}" text-anchor="middle" class="chart-tag-text" data-role="chart-tag-text" visibility="${hasCurrent ? 'visible' : 'hidden'}">${this._escape(latest)}</text><text x="${(tagX + 42).toFixed(1)}" y="${(tagY + 37).toFixed(1)}" text-anchor="middle" class="chart-tag-sub" data-role="chart-tag-sub" visibility="hidden"></text></svg>`;
+      const svgId = (name) => this._id(isEnergy ? `energy-${metricKey}-${name}` : name);
+      const chartTitle = isEnergy ? (metricKey === 'energy_total' ? this._t('energy_chart_title') : this._t('cost_chart_title')) : this._t('chart_title');
+      return `<svg class="chart" data-chart-scope="${scope}" data-chart-min="${scale.lo}" data-chart-max="${scale.max}" data-chart-start="${tStart}" data-chart-end="${tEnd}" data-chart-w="${width}" data-chart-x0="${x0}" data-chart-x1="${x1}" data-chart-y0="${y0}" data-chart-y1="${y1}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${this._escape(chartTitle)}"><defs><linearGradient id="${svgId('area')}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#0a96ff" stop-opacity=".5"/><stop offset="1" stop-color="#0a96ff" stop-opacity=".02"/></linearGradient><filter id="${svgId('line-glow')}" x="-5%" y="-30%" width="110%" height="160%"><feGaussianBlur stdDeviation="3"/></filter><clipPath id="${svgId('plot-clip')}"><rect x="${x0}" y="0" width="${x1 - x0}" height="${height}"/></clipPath></defs><g class="chart-grid">${horizontal}${vertical}</g><g class="chart-data" data-role="chart-data" clip-path="url(#${svgId('plot-clip')})"><path d="${area}" fill="url(#${svgId('area')})"/><path d="${line}" class="chart-glow" filter="url(#${svgId('line-glow')})"/><path d="${line}" class="chart-line"/></g><path class="chart-cross" data-role="chart-cross" d="M${last.x.toFixed(1)} ${y0}V${y1}" visibility="hidden"/><circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="6" class="chart-dot" data-role="chart-dot" visibility="${hasCurrent ? 'visible' : 'hidden'}"/><rect x="${tagX.toFixed(1)}" y="${tagY.toFixed(1)}" width="84" height="30" rx="10" class="chart-tag" data-role="chart-tag" visibility="${hasCurrent ? 'visible' : 'hidden'}"/><text x="${(tagX + 42).toFixed(1)}" y="${(tagY + 20).toFixed(1)}" text-anchor="middle" class="chart-tag-text" data-role="chart-tag-text" visibility="${hasCurrent ? 'visible' : 'hidden'}">${this._escape(latest)}</text><text x="${(tagX + 42).toFixed(1)}" y="${(tagY + 37).toFixed(1)}" text-anchor="middle" class="chart-tag-sub" data-role="chart-tag-sub" visibility="hidden"></text></svg>`;
     }
 
     _setChartMarker(chart, x, y, text, sub = '') {
@@ -2593,6 +2669,119 @@
       if (key !== this._historyKey || Date.now() - this._historyAt >= 60000) this._loadHistory(key);
       if (metricKey === 'voltage') this._syncVoltageHistoryFromChart();
       else this._ensureVoltageHistory();
+    }
+
+    _energyHistoryBounds(range = this._energyHistoryRange, now = Date.now()) {
+      if (range === 'custom' && this._energyCustomRange) return { ...this._energyCustomRange };
+      const end = new Date(now);
+      let start;
+      if (range === 'hour') start = new Date(end.getTime() - 3600e3);
+      else {
+        start = new Date(end);
+        start.setHours(0, 0, 0, 0);
+        if (range === 'week') start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+        else if (range === 'month') start.setDate(1);
+      }
+      return { start: start.getTime(), end: end.getTime() };
+    }
+
+    _energyHistoryWindowToken() {
+      return this._energyHistoryRange === 'custom' && this._energyCustomRange
+        ? `:custom:${Math.round(this._energyCustomRange.start)}:${Math.round(this._energyCustomRange.end)}` : '';
+    }
+
+    _energyHistoryCacheKey(metricKey) {
+      return `${this._energyHistoryRange}${this._energyHistoryWindowToken()}:${metricKey}:${this._entity(metricKey)}`;
+    }
+
+    _clearEnergyHistory() {
+      for (const metricKey of ['energy_total', 'cost_total']) {
+        this._energyHistoryRequests[metricKey] += 1;
+        this._energyHistoryLoading[metricKey] = false;
+        this._energyHistory[metricKey] = [];
+        this._energyHistoryKeys[metricKey] = '';
+        this._energyHistoryAt[metricKey] = 0;
+      }
+    }
+
+    _ensureEnergyHistory() {
+      if (!this._hass || !this._config || this._activeTab !== 'energy' || !this._isActive()) return;
+      for (const metricKey of ['energy_total', 'cost_total']) {
+        const key = this._energyHistoryCacheKey(metricKey);
+        if (key !== this._energyHistoryKeys[metricKey]) {
+          this._energyHistoryRequests[metricKey] += 1;
+          this._energyHistoryLoading[metricKey] = false;
+          this._energyHistory[metricKey] = [];
+          this._energyHistoryKeys[metricKey] = key;
+          this._energyHistoryAt[metricKey] = 0;
+        }
+        if (!this._energyHistoryLoading[metricKey] && Date.now() - this._energyHistoryAt[metricKey] >= 60000) this._loadEnergyHistory(metricKey, key);
+      }
+    }
+
+    _parseCumulativeHistory(response, metricKey, bounds, currentValue) {
+      const [minimum, maximum] = CHART_METRICS[metricKey].plausible;
+      const raw = (Array.isArray(response?.[0]) ? response[0] : [])
+        .map((item) => ({ time: new Date(item.last_changed || item.last_updated), value: Number(item.state) }))
+        .filter((item) => Number.isFinite(item.time.getTime()) && Number.isFinite(item.value) && item.value >= minimum && item.value <= maximum)
+        .sort((a, b) => a.time - b.time);
+      const start = bounds.start;
+      const end = bounds.end;
+      const before = raw.filter((item) => item.time.getTime() <= start).at(-1);
+      const within = raw.filter((item) => item.time.getTime() > start && item.time.getTime() <= end);
+      let previous = before?.value ?? raw.find((item) => item.time.getTime() > start)?.value;
+      let cumulative = 0;
+      const result = [{ time: new Date(start), value: 0 }];
+      let lastTime = start;
+      for (const item of within) {
+        if (previous === undefined) { previous = item.value; lastTime = item.time.getTime(); result.push({ time: new Date(lastTime), value: cumulative }); continue; }
+        cumulative += item.value >= previous ? item.value - previous : item.value;
+        previous = item.value;
+        lastTime = item.time.getTime();
+        result.push({ time: new Date(lastTime), value: cumulative });
+      }
+      if (Number.isFinite(currentValue) && currentValue >= minimum && currentValue <= maximum && end >= Date.now() - 60e3) {
+        if (previous === undefined) previous = currentValue;
+        else cumulative += currentValue >= previous ? currentValue - previous : currentValue;
+      }
+      if (lastTime < end) result.push({ time: new Date(end), value: cumulative });
+      return result;
+    }
+
+    async _loadEnergyHistory(metricKey, key = this._energyHistoryCacheKey(metricKey)) {
+      if (!this._hass || this._energyHistoryLoading[metricKey]) return;
+      const request = ++this._energyHistoryRequests[metricKey];
+      const hass = this._hass;
+      const bounds = this._energyHistoryBounds();
+      const start = new Date(Math.max(0, bounds.start - 10 * 60e3));
+      const end = new Date(bounds.end);
+      this._energyHistoryLoading[metricKey] = true;
+      this._refreshEnergyCharts();
+      try {
+        if (typeof hass.callApi !== 'function') throw new Error('History API unavailable');
+        const path = `history/period/${encodeURIComponent(start.toISOString())}?filter_entity_id=${encodeURIComponent(this._entity(metricKey))}&end_time=${encodeURIComponent(end.toISOString())}&minimal_response&no_attributes`;
+        const response = await hass.callApi('GET', path);
+        if (request !== this._energyHistoryRequests[metricKey]) return;
+        this._energyHistory[metricKey] = this._parseCumulativeHistory(response, metricKey, bounds, this._num(metricKey));
+      } catch (_error) {
+        if (request === this._energyHistoryRequests[metricKey]) this._energyHistory[metricKey] = [];
+      } finally {
+        if (request === this._energyHistoryRequests[metricKey]) {
+          this._energyHistoryKeys[metricKey] = key;
+          this._energyHistoryAt[metricKey] = Date.now();
+          this._energyHistoryLoading[metricKey] = false;
+          this._refreshEnergyCharts();
+        }
+      }
+    }
+
+    _refreshEnergyCharts() {
+      for (const metricKey of ['energy_total', 'cost_total']) {
+        const plot = this.shadowRoot.querySelector(`[data-energy-plot="${metricKey}"]`);
+        if (plot) plot.innerHTML = this._chartSvg(metricKey, this._energyHistory[metricKey], 'energy', this._energyHistoryLoading[metricKey]);
+        const stats = this.shadowRoot.querySelector(`[data-energy-stats="${metricKey}"]`);
+        if (stats) stats.innerHTML = this._chartStatsHtml(metricKey, this._energyHistory[metricKey], 'energy');
+      }
     }
 
     _voltageHistoryCacheKey() { return `${this._historyRange}${this._historyWindowToken()}:${this._entity('voltage')}`; }
@@ -2840,6 +3029,9 @@
           <article class="energy-visual energy-coin"><span class="eyebrow">${this._escape(this._t('today'))}</span><strong class="hero-number" data-value-key="energy_today" data-value-digits="2">${this._escape(this._formatted('energy_today', 2))}</strong><small>${this._escape(this._t('estimated_cost'))} · <span data-value-key="cost_today" data-value-digits="2">${this._escape(this._formatted('cost_today', 2))}</span></small>${this._energyCoinArt()}</article>
           <article class="energy-visual energy-load"><span class="eyebrow">${this._escape(this._t('current_load'))}</span><strong class="hero-number" data-value-key="power" data-value-digits="0">${this._escape(this._formatted('power', 0))}</strong><small>${this._escape(this._t('cost_rate'))} · <span data-value-key="cost_rate" data-value-digits="2">${this._escape(this._formatted('cost_rate', 2))}</span></small>${this._plugArt()}</article>
         </div>
+        ${this._energyChartControlsHtml()}
+        ${this._energyChart('energy_total')}
+        ${this._energyChart('cost_total')}
         <div class="detail-grid energy-grid">
           ${this._detail('energy_today', this._t('today'), 3)}${this._detail('energy_month', this._t('energy_month'), 2)}${this._detail('energy_total', this._t('energy_total'), 3)}
           ${this._detail('cost_today', this._t('cost_today'), 2)}${this._detail('cost_month', this._t('cost_month'), 2)}${this._detail('cost_total', this._t('cost_total'), 2)}
@@ -2851,6 +3043,16 @@
           <section class="visual-card current-tariff"><h3>${this._escape(this._t('current_rate'))}</h3><strong class="big-number" data-value-key="tariff" data-value-digits="2">${this._escape(this._formatted('tariff', 2))}</strong><span class="rate-pulse">${this._svg('energy')} ${this._escape(this._t('two_zone'))}: <span data-role="energy-two-zone-label">${this._escape(twoZone ? this._t('on') : this._t('off'))}</span></span></section>
         </div>
       </section>`;
+    }
+
+    _energyChartControlsHtml() {
+      const periods = ['hour', 'day', 'week', 'month'].map((period) => `<button type="button" class="period-button ${this._energyHistoryRange === period ? 'active' : ''}" data-energy-period="${period}" aria-pressed="${this._energyHistoryRange === period}">${this._escape(this._t(period))}</button>`).join('');
+      return `<div class="energy-chart-controls"><div class="chart-head"><h3>${this._escape(this._t('chart_period'))}</h3><div class="periods" role="group" aria-label="${this._escape(this._t('chart_period'))}">${periods}${this._chartDateRangeHtml('energy')}</div></div></div>`;
+    }
+
+    _energyChart(metricKey) {
+      const title = metricKey === 'energy_total' ? 'energy_chart_title' : 'cost_chart_title';
+      return `<section class="card chart-card energy-history-card"><div class="chart-head"><h2><span class="chart-icon">${this._svg('chart')}</span>${this._escape(this._t(title))}</h2></div><div class="chart-stats" data-energy-stats="${metricKey}">${this._chartStatsHtml(metricKey, this._energyHistory[metricKey], 'energy')}</div><div class="chart-plot energy-chart-plot" data-energy-plot="${metricKey}">${this._chartSvg(metricKey, this._energyHistory[metricKey], 'energy', this._energyHistoryLoading[metricKey])}</div></section>`;
     }
 
     _energyCoinArt() {
@@ -3132,12 +3334,17 @@
         this._finishDialog(dialogAction.dataset.dialogAction === 'confirm' || dialogAction.dataset.dialogAction === 'close');
         return;
       }
-      if (!event.target?.closest?.('.chart-date-range')) {
-        const picker = this.shadowRoot.querySelector('.chart-date-range[open]');
-        if (picker) picker.open = false;
-      }
-      const target = event.target?.closest?.('[data-tab], [data-period], [data-metric], [data-action], [data-number-save], [data-switch], [data-chart-live], [data-chart-zoom], [data-chart-date-apply], [data-stats-start-apply], [data-stats-start-clear]');
+      if (!event.target?.closest?.('.chart-date-range')) this._closeChartDateRangePopover();
+      const target = event.target?.closest?.('[data-tab], [data-period], [data-energy-period], [data-metric], [data-action], [data-number-save], [data-switch], [data-chart-live], [data-chart-zoom], [data-chart-date-toggle], [data-chart-date-apply], [data-stats-start-apply], [data-stats-start-clear]');
       if (!target) return;
+      if (target.dataset.chartDateToggle !== undefined) {
+        const panel = this.shadowRoot.getElementById(target.getAttribute('aria-controls'));
+        let isOpen = false;
+        try { isOpen = panel?.matches(':popover-open'); } catch (_error) { isOpen = !panel?.hidden; }
+        if (isOpen) this._closeChartDateRangePopover(panel);
+        else this._positionChartDateRangePopover(target, panel);
+        return;
+      }
       if (target.dataset.tab) {
         if (target.dataset.tab === this._activeTab) return;
         const wasHome = this._activeTab === 'home';
@@ -3146,6 +3353,7 @@
         if (wasHome !== (this._activeTab === 'home')) {
           this._render();
           this._ensureHistory();
+          this._ensureEnergyHistory();
           return;
         }
         this.shadowRoot.querySelector('.shell')?.classList.toggle('home-active', this._activeTab === 'home');
@@ -3158,6 +3366,7 @@
         if (view) view.innerHTML = this._activeContent();
         this._queueChartMeasure();
         this._ensureHistory();
+        this._ensureEnergyHistory();
         return;
       }
       if (target.dataset.chartLive !== undefined) {
@@ -3182,7 +3391,7 @@
         return;
       }
       if (target.dataset.chartZoom) { this._zoomChart(target.dataset.chartZoom); return; }
-      if (target.dataset.chartDateApply !== undefined) { this._applyChartDateRange(); return; }
+      if (target.dataset.chartDateApply !== undefined) { this._applyChartDateRange(target.dataset.chartScope || 'params'); return; }
       if (target.dataset.statsStartApply !== undefined) { this._applyStatsStartInput(); return; }
       if (target.dataset.statsStartClear !== undefined) { this._setStatsStart(null); return; }
       if (target.dataset.metric) {
@@ -3200,6 +3409,22 @@
         });
         this._refreshChart();
         this._ensureHistory();
+        return;
+      }
+      if (target.dataset.energyPeriod) {
+        if (this._energyHistoryRange === target.dataset.energyPeriod) return;
+        this._energyHistoryRange = target.dataset.energyPeriod;
+        this._energyCustomRange = null;
+        this._clearEnergyHistory();
+        this.shadowRoot.querySelectorAll('[data-energy-period]').forEach((button) => {
+          const active = button.dataset.energyPeriod === this._energyHistoryRange;
+          button.classList.toggle('active', active);
+          button.setAttribute('aria-pressed', String(active));
+        });
+        this._updateChartDateRangeControls('energy');
+        this._closeChartDateRangePopover();
+        this._refreshEnergyCharts();
+        this._ensureEnergyHistory();
         return;
       }
       if (target.dataset.period) {
@@ -3609,8 +3834,8 @@
         .detail-panel{padding:22px;margin-top:2px}.detail-panel h2{margin:0 0 18px;font-size:25px}.detail-panel h2.subheading{margin:24px 0 14px;font-size:19px}.detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.detail{padding:16px;border-radius:16px;background:#13243a;border:1px solid #2b4562;min-width:0}.detail>span,.detail label>span{display:block;color:#9fb5d1;font-size:14px;margin-bottom:7px}.detail b{font-size:22px;overflow-wrap:anywhere}.setting{display:flex;align-items:end;gap:10px}.setting label{flex:1;min-width:0}.setting-input{display:flex;align-items:center;gap:8px}.setting-input input{width:100%;min-width:0;background:#091727;border:1px solid #37526f;border-radius:9px;color:var(--text);padding:10px;font:inherit;font-size:18px}.setting-input small{color:#9fb5d1;white-space:nowrap}.save-button,.switch-button,.action-button{border:1px solid #278ed0;background:#092645;color:#d7efff;border-radius:10px;padding:9px 12px;font:inherit;cursor:pointer}.save-button:hover,.switch-button:hover,.action-button:hover{background:#0c3962}.save-button:disabled,.switch-button:disabled,.action-button:disabled{opacity:.45;cursor:not-allowed}.switch-setting{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.switch-setting>span{color:#9fb5d1;font-size:14px}.switch-setting>strong{font-size:16px}.switch-button{grid-column:1/-1;display:flex;align-items:center;gap:8px;justify-content:center}.switch-button .icon{width:20px;height:20px}.switch-button.on{border-color:#35ed91;color:#35ed91}.action-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.action-button{min-height:68px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;font-size:13px;border-color:#2b8ed0}.action-button span{font-size:22px;color:#45bdff}.action-button .icon{width:25px;height:25px}.footer{display:flex;justify-content:space-between;gap:10px;margin:14px 2px 0;color:#6885a2;font-size:11px}.footer span:last-child{max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
         .chart-head .periods+.periods{margin-left:0}.chart-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:4px 0 10px}.chart-stats>div{background:#13243a;border:1px solid #2b4562;border-radius:14px;padding:9px 12px;min-width:0}.chart-stats span{display:block;color:#9fb5d1;font-size:13px}.chart-stats b{display:block;font-size:19px;margin-top:3px;overflow-wrap:anywhere}.chart-stats small{display:block;margin-top:3px;color:#86a1c1;font-size:12px;line-height:1.25}
         .voltage-brand{display:flex;align-items:flex-start;gap:10px;align-self:flex-start;width:100%;min-width:0;max-width:100%;margin-bottom:0;flex-wrap:wrap}.voltage-brand .logo{flex:none}.voltage-brand .brand{flex:1 1 auto}.voltage-brand .brand h1{margin:0 0 2px;line-height:1.15;font-size:clamp(20px,2.6cqw,32px)}.voltage-brand .brand p{font-size:clamp(13px,1.5cqw,16px);line-height:1.2}.voltage-brand .home-status{flex:none;align-self:flex-start;gap:8px;margin-left:auto;max-width:100%}.voltage-brand .home-status .connection small{margin-top:2px}.voltage .voltage-gauge{margin:0}.main-right{display:flex;flex-direction:column;gap:10px;min-width:0}.main-right>.metrics{flex:1}
-        @container (min-width:960px){.shell.home-active>.tabs-top{display:none}.shell:not(.home-active)>.tabs-top{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:45%;min-width:360px;max-width:560px;margin:0 0 14px auto;padding:8px;gap:6px}.shell:not(.home-active)>.tabs-top .tab{padding:15px 8px}.shell:not(.home-active)>.page-layout{display:block}.shell:not(.home-active)>.page-layout>.tabs-side{display:none}.home-view .main-grid{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);grid-template-rows:auto;align-items:stretch}.home-view .main-grid>.voltage{grid-column:1;grid-row:1}.home-view .main-grid>.main-right{grid-column:2;grid-row:1}.home-view .main-right>.tabs-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:0;align-self:stretch;width:100%}}
-        @container (max-width:959px){.home-view .main-grid{grid-template-columns:minmax(0,1fr);align-items:start}.home-view .main-right{display:contents}.home-view .main-right>.tabs-side{display:none}.home-view .main-grid>.voltage{grid-column:1;grid-row:1}.home-view .main-right>.metrics{grid-column:1;grid-row:2}.shell:not(.home-active)>.tabs-top{display:grid}.shell:not(.home-active)>.page-layout{display:block}.shell:not(.home-active)>.page-layout>.tabs-side{display:none}}
+        @container (min-width:960px){.shell.home-active>.tabs-top{display:none}.shell:not(.home-active)>.tabs-top{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:45%;min-width:360px;max-width:560px;margin:0 0 14px auto;padding:8px;gap:6px}.shell:not(.home-active)>.tabs-top .tab{padding:15px 8px}.shell:not(.home-active)>.page-layout{display:block;margin-top:-30px}.shell:not(.home-active)>.page-layout>.tabs-side{display:none}.home-view .main-grid{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);grid-template-rows:auto;align-items:stretch}.home-view .main-grid>.voltage{grid-column:1;grid-row:1}.home-view .main-grid>.main-right{grid-column:2;grid-row:1}.home-view .main-right>.tabs-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:0;align-self:stretch;width:100%}}
+        @container (max-width:959px){.home-view .main-grid{grid-template-columns:minmax(0,1fr);align-items:start}.home-view .main-right{display:contents}.home-view .main-right>.tabs-side{display:none}.home-view .main-grid>.voltage{grid-column:1;grid-row:1}.home-view .main-right>.metrics{grid-column:1;grid-row:2}.shell:not(.home-active)>.tabs-top{display:grid}.shell:not(.home-active)>.page-layout{display:block;margin-top:-30px}.shell:not(.home-active)>.page-layout>.tabs-side{display:none}}
         @container (max-width:760px){.shell{padding:12px}.header{gap:11px;padding:5px 2px 14px}.logo{width:58px;height:58px;border-radius:17px}.logo .icon{width:38px;height:38px}.headright{gap:8px}.connection strong{font-size:14px}.connection small{font-size:10px}.tabs{margin-bottom:12px}.tab{gap:5px;padding:12px 3px;font-size:12px}.tab .tab-icon{font-size:19px}.tab .icon{width:20px;height:20px}.main-grid{grid-template-columns:1fr;gap:10px}.voltage{min-height:300px}.voltage-gauge{width:min(100%,420px)}.metrics{gap:10px}.metric{min-height:135px}.metric-icon .icon{width:38px;height:38px}.metric-label{font-size:15px}.chart-card{padding:13px 11px}.chart-head h2{font-size:19px}.periods{width:100%;margin:0}.period-button{flex:1;padding:8px 4px;font-size:13px}.bottom-status{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.info{min-height:100px;padding:12px 8px}.info .symbol .icon{width:30px;height:30px}.info .small{font-size:13px}.info strong{font-size:16px}.banner{padding:14px;min-height:70px}.banner-check{width:38px;height:38px}.banner-check .icon{width:28px;height:28px}.house-art{width:80px}.detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.detail-panel{padding:16px}.detail-panel h2{font-size:22px}.action-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
         @container (max-width:420px){.connection small{max-width:105px}.tab{font-size:11px}.tab .tab-icon{display:none}.metric{min-height:122px;padding:12px 8px}.metric-value{font-size:clamp(25px,8cqw,34px)}.info{gap:8px}.info .symbol .icon{width:26px;height:26px}.info .small{font-size:12px}.info strong{font-size:14px}.detail-grid{grid-template-columns:1fr}.setting{align-items:stretch}}
         /* Premium instrument finish: layered glass, metal highlights and soft depth. */
@@ -3629,7 +3854,7 @@
         .energy-visual-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;margin-top:14px}.visual-card{padding:18px;border-radius:18px;background:linear-gradient(145deg,#1b334ff5,#0a1728fa);border:1px solid #69a4d944;box-shadow:inset 0 1px 0 #ffffff1e,0 11px 24px #0005}.visual-card h3{margin:0 0 15px;font-size:17px}.bar-list{display:grid;gap:14px}.bar-row{display:grid;grid-template-columns:64px minmax(36px,1fr) minmax(80px,auto);gap:11px;align-items:center;color:var(--muted);font-size:13px}.bar-row b{color:var(--text);font-size:14px;text-align:right}.bar-track{height:9px;border-radius:9px;overflow:hidden;background:#263c56;box-shadow:inset 0 2px 3px #0008}.bar-track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#078bff,#16d6e8);box-shadow:0 0 12px #0aaaff62;transition:width .55s ease}.bar-track i.night-rate{background:linear-gradient(90deg,#8057d8,#c07aff);box-shadow:0 0 12px #a875ff62}.rate-pulse{display:inline-flex;align-items:center;gap:7px;margin-top:13px;padding:6px 10px;border-radius:18px;background:#0b3440;border:1px solid #28bdc457;color:#69e6d4;font-size:12px;max-width:100%;flex-wrap:wrap}.rate-pulse .icon{width:17px;height:17px}.current-tariff{display:flex;flex-direction:column;justify-content:center;align-items:flex-start}.current-tariff .big-number{font-size:clamp(27px,3.5cqw,40px);overflow-wrap:anywhere}
         .settings-hero{display:flex;align-items:center;gap:15px;padding:14px 18px;margin:0 0 15px;border-radius:18px;background:linear-gradient(110deg,#163c5ff2,#17224bf2);border:1px solid #70aee24a;box-shadow:inset 0 1px 0 #ffffff27,0 14px 28px #0005}.chip-art{width:68px;height:68px;flex:none;filter:drop-shadow(0 6px 12px #0008) drop-shadow(0 0 10px #078fff35)}.device-copy{min-width:0}.device-copy strong{display:block;font-size:17px}.device-copy span{display:block;margin-top:4px;color:#a9bfdc;font-size:12px}.device-status{margin-left:auto;display:flex;align-items:center;gap:8px;white-space:nowrap;color:var(--muted);font-size:13px}.device-status i{width:10px;height:10px;border-radius:50%;background:#8597aa;box-shadow:0 0 8px #8597aa66}.device-status.online{color:var(--green)}.device-status.online i{background:var(--green);box-shadow:0 0 12px #35ed91a8}.device-status.offline{color:var(--red)}.device-status.offline i{background:var(--red);box-shadow:0 0 12px #ff526d88}.detail:hover,.visual-card:hover,.control:hover{border-color:#59bbef70;box-shadow:0 16px 32px #0007,0 0 24px #0099ff13}.tariff-state{position:relative}.tariff-led{position:absolute;right:14px;bottom:14px;width:8px;height:8px;border-radius:50%;background:#7e8ea2}.tariff-led.active{background:var(--green);box-shadow:0 0 12px #35ed91b0}
         .metric:hover,.info:hover,.action-button:hover,.save-button:hover,.switch-button:hover{transform:translateY(-3px);border-color:#54bdff80;box-shadow:0 18px 34px #0008,0 0 24px #0099ff1b}.tab,.period-button,.action-button,.save-button,.switch-button{transition:background .22s,color .22s,border-color .22s,box-shadow .22s,transform .22s}
-        @media(prefers-reduced-motion:no-preference){.shell:not(.render-ready){animation:deviceBoot .7s cubic-bezier(.2,.8,.2,1) both}.logo .icon{animation:logoFloat 4.2s ease-in-out infinite}.connection.online .dot,.device-status.online i{animation:ledPulse 2.2s ease-in-out infinite}.gauge-dot{animation:gaugePulse 2.8s ease-in-out infinite}.chart-dot{animation:chartPulse 2.4s ease-in-out infinite}.voltage:after{animation:screenGlow 7s ease-in-out infinite alternate}@keyframes deviceBoot{from{opacity:0;transform:translateY(8px) scale(.995)}to{opacity:1;transform:translateY(0) scale(1)}}@keyframes logoFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}@keyframes ledPulse{0%,100%{box-shadow:0 0 7px currentColor}50%{box-shadow:0 0 16px currentColor,0 0 25px currentColor}}@keyframes gaugePulse{0%,100%{filter:drop-shadow(0 0 5px #08c5ff)}50%{filter:drop-shadow(0 0 12px #08c5ff)}}@keyframes chartPulse{0%,100%{opacity:.8}50%{opacity:1}}@keyframes screenGlow{from{box-shadow:inset 0 0 24px #0091ff10}to{box-shadow:inset 0 0 40px #0091ff24}}}
+        @media(prefers-reduced-motion:no-preference){.shell:not(.render-ready){animation:deviceBoot .7s cubic-bezier(.2,.8,.2,1) both}.logo .icon{animation:logoFloat 4.2s ease-in-out infinite}.gauge-dot{animation:gaugePulse 2.8s ease-in-out infinite}.chart-dot{animation:chartPulse 2.4s ease-in-out infinite}.voltage:after{animation:screenGlow 7s ease-in-out infinite alternate}@keyframes deviceBoot{from{opacity:0;transform:translateY(8px) scale(.995)}to{opacity:1;transform:translateY(0) scale(1)}}@keyframes logoFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}@keyframes gaugePulse{0%,100%{filter:drop-shadow(0 0 5px #08c5ff)}50%{filter:drop-shadow(0 0 12px #08c5ff)}}@keyframes chartPulse{0%,100%{opacity:.8}50%{opacity:1}}@keyframes screenGlow{from{box-shadow:inset 0 0 24px #0091ff10}to{box-shadow:inset 0 0 40px #0091ff24}}}
         @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
         @container (max-width:760px){.energy-hero{grid-template-columns:1fr}.energy-visual{min-height:145px}.energy-visual-grid{grid-template-columns:1fr}.energy-object{width:76px;height:76px;right:10px;bottom:8px}.settings-hero{gap:11px;padding:12px}.chip-art{width:56px;height:56px}.device-copy strong{font-size:15px}.device-status{font-size:12px}}
         @container (max-width:420px){.energy-visual{min-height:130px;padding:15px}.energy-visual .hero-number{font-size:clamp(24px,7cqw,31px);max-width:80%}.energy-visual small{font-size:11px;max-width:80%}.energy-object{width:58px;height:58px;right:8px;bottom:6px;opacity:.8}.settings-hero{flex-wrap:wrap}.chip-art{width:46px;height:46px}.device-status{margin-left:6px}.bar-row{grid-template-columns:47px minmax(24px,1fr) minmax(75px,auto);gap:7px}.banner strong{max-width:68%}}
@@ -3988,15 +4213,20 @@
         .chart-tools{display:flex;align-items:center;gap:6px;margin-left:auto}
         .chart-zoom-button,.chart-date-apply{min-width:38px;min-height:36px;border:1px solid #278ed0;border-radius:10px;background:#092645;color:#d7efff;font:inherit;font-weight:700;cursor:pointer}
         .chart-zoom-button:hover,.chart-date-apply:hover{background:#0c3962}
-        .chart-date-range{position:relative;display:inline-flex}
-        .chart-date-range summary{list-style:none;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;user-select:none;-webkit-user-select:none}
-        .chart-date-range summary::-webkit-details-marker{display:none}
-        .chart-date-range-panel{position:absolute;top:calc(100% + 8px);right:0;z-index:30;display:flex;align-items:end;flex-wrap:wrap;gap:9px;padding:12px;border:1px solid #37526f;border-radius:14px;background:#0b192a;box-shadow:0 12px 35px rgba(0,0,0,.85)}
+        .chart-date-range{position:relative;display:inline-flex;z-index:1000}
+        .chart-date-range-panel{position:fixed;inset:auto;margin:0;z-index:2147483647;display:flex;align-items:end;flex-wrap:wrap;gap:9px;width:min(440px,calc(100vw - 16px));max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow:auto;padding:12px;border:1px solid #37526f;border-radius:14px;background:#0b192a;color:var(--text);box-shadow:0 12px 35px rgba(0,0,0,.85)}
+        .chart-date-range-panel[hidden]{display:none!important}
+        .chart-date-range-panel:popover-open{display:flex}
         .chart-date-range-panel label{display:grid;gap:4px;color:#9fb5d1;font-size:12px}
         .chart-date-range-panel input{min-width:190px;min-height:36px;padding:6px 8px;border:1px solid #37526f;border-radius:9px;background:#091727;color:#eef6ff;font:inherit;color-scheme:dark}
         .chart-date-range-panel small{flex-basis:100%;color:#ff9ba8;font-size:12px}
         .chart-date-apply{padding:0 14px}
-        .chart-card>.chart-head{z-index:20}
+        .chart-card>.chart-head{position:relative;z-index:20}
+        .energy-chart-controls{margin:14px 0 10px}
+        .energy-chart-controls .chart-head{margin:0}
+        .energy-chart-controls h3{margin:0;font-size:17px}
+        .energy-history-card{margin-top:12px}
+        .energy-chart-plot{cursor:default;touch-action:auto;user-select:auto;-webkit-user-select:auto}
         .banner-main{flex:1 1 38%;min-width:0}
         .banner-main strong{display:block;max-width:none}
         .banner-system{flex:1 1 35%;min-width:0;display:grid;gap:3px;padding-left:16px;border-left:1px solid #ffffff2c}
@@ -4009,9 +4239,9 @@
         .chart-plot.is-panning{cursor:grabbing}
         @container (max-width:760px){
           .chart-tools{width:100%;margin-left:0;justify-content:flex-end}
-          .chart-date-range{flex:1 1 auto;min-width:0;position:static}
-          .chart-date-range summary{width:100%;padding:8px 4px;font-size:12px}
-          .chart-date-range-panel{position:absolute;top:calc(100% + 6px);left:0;right:0;min-width:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+          .chart-date-range{flex:1 1 auto;min-width:0;position:relative}
+          .chart-date-range>[data-chart-date-toggle]{width:100%;padding:8px 4px;font-size:12px}
+          .chart-date-range-panel{position:fixed;inset:auto;left:8px;right:8px;width:calc(100vw - 16px);min-width:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
           .chart-date-range-panel input{min-width:0;width:100%;box-sizing:border-box;font-size:12px}
           .chart-date-apply{grid-column:1/-1}
           .banner{display:grid;grid-template-columns:38px minmax(0,1fr) 58px;align-items:center;gap:10px}

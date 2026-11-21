@@ -92,8 +92,33 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertNotIn("${this._activeTab === 'home' ? '' : this._tabs('side')}", render)
         self.assertIn(".shell:not(.home-active)>.header>.tabs-top{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));flex:0 0 45%;width:45%;min-width:360px;max-width:560px;margin:0 0 0 auto", card)
         self.assertIn(".shell:not(.home-active)>.header>.tabs-top .tab{padding:15px 8px}", card)
-        self.assertIn(".shell:not(.home-active)>.page-layout{display:block}", card)
+        self.assertIn(".shell:not(.home-active)>.page-layout{display:block;margin-top:-30px}", card)
         self.assertIn(".shell:not(.home-active)>.page-layout>.tabs-side{display:none}", card)
+
+    def test_energy_tab_has_separate_kwh_and_cost_history_charts(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        energy = card.split("    _energy() {", 1)[1].split("    _energyChartControlsHtml()", 1)[0]
+        self.assertIn("${this._energyChart('energy_total')}", energy)
+        self.assertIn("${this._energyChart('cost_total')}", energy)
+        chart = card.split("    _energyChart(metricKey)", 1)[1].split("    _energyCoinArt()", 1)[0]
+        self.assertIn('data-energy-plot="${metricKey}"', chart)
+        self.assertIn("this._chartSvg(metricKey, this._energyHistory[metricKey], 'energy'", chart)
+        self.assertIn("energy_total: { digits: 3, plausible: [0, 1e7], unit: () => 'kWh' }", card)
+        self.assertIn("cost_total: { digits: 2, plausible: [0, 1e9], unit: (lang) => (lang === 'uk' ? 'грн' : 'UAH') }", card)
+
+    def test_date_picker_uses_top_layer_and_online_indicators_are_static(self):
+        import re
+
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        self.assertIn('popover="auto"', card)
+        self.assertIn("panel.showPopover()", card)
+        self.assertIn(".chart-date-range-panel:popover-open{display:flex}", card)
+        self.assertIn(".chart-date-range-panel{position:fixed;inset:auto;", card)
+        self.assertIn("z-index:2147483647", card)
+        self.assertNotRegex(card, r"\.dot\{[^}]*animation")
+        connection_rules = re.findall(r"\.connection[^{}]*\{[^{}]*\}", card)
+        self.assertTrue(connection_rules)
+        self.assertTrue(all("animation" not in rule for rule in connection_rules))
 
     def test_settings_tab_uses_centered_gear_and_actions_stay_in_one_row(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
@@ -156,7 +181,7 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("chart.dataset.chartMin", card)
         self.assertIn(".chart-reading-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr))", card)
         self.assertIn("this._queueChartReadings(point.t)", card)
-        self.assertIn(".shell:not(.home-active)>.page-layout{display:block}", card)
+        self.assertIn(".shell:not(.home-active)>.page-layout{display:block;margin-top:-30px}", card)
         self.assertIn(".shell:not(.home-active)>.page-layout>.tabs-side{display:none}", card)
 
     def test_daily_voltage_and_power_minima_ignore_invalid_restored_values(self):
@@ -203,7 +228,8 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("metricKey === 'power' ? plottedPoints.filter((point) => point.v > 0) : plottedPoints", card)
         self.assertIn("this._historyBounds(range)", card)
         self.assertIn("_chartDateRangeHtml()", card)
-        self.assertIn("type=\"datetime-local\" data-chart-date-start", card)
+        self.assertIn('type="datetime-local" ${startKey}', card)
+        self.assertIn("isEnergy ? 'data-energy-chart-date-start' : 'data-chart-date-start'", card)
         self.assertNotIn("data-chart-zoom=\"in\"", card)
         self.assertIn("chart_date_range", card)
         self.assertIn("this._chartPointerDistance(points)", card)
