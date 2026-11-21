@@ -86,6 +86,7 @@
   const SETTING_ENTITY_KEYS = new Set(['sag_threshold', 'swell_threshold', 'nominal_voltage', 'tariff_day', 'tariff_night']);
   const TIMESTAMP_ENTITY_KEYS = new Set(['voltage', 'power', 'current', 'uptime']);
   const HEARTBEAT_TIMEOUT_MS = 15000;
+  const MAX_PLAUSIBLE_POWER_W = 30000;
   const LIVE_MEASUREMENT_KEYS = new Set([
     'voltage', 'current', 'power', 'frequency', 'power_factor', 'apparent_power',
     'reactive_power', 'phase_angle', 'voltage_deviation', 'voltage_average', 'cost_rate',
@@ -1402,7 +1403,8 @@
         const series = Array.isArray(response?.[0]) ? response[0] : [];
         this._history = series.map((item) => {
           const value = Number(item.state);
-          return { time: new Date(item.last_changed || item.last_updated), value: Number.isFinite(value) ? value : null };
+          const plausible = Number.isFinite(value) && value >= 0 && value <= MAX_PLAUSIBLE_POWER_W;
+          return { time: new Date(item.last_changed || item.last_updated), value: plausible ? value : null };
         })
           .filter((item) => Number.isFinite(item.time.getTime()))
           .sort((a, b) => a.time - b.time);
