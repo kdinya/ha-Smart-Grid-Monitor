@@ -3852,6 +3852,7 @@
         .chart-date-range-panel input{min-width:190px;min-height:36px;padding:6px 8px;border:1px solid #37526f;border-radius:9px;background:#091727;color:#eef6ff;font:inherit;color-scheme:dark}
         .chart-date-range-panel small{flex-basis:100%;color:#ff9ba8;font-size:12px}
         .chart-date-apply{padding:0 14px}
+        .chart-card>.chart-head{z-index:20}
         .banner-main{flex:1 1 38%;min-width:0}
         .banner-main strong{display:block;max-width:none}
         .banner-system{flex:1 1 35%;min-width:0;display:grid;gap:3px;padding-left:16px;border-left:1px solid #ffffff2c}
@@ -3864,7 +3865,7 @@
         .chart-plot.is-panning{cursor:grabbing}
         @container (max-width:760px){
           .chart-tools{width:100%;margin-left:0;justify-content:flex-end}
-          .chart-date-range{flex:1 1 auto;min-width:0}
+          .chart-date-range{flex:1 1 auto;min-width:0;position:static}
           .chart-date-range summary{width:100%;padding:8px 4px;font-size:12px}
           .chart-date-range-panel{position:absolute;top:calc(100% + 6px);left:0;right:0;min-width:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
           .chart-date-range-panel input{min-width:0;width:100%;box-sizing:border-box;font-size:12px}
