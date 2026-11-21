@@ -44,12 +44,16 @@ def run_node(body):
 
 
 class PeriodPickerStylingTests(unittest.TestCase):
-    def test_period_panel_stacks_above_chart_and_spans_card_width_on_narrow_layouts(self):
+    def test_period_panel_uses_top_layer_and_remains_sized_for_narrow_layouts(self):
         card = CARD.read_text(encoding="utf-8")
         self.assertIn(".card>*{position:relative;z-index:1}", card)
-        self.assertIn(".chart-card>.chart-head{z-index:20}", card)
-        self.assertIn(".chart-date-range{flex:1 1 auto;min-width:0;position:static}", card)
-        self.assertIn(".chart-date-range-panel{position:absolute;top:calc(100% + 6px);left:0;right:0;", card)
+        self.assertIn(".chart-card>.chart-head{position:relative;z-index:20}", card)
+        self.assertIn('popover="auto"', card)
+        self.assertIn("panel.showPopover()", card)
+        self.assertIn(":popover-open", card)
+        self.assertIn(".chart-date-range-panel{position:fixed;inset:auto;", card)
+        self.assertIn("z-index:2147483647", card)
+        self.assertIn(".chart-date-range{flex:1 1 auto;min-width:0;position:relative}", card)
 
 
 class PowerSavingModeTests(unittest.TestCase):

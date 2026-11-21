@@ -4,6 +4,8 @@ ESPHome firmware and Home Assistant interfaces for an ESP32-C3 + PZEM-004T v3.0 
 
 The repository now provides two supported interface paths. The recommended path is the HACS-installable `Smart Grid Monitor Card`, a responsive dark-neon frontend card. The dependency-free native Lovelace dashboard remains available as a fallback for installations where custom frontend resources are not desired.
 
+The card's **Energy** tab includes separate history charts for electricity consumption in kWh and accumulated cost in грн. They calculate period increases from Home Assistant history of the cumulative energy and cost counters, including counter resets. Their hour/day/week/month/custom period is independent of the Parameters chart and its statistics-start setting.
+
 ## Preview
 
 | Home (desktop) | Home (phone) |
@@ -100,7 +102,7 @@ Both interfaces cover the firmware's live electrical values, energy and cost cou
 
 ## Statistics start
 
-In the card's **Settings** tab, the **Statistics** section lets you pick a date and time. After applying it, the chart gets a «From HH:MM» period, and the minimum, maximum and peak values on the tiles and range cards are calculated from Home Assistant history since that moment. Clearing the field returns to the firmware's daily values. The setting is stored per browser.
+In the card's **Settings** tab, the **Statistics** section lets you pick a date and time. After applying it, the Parameters chart gets a «From HH:MM» period, and the minimum, maximum and peak values on the tiles and range cards are calculated from Home Assistant history since that moment. Clearing the field returns to the firmware's daily values. The setting is stored per browser and does not change the Energy tab's history period.
 
 ## Electrical safety
 
