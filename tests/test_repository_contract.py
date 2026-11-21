@@ -95,6 +95,15 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn(".shell:not(.home-active)>.page-layout{display:block}", card)
         self.assertIn(".shell:not(.home-active)>.page-layout>.tabs-side{display:none}", card)
 
+    def test_settings_tab_uses_centered_gear_and_actions_stay_in_one_row(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        settings_icon = card.split("    settings: '", 1)[1].split("',", 1)[0]
+        self.assertNotIn("transform=", settings_icon)
+        self.assertIn("fill-rule=\"evenodd\"", settings_icon)
+        self.assertIn("M24 17a7 7 0 1 0 0 14 7 7 0 1 0 0-14Z", settings_icon)
+        self.assertIn(".action-grid{grid-template-columns:repeat(5,minmax(0,1fr))}", card)
+        self.assertIn(".action-grid{grid-template-columns:repeat(5,minmax(104px,1fr));overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin}", card)
+
     def test_voltage_panel_reduces_vertical_padding_and_lowers_caption(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
         self.assertIn('<text x="250" y="281" text-anchor="middle" class="voltage-label">', card)
@@ -103,8 +112,8 @@ class RepositoryContractTests(unittest.TestCase):
 
     def test_non_home_header_aligns_with_menu_and_reduces_content_gap(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
-        self.assertIn(".shell:not(.home-active)>.header{align-items:flex-start;padding-bottom:6px}", card)
-        self.assertIn("@container (max-width:959px){.shell:not(.home-active)>.header{padding-bottom:4px}.shell:not(.home-active)>.header>.tabs-top{margin-bottom:1px}}", card)
+        self.assertIn(".shell:not(.home-active)>.header{align-items:flex-start;padding-bottom:2px}", card)
+        self.assertIn("@container (max-width:959px){.shell:not(.home-active)>.header{padding-bottom:2px}.shell:not(.home-active)>.header>.tabs-top{margin-bottom:0}}", card)
 
     def test_chart_scrubber_shows_full_width_historical_measurements_and_metric_correct_marker(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")

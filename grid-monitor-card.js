@@ -231,7 +231,7 @@
     energy: '<path d="M24 3 8 25h12l-2 20 22-28H27z" fill="currentColor"/>',
     chart: '<path d="M7 40V25h8v15zm13 0V9h8v31zm13 0V18h8v22z" fill="currentColor"/>',
     params: '<path d="M7 11h34M7 24h34M7 37h34" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><circle cx="18" cy="11" r="5" fill="#14243a" stroke="currentColor" stroke-width="3"/><circle cx="31" cy="24" r="5" fill="#14243a" stroke="currentColor" stroke-width="3"/><circle cx="15" cy="37" r="5" fill="#14243a" stroke="currentColor" stroke-width="3"/>',
-    settings: '<path d="M20 4h8l2 6 5 3 6-1 4 7-4 5v6l4 5-4 7-6-1-5 3-2 6h-8l-2-6-5-3-6 1-4-7 4-5v-6l-4-5 4-7 6 1 5-3z" transform="translate(0 -3) scale(.9)" fill="none" stroke="currentColor" stroke-width="3.5"/><circle cx="24" cy="24" r="7" fill="none" stroke="currentColor" stroke-width="3.5"/>',
+    settings: '<path d="M21.2 8.2 L20.4 3.3 L27.6 3.3 L26.8 8.2 L33.2 10.9 L36 6.8 L41.2 12 L37.1 14.8 L39.8 21.2 L44.7 20.4 L44.7 27.6 L39.8 26.8 L37.1 33.2 L41.2 36 L36 41.2 L33.2 37.1 L26.8 39.8 L27.6 44.7 L20.4 44.7 L21.2 39.8 L14.8 37.1 L12 41.2 L6.8 36 L10.9 33.2 L8.2 26.8 L3.3 27.6 L3.3 20.4 L8.2 21.2 L10.9 14.8 L6.8 12 L12 6.8 L14.8 10.9Z M24 17a7 7 0 1 0 0 14 7 7 0 1 0 0-14Z" fill="currentColor" fill-rule="evenodd"/>',
     wifi: '<path d="M5 17a29 29 0 0 1 38 0M11 24a20 20 0 0 1 26 0m-20 7a10 10 0 0 1 14 0m-7 8h.1" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>',
     coin: '<path d="M24 5c-10 0-17 3-17 7s7 7 17 7 17-3 17-7-7-7-17-7Zm-17 7v8c0 4 7 7 17 7s17-3 17-7v-8m-34 8v8c0 4 7 7 17 7s17-3 17-7v-8m-34 8v8c0 4 7 7 17 7s17-3 17-7v-8" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>',
     check: '<path d="m11 25 9 9 18-20" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>',
@@ -2945,9 +2945,11 @@
         @container (max-width:520px){.chart-reading-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.chart-reading{padding:10px}.chart-reading strong{font-size:16px}}
 
         .voltage{padding:5px 12px 4px;justify-content:space-between}
-        .shell:not(.home-active)>.header{align-items:flex-start;padding-bottom:6px}
-        @container (max-width:959px){.shell:not(.home-active)>.header{padding-bottom:4px}.shell:not(.home-active)>.header>.tabs-top{margin-bottom:1px}}
+        .shell:not(.home-active)>.header{align-items:flex-start;padding-bottom:2px}
+        @container (max-width:959px){.shell:not(.home-active)>.header{padding-bottom:2px}.shell:not(.home-active)>.header>.tabs-top{margin-bottom:0}}
         @container (max-width:760px){.voltage{padding:5px 10px 4px}}
+        .action-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
+        @container (max-width:760px){.action-grid{grid-template-columns:repeat(5,minmax(104px,1fr));overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin}}
 
       `;
     }
