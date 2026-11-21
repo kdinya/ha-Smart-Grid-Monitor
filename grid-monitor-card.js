@@ -112,6 +112,15 @@
     frequency: { min: 'frequency_min', max: 'frequency_max', digits: 2 },
     power_factor: { min: 'pf_min', max: 'pf_max', digits: 2 },
   };
+  const METRIC_INFO = {
+    power: { label: 'power', description: 'info_power' },
+    current: { label: 'current', description: 'info_current' },
+    frequency: { label: 'frequency', description: 'info_frequency' },
+    power_factor: { label: 'pf', description: 'info_power_factor' },
+    apparent_power: { label: 'apparent', description: 'info_apparent_power' },
+    reactive_power: { label: 'reactive', description: 'info_reactive_power' },
+    phase_angle: { label: 'phase', description: 'info_phase_angle' },
+  };
 
   // «Мін/макс за добу» з прошивки, які від вибраного моменту рахуються з історії Home Assistant.
   const STATS_OVERRIDES = {
@@ -182,6 +191,14 @@
       dialog_confirm_title: 'Підтвердьте дію', dialog_error_title: 'Перевірте значення', dialog_confirm: 'Виконати', dialog_cancel: 'Скасувати', dialog_close: 'Зрозуміло',
       energy_unit_unsupported: 'Одиниця енергії не підтримується. Графік підтримує Wh, kWh і MWh.',
       energy_max_hour: 'Макс. за годину', energy_max_day: 'Макс. за день',
+      metric_info_button: 'Пояснення показника',
+      info_power: 'Активна потужність, яку вимірює прилад. Вказує на потужність, що передається навантаженню; одиниця — ват (Вт).',
+      info_current: 'Сила електричного струму у вимірюваній лінії. Одиниця — ампер (А).',
+      info_frequency: 'Частота змінної напруги мережі. Вимірюється в герцах (Гц); номінальне значення для мережі України — 50 Гц.',
+      info_power_factor: 'Коефіцієнт потужності — відношення активної потужності до повної. Це безрозмірний показник: значення, ближче до 1, означає ефективніше використання потужності мережі.',
+      info_apparent_power: 'Повна потужність показує загальне електричне навантаження, обчислене за діючими значеннями напруги й струму. Одиниця — вольт-ампер (ВА).',
+      info_reactive_power: 'Реактивна потужність описує обмін енергією між мережею та індуктивними або ємнісними навантаженнями. Вимірюється у варах (вар) і створює додаткове навантаження на мережу.',
+      info_phase_angle: 'Кут зсуву фаз між напругою та струмом, у градусах (°). Він пов’язаний із коефіцієнтом потужності; сам по собі не є значенням потужності чи енергії.',
       scroll_to_top: 'На початок сторінки',
     },
     en: {
@@ -235,6 +252,14 @@
       dialog_confirm_title: 'Confirm action', dialog_error_title: 'Check the value', dialog_confirm: 'Continue', dialog_cancel: 'Cancel', dialog_close: 'Got it',
       energy_unit_unsupported: 'Energy unit is unsupported. The chart supports Wh, kWh, and MWh.',
       energy_max_hour: 'Max per hour', energy_max_day: 'Max per day',
+      metric_info_button: 'Explain this metric',
+      info_power: 'Active power measured by the meter. It indicates the power transferred to the load; measured in watts (W).',
+      info_current: 'Electric current flowing through the measured line; measured in amperes (A).',
+      info_frequency: 'Frequency of the AC mains voltage, measured in hertz (Hz). The nominal mains frequency in Ukraine is 50 Hz.',
+      info_power_factor: 'Power factor is the ratio of active power to apparent power. It is dimensionless; a value closer to 1 means the mains capacity is being used more effectively.',
+      info_apparent_power: 'Apparent power represents the total electrical load, calculated from the RMS voltage and current. Measured in volt-amperes (VA).',
+      info_reactive_power: 'Reactive power describes energy exchanged between the mains and inductive or capacitive loads. Measured in vars (var), it still adds load to the electrical system.',
+      info_phase_angle: 'The phase shift between voltage and current, measured in degrees (°). It is related to power factor; by itself it is not a power or energy value.',
       scroll_to_top: 'Back to top',
     },
   };
@@ -1380,7 +1405,17 @@
       return `${value}${unit ? ` ${unit}` : ''}`;
     }
     _svg(name, extra = '') { return `<svg class="icon ${extra}" viewBox="0 0 48 48" aria-hidden="true">${ICONS[name] || ''}</svg>`; }
-    _detail(key, label, digits = 1) { return `<div class="detail"><span>${this._escape(label)}</span><b data-value-key="${key}" data-value-digits="${digits}">${this._escape(this._formatted(key, digits))}</b></div>`; }
+    _metricInfoButton(key) {
+      const info = METRIC_INFO[key];
+      if (!info) return '';
+      const label = this._t(info.label);
+      const ariaLabel = `${this._t('metric_info_button')}: ${label}`;
+      return `<button type="button" class="metric-info-button" data-metric-info="${key}" aria-label="${this._escape(ariaLabel)}" title="${this._escape(ariaLabel)}"><span aria-hidden="true">i</span></button>`;
+    }
+    _detail(key, label, digits = 1) {
+      const infoButton = this._metricInfoButton(key);
+      return `<div class="detail${infoButton ? ' metric-info-card' : ''}">${infoButton}<span>${this._escape(label)}</span><b data-value-key="${key}" data-value-digits="${digits}">${this._escape(this._formatted(key, digits))}</b></div>`;
+    }
     _row(key, label, icon, digits = 1) { return `<div class="row"><span class="row-label"><span class="row-symbol">${icon}</span>${this._escape(label)}</span><strong data-value-key="${key}" data-value-digits="${digits}">${this._escape(this._formatted(key, digits))}</strong></div>`; }
     _setting(key, label) {
       const entity = this._entity(key);
@@ -1699,7 +1734,7 @@
       const minDigits = range ? (range.minDigits ?? range.digits) : 0;
       const maxDigits = range ? (range.maxDigits ?? range.digits) : 0;
       const rangeHtml = range ? `<div class="metric-range" data-role="metric-range"><span>${this._escape(this._t('stat_min'))} <b data-value-key="${range.min}" data-value-digits="${minDigits}">${this._escape(this._formatted(range.min, minDigits))}</b></span><span>${this._escape(this._t('stat_max'))} <b data-value-key="${range.max}" data-value-digits="${maxDigits}">${this._escape(this._formatted(range.max, maxDigits))}</b></span></div>` : '';
-      return `<div class="card metric ${extraClass}"><div class="metric-icon">${this._svg(icon)}</div><div class="metric-value${value === null ? ' empty' : ''}" data-metric-key="${key}" data-metric-digits="${digits}"><span data-role="metric-number">${display}</span><span class="unit" data-role="metric-unit" style="${unit ? '' : 'display:none'}">${this._escape(unit)}</span></div><div class="metric-label">${this._escape(this._t(key === 'power_factor' ? 'pf' : key))}</div>${rangeHtml}</div>`;
+      return `<div class="card metric ${extraClass}">${this._metricInfoButton(key)}<div class="metric-icon">${this._svg(icon)}</div><div class="metric-value${value === null ? ' empty' : ''}" data-metric-key="${key}" data-metric-digits="${digits}"><span data-role="metric-number">${display}</span><span class="unit" data-role="metric-unit" style="${unit ? '' : 'display:none'}">${this._escape(unit)}</span></div><div class="metric-label">${this._escape(this._t(key === 'power_factor' ? 'pf' : key))}</div>${rangeHtml}</div>`;
     }
 
     _chart() {
@@ -3717,6 +3752,12 @@
         this._finishDialog(dialogAction.dataset.dialogAction === 'confirm' || dialogAction.dataset.dialogAction === 'close');
         return;
       }
+      const infoButton = event.target?.closest?.('[data-metric-info]');
+      if (infoButton) {
+        const info = METRIC_INFO[infoButton.dataset.metricInfo];
+        if (info) this._showDialog({ title: this._t(info.label), message: this._t(info.description), info: true });
+        return;
+      }
       if (!event.target?.closest?.('.chart-date-range')) this._closeChartDateRangePopover();
       const target = event.target?.closest?.('[data-scroll-top], [data-tab], [data-period], [data-energy-period], [data-energy-metric], [data-energy-bar], [data-metric], [data-action], [data-number-save], [data-switch], [data-chart-live], [data-chart-zoom], [data-chart-date-toggle], [data-chart-date-apply], [data-stats-start-apply], [data-stats-start-clear]');
       if (!target) return;
@@ -4106,7 +4147,7 @@
       if (changed.has('two_zone')) this._updateEnergyTwoZone();
     }
 
-    _showDialog({ title, message, confirm = false }) {
+    _showDialog({ title, message, confirm = false, info = false }) {
       if (this._dialogResolver) this._finishDialog(false);
       return new Promise((resolve) => {
         this._dialogResolver = resolve;
@@ -4120,7 +4161,7 @@
         const primaryAction = confirm ? 'confirm' : 'close';
         const primaryLabel = confirm ? this._t('dialog_confirm') : this._t('dialog_close');
         dialog.innerHTML = `<section class="app-dialog" role="dialog" aria-modal="true" aria-labelledby="grid-monitor-dialog-title" aria-describedby="grid-monitor-dialog-message">
-          <div class="dialog-mark" aria-hidden="true">${confirm ? this._svg('gear') : '!'}</div>
+          <div class="dialog-mark" aria-hidden="true">${confirm ? this._svg('gear') : info ? 'i' : '!'}</div>
           <h2 id="grid-monitor-dialog-title">${this._escape(title)}</h2>
           <p id="grid-monitor-dialog-message">${this._escape(message)}</p>
           <div class="dialog-actions">${cancelButton}<button type="button" class="dialog-button primary" data-dialog-action="${primaryAction}">${this._escape(primaryLabel)}</button></div>
@@ -4411,6 +4452,11 @@
         .detail:before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:0 3px 3px 0;background:linear-gradient(#12aaff,#13d5f4);box-shadow:0 0 10px #12aaff80}
         .detail>span,.detail label>span{font-size:13px;color:#9fb7d6;margin-bottom:6px}
         .detail b{font-size:21px;font-weight:750;letter-spacing:-.2px}
+        .metric{position:relative}
+        .metric .metric-info-button,.detail .metric-info-button{position:absolute;top:8px;right:8px;z-index:3;width:28px;height:28px;display:grid;place-items:center;padding:0;border:1px solid #64caff88;border-radius:50%;background:linear-gradient(145deg,#0d5791,#082340);color:#c5efff;font-family:inherit;font-size:15px;font-weight:800;line-height:1;cursor:pointer;box-shadow:0 0 12px #009dff26}
+        .metric .metric-info-button:hover,.detail .metric-info-button:hover{background:linear-gradient(145deg,#0e78bf,#0a3961);color:#fff;border-color:#8edcff}
+        .metric .metric-info-button:focus-visible,.detail .metric-info-button:focus-visible{outline:2px solid #bcecff;outline-offset:2px}
+        .detail.metric-info-card>span{padding-right:34px}
 
         @container (min-width:761px){.metric{min-height:0;padding:12px 10px}.metric-icon{font-size:40px}.metric-icon .icon{width:40px;height:40px}.metric-value{font-size:clamp(30px,3.4cqw,46px);margin:0}.metric-range{margin-top:6px}}
         .metric-range{display:flex;justify-content:center;flex-wrap:wrap;gap:2px 16px;margin-top:8px;color:#9fb7d6;font-size:14px}.metric-range b{color:#e6f0ff;font-size:15px;font-weight:700;margin-left:4px}
