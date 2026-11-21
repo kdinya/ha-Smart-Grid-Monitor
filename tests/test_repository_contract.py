@@ -108,7 +108,9 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("['energy_total', 'energy_metric_energy'], ['cost_total', 'energy_metric_cost']", chart)
         self.assertIn("data-energy-metric=\"${key}\"", chart)
         self.assertIn('data-energy-plot="${metricKey}"', chart)
-        self.assertIn("this._chartSvg(metricKey, this._energyHistory[metricKey], 'energy'", chart)
+        self.assertIn("this._energyBarSvg(metricKey, this._energyHistory[metricKey]", chart)
+        self.assertIn("_energyHistoryBars(history, bounds, range)", card)
+        self.assertIn("class=\"energy-bars\" data-energy-bar-count=\"${bars.length}\"", card)
         self.assertIn("energy_total: { digits: 3, plausible: [0, 1e7], unit: () => 'kWh' }", card)
         self.assertIn("cost_total: { digits: 2, plausible: [0, 1e9], unit: (lang, currency = 'UAH') => (currency === 'UAH' && lang === 'uk' ? 'грн' : currency) }", card)
 
@@ -310,6 +312,8 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("new ResizeObserver(() => this._queueChartMeasure())", card)
         self.assertIn("this._chartW", card)
         self.assertIn("hour12: false", card)
+        self.assertIn("this._activeTab === 'energy' ? '[data-energy-plot]' : '[data-role=\"chart-plot\"]'", card)
+        self.assertIn("if (this._activeTab === 'energy') this._refreshEnergyCharts()", card)
 
     def test_unavailable_values_use_compact_placeholders(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")

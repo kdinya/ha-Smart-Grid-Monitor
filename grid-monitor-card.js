@@ -1088,11 +1088,12 @@
       this._measureQueued = true;
       const run = () => {
         this._measureQueued = false;
-        const plot = this.shadowRoot.querySelector('[data-role="chart-plot"]');
+        const plot = this.shadowRoot.querySelector(this._activeTab === 'energy' ? '[data-energy-plot]' : '[data-role="chart-plot"]');
         const width = plot ? Math.round(plot.clientWidth) : 0;
         if (width > 120 && Math.abs(width - this._chartW) > 6) {
           this._chartW = width;
-          this._refreshChart();
+          if (this._activeTab === 'energy') this._refreshEnergyCharts();
+          else this._refreshChart();
         }
       };
       if (typeof window.requestAnimationFrame === 'function') window.requestAnimationFrame(run);
@@ -2114,11 +2115,14 @@
       const range = isEnergy ? this._energyHistoryRange : this._historyRange;
       const customRange = isEnergy ? this._energyCustomRange : this._historyCustomRange;
       const bounds = isEnergy ? this._energyHistoryBounds() : this._historyBounds();
-      const data = this._chartData(history, metricKey, { range, customRange, bounds, includeCurrent: !isEnergy });
-      const plottedPoints = (data?.series || []).filter((point) => Number.isFinite(point.v) && (isEnergy || !Number.isFinite(this._statsStart) || point.t >= this._statsStart));
+      const energyBars = isEnergy ? this._energyHistoryBars(history, bounds, range) : null;
+      const data = isEnergy ? null : this._chartData(history, metricKey, { range, customRange, bounds, includeCurrent: true });
+      const plottedPoints = isEnergy
+        ? energyBars.map((bar) => ({ t: bar.start, v: bar.value }))
+        : (data?.series || []).filter((point) => Number.isFinite(point.v) && (!Number.isFinite(this._statsStart) || point.t >= this._statsStart));
       const minimumPoints = metricKey === 'power' ? plottedPoints.filter((point) => point.v > 0) : plottedPoints;
-      const historyPoints = (Array.isArray(history) ? history : [])
-        .filter((item) => isEnergy || !Number.isFinite(this._statsStart) || (item.time && item.time.getTime() >= this._statsStart))
+      const historyPoints = isEnergy ? [] : (Array.isArray(history) ? history : [])
+        .filter((item) => !Number.isFinite(this._statsStart) || (item.time && item.time.getTime() >= this._statsStart))
         .filter((item) => Number.isFinite(item.value));
       const fmt = (value) => value.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits });
       const formatMinimum = (value) => {
@@ -2135,23 +2139,9 @@
       const min = minPoint?.v ?? null;
       const max = maxPoint?.v ?? null;
       let avg = null;
-      if (isEnergy && bounds.end > bounds.start) {
-        let weighted = 0;
-        let duration = 0;
-        for (let index = 0; index < historyPoints.length; index += 1) {
-          const point = historyPoints[index];
-          const pointTime = point.time?.getTime?.();
-          const nextTime = historyPoints[index + 1]?.time?.getTime?.() ?? bounds.end;
-          if (!Number.isFinite(pointTime) || !Number.isFinite(nextTime)) continue;
-          const from = Math.max(bounds.start, pointTime);
-          const to = Math.min(bounds.end, nextTime);
-          if (to <= from) continue;
-          const interval = to - from;
-          weighted += point.value * interval;
-          duration += interval;
-        }
-        if (duration > 0) avg = weighted / duration;
-      } else if (historyPoints.length) {
+      if (isEnergy && energyBars.length) {
+        avg = energyBars.reduce((sum, bar) => sum + bar.value, 0) / energyBars.length;
+      } else if (!isEnergy && historyPoints.length) {
         avg = historyPoints.reduce((sum, point) => sum + point.value, 0) / historyPoints.length;
       }
       const unit = metric.unit(this._lang(), this._currencyCode());
@@ -2607,6 +2597,136 @@
       return `<svg class="chart" data-chart-scope="${scope}" data-chart-min="${scale.lo}" data-chart-max="${scale.max}" data-chart-start="${tStart}" data-chart-end="${tEnd}" data-chart-w="${width}" data-chart-x0="${x0}" data-chart-x1="${x1}" data-chart-y0="${y0}" data-chart-y1="${y1}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${this._escape(chartTitle)}"><defs><linearGradient id="${svgId('area')}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#0a96ff" stop-opacity=".5"/><stop offset="1" stop-color="#0a96ff" stop-opacity=".02"/></linearGradient><filter id="${svgId('line-glow')}" x="-5%" y="-30%" width="110%" height="160%"><feGaussianBlur stdDeviation="3"/></filter><clipPath id="${svgId('plot-clip')}"><rect x="${x0}" y="0" width="${x1 - x0}" height="${height}"/></clipPath></defs><g class="chart-grid">${horizontal}${vertical}</g><g class="chart-data" data-role="chart-data" clip-path="url(#${svgId('plot-clip')})"><path d="${area}" fill="url(#${svgId('area')})"/><path d="${line}" class="chart-glow" filter="url(#${svgId('line-glow')})"/><path d="${line}" class="chart-line"/></g><path class="chart-cross" data-role="chart-cross" d="M${last.x.toFixed(1)} ${y0}V${y1}" visibility="hidden"/><circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="6" class="chart-dot" data-role="chart-dot" visibility="${hasCurrent ? 'visible' : 'hidden'}"/><rect x="${tagX.toFixed(1)}" y="${tagY.toFixed(1)}" width="84" height="30" rx="10" class="chart-tag" data-role="chart-tag" visibility="${hasCurrent ? 'visible' : 'hidden'}"/><text x="${(tagX + 42).toFixed(1)}" y="${(tagY + 20).toFixed(1)}" text-anchor="middle" class="chart-tag-text" data-role="chart-tag-text" visibility="${hasCurrent ? 'visible' : 'hidden'}">${this._escape(latest)}</text><text x="${(tagX + 42).toFixed(1)}" y="${(tagY + 37).toFixed(1)}" text-anchor="middle" class="chart-tag-sub" data-role="chart-tag-sub" visibility="hidden"></text></svg>`;
     }
 
+    _energyHistoryBars(history, bounds = this._energyHistoryBounds(), range = this._energyHistoryRange) {
+      if (!Number.isFinite(bounds?.start) || !Number.isFinite(bounds?.end) || bounds.end <= bounds.start || !Array.isArray(history) || history.length < 2) return [];
+      const daily = range === 'week' || range === 'month' || range === 'custom' && bounds.end - bounds.start >= 24 * 3600e3;
+      const bins = [];
+      if (range === 'hour') {
+        const startDate = new Date(bounds.start);
+        const endDate = new Date(bounds.end);
+        const timeFormat = { hour: '2-digit', minute: '2-digit', hour12: false };
+        bins.push({
+          start: bounds.start,
+          end: bounds.end,
+          value: 0,
+          label: startDate.toLocaleTimeString(this._locale(), { hour: '2-digit', hour12: false }),
+          fullLabel: `${startDate.toLocaleString(this._locale(), { month: 'short', day: '2-digit', ...timeFormat })}–${endDate.toLocaleString(this._locale(), { month: 'short', day: '2-digit', ...timeFormat })}`,
+        });
+      } else {
+        let cursor = bounds.start;
+        while (cursor < bounds.end && bins.length < 10000) {
+          let next;
+          if (daily) {
+            const boundary = new Date(cursor);
+            boundary.setHours(0, 0, 0, 0);
+            boundary.setDate(boundary.getDate() + 1);
+            next = boundary.getTime();
+          } else {
+            const boundary = new Date(cursor);
+            boundary.setMinutes(0, 0, 0);
+            next = boundary.getTime() + 3600e3;
+          }
+          if (next <= cursor) next = cursor + (daily ? 24 * 3600e3 : 3600e3);
+          const stop = Math.min(next, bounds.end);
+          const date = new Date(cursor);
+          const shortLabel = daily
+            ? date.toLocaleDateString(this._locale(), range === 'week' ? { weekday: 'short', day: '2-digit' } : range === 'month' ? { day: '2-digit' } : { day: '2-digit', month: '2-digit' })
+            : date.toLocaleTimeString(this._locale(), { hour: '2-digit', hour12: false });
+          const fullLabel = daily
+            ? date.toLocaleDateString(this._locale(), { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
+            : `${date.toLocaleTimeString(this._locale(), { hour: '2-digit', minute: '2-digit', hour12: false })}–${new Date(stop).toLocaleTimeString(this._locale(), { hour: '2-digit', minute: '2-digit', hour12: false })}`;
+          bins.push({ start: cursor, end: stop, value: 0, label: shortLabel, fullLabel });
+          cursor = stop;
+        }
+      }
+      const points = history
+        .filter((point) => point?.time && Number.isFinite(point.time.getTime()) && Number.isFinite(point.value))
+        .slice()
+        .sort((a, b) => a.time.getTime() - b.time.getTime());
+      const binAt = (timestamp) => {
+        const sampleTime = Math.max(bounds.start, Math.min(timestamp, bounds.end - 1));
+        return bins.find((bin) => sampleTime >= bin.start && sampleTime < bin.end);
+      };
+      for (let index = 1; index < points.length; index += 1) {
+        const previous = points[index - 1];
+        const current = points[index];
+        const delta = current.value - previous.value;
+        if (!(delta > 0)) continue;
+        const from = Math.max(bounds.start, previous.time.getTime());
+        const to = Math.min(bounds.end, current.time.getTime());
+        if (to <= from) {
+          const bin = binAt(current.time.getTime());
+          if (bin) bin.value += delta;
+          continue;
+        }
+        const duration = to - from;
+        for (const bin of bins) {
+          const overlap = Math.max(0, Math.min(to, bin.end) - Math.max(from, bin.start));
+          if (overlap > 0) bin.value += delta * (overlap / duration);
+        }
+      }
+      return bins;
+    }
+
+    _energyBarScale(maximum, metricKey) {
+      if (!(maximum > 0) || !Number.isFinite(maximum)) {
+        const step = metricKey === 'energy_total' ? 0.1 : 1;
+        return { step, count: 4, max: step * 4 };
+      }
+      const target = maximum * 1.08;
+      const rawStep = target / 4;
+      const magnitude = 10 ** Math.floor(Math.log10(rawStep));
+      const step = [1, 2, 2.5, 5, 10].map((factor) => factor * magnitude).find((value) => value >= rawStep) || magnitude * 10;
+      const count = Math.max(1, Math.ceil(target / step));
+      return { step, count, max: count * step };
+    }
+
+    _energyBarSvg(metricKey = this._energyChartMetric || 'energy_total', history = this._energyHistory[metricKey], loading = this._energyHistoryLoading[metricKey]) {
+      if (loading && !history?.length) return `<div class="chart-empty">${this._escape(this._t('loading'))}</div>`;
+      const range = this._energyHistoryRange;
+      const bounds = this._energyHistoryBounds();
+      const bars = this._energyHistoryBars(history, bounds, range);
+      if (!bars.length) return `<div class="chart-empty">${this._escape(this._t('no_history'))}</div>`;
+      const metric = CHART_METRICS[metricKey];
+      const unit = metric.unit(this._lang(), this._currencyCode());
+      const maximum = Math.max(0, ...bars.map((bar) => bar.value));
+      const scale = this._energyBarScale(maximum, metricKey);
+      const width = Math.max(280, Math.round(this._chartW || 985));
+      const narrow = width < 520;
+      const height = narrow ? 200 : 228;
+      const x0 = narrow ? 56 : 70;
+      const x1 = width - (narrow ? 14 : 20);
+      const y0 = 26;
+      const y1 = height - 30;
+      const plotWidth = x1 - x0;
+      const slot = plotWidth / bars.length;
+      const barWidth = Math.max(2, Math.min(24, slot * 0.68));
+      const Y = (value) => y1 - (Math.max(0, Math.min(scale.max, value)) / scale.max) * (y1 - y0);
+      const horizontal = Array.from({ length: scale.count + 1 }, (_, index) => {
+        const tick = index * scale.step;
+        const y = Y(tick);
+        const text = tick.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits });
+        return `<path d="M${x0} ${y.toFixed(1)}H${x1}"/><text x="${x0 - 10}" y="${(y + 4).toFixed(1)}" text-anchor="end">${this._escape(text)}${index === scale.count ? ` ${this._escape(unit)}` : ''}</text>`;
+      }).join('');
+      const labelStep = Math.max(1, Math.ceil(bars.length / (narrow ? 6 : 12)));
+      const vertical = bars.map((bar, index) => {
+        const center = x0 + (index + 0.5) * slot;
+        const show = index === 0 || index === bars.length - 1 || index % labelStep === 0;
+        return show ? `<text x="${center.toFixed(1)}" y="${height - 8}" text-anchor="middle">${this._escape(bar.label)}</text>` : '';
+      }).join('');
+      const fill = metricKey === 'cost_total' ? '#f5b94c' : '#16b5ff';
+      const rects = bars.map((bar, index) => {
+        const x = x0 + index * slot + (slot - barWidth) / 2;
+        const y = Y(bar.value);
+        const rectHeight = Math.max(1, y1 - y);
+        const value = bar.value.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits });
+        const aria = `${bar.fullLabel}: ${value} ${unit}`;
+        return `<rect x="${x.toFixed(1)}" y="${(y1 - rectHeight).toFixed(1)}" width="${barWidth.toFixed(1)}" height="${rectHeight.toFixed(1)}" rx="3" fill="${fill}" data-energy-bar="${index}" data-energy-value="${bar.value}" aria-label="${this._escape(aria)}"><title>${this._escape(aria)}</title></rect>`;
+      }).join('');
+      const title = metricKey === 'energy_total' ? this._t('energy_chart_title') : this._t('cost_chart_title');
+      return `<svg class="energy-bars" data-energy-bar-count="${bars.length}" data-energy-start="${bounds.start}" data-energy-end="${bounds.end}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${this._escape(title)}" style="width:100%;height:auto;display:block;overflow:visible"><g class="chart-grid">${horizontal}${vertical}</g><g class="energy-bars-data">${rects}</g></svg>`;
+    }
+
     _setChartMarker(chart, x, y, text, sub = '') {
       const width = Number(chart.dataset.chartW) || 1000;
       const left = Number(chart.dataset.chartX0) || 0;
@@ -2865,10 +2985,19 @@
       }
     }
 
+    _energyHistoryUnitFactor(metricKey) {
+      if (metricKey !== 'energy_total') return 1;
+      const unit = String(this._state?.(metricKey)?.attributes?.unit_of_measurement || '').trim().toLowerCase();
+      if (unit === 'wh') return 0.001;
+      if (unit === 'mwh') return 1000;
+      return 1;
+    }
+
     _parseCumulativeHistory(response, metricKey, bounds, currentValue) {
       const [minimum, maximum] = CHART_METRICS[metricKey].plausible;
+      const unitFactor = this._energyHistoryUnitFactor(metricKey);
       const raw = (Array.isArray(response?.[0]) ? response[0] : [])
-        .map((item) => ({ time: new Date(item.last_changed || item.last_updated), value: Number(item.state) }))
+        .map((item) => ({ time: new Date(item.last_changed || item.last_updated), value: Number(item.state) * unitFactor }))
         .filter((item) => Number.isFinite(item.time.getTime()) && Number.isFinite(item.value) && item.value >= minimum && item.value <= maximum)
         .sort((a, b) => a.time - b.time);
       const start = bounds.start;
@@ -2887,9 +3016,10 @@
         result.push({ time: new Date(lastTime), value: cumulative });
       }
       const currentStateTime = Date.parse(this._state(metricKey)?.last_changed || '');
-      if (Number.isFinite(currentValue) && currentValue >= minimum && currentValue <= maximum && Number.isFinite(currentStateTime) && currentStateTime <= end) {
-        if (previous === undefined) previous = currentValue;
-        else cumulative += currentValue >= previous ? currentValue - previous : currentValue;
+      const normalizedCurrentValue = currentValue * unitFactor;
+      if (Number.isFinite(normalizedCurrentValue) && normalizedCurrentValue >= minimum * unitFactor && normalizedCurrentValue <= maximum * unitFactor && Number.isFinite(currentStateTime) && currentStateTime <= end) {
+        if (previous === undefined) previous = normalizedCurrentValue;
+        else cumulative += normalizedCurrentValue >= previous ? normalizedCurrentValue - previous : normalizedCurrentValue;
       }
       if (lastTime < end) result.push({ time: new Date(end), value: cumulative });
       else if (lastTime === end) result[result.length - 1] = { time: new Date(end), value: cumulative };
@@ -2928,7 +3058,7 @@
       const plot = this.shadowRoot.querySelector('[data-energy-plot]');
       if (plot) {
         plot.dataset.energyPlot = metricKey;
-        plot.innerHTML = this._chartSvg(metricKey, this._energyHistory[metricKey], 'energy', this._energyHistoryLoading[metricKey]);
+        plot.innerHTML = this._energyBarSvg(metricKey, this._energyHistory[metricKey], this._energyHistoryLoading[metricKey]);
       }
       const stats = this.shadowRoot.querySelector('[data-energy-stats]');
       if (stats) {
@@ -3213,7 +3343,7 @@
 
     _energyChart(metricKey = this._energyChartMetric || 'energy_total') {
       const title = metricKey === 'energy_total' ? 'energy_chart_title' : 'cost_chart_title';
-      return `<section class="card chart-card energy-history-card"><div class="chart-head"><h2><span class="chart-icon">${this._svg('chart')}</span><span data-energy-chart-title>${this._escape(this._t(title))}</span></h2>${this._energyChartControlsHtml()}</div><div class="chart-stats" data-energy-stats="${metricKey}">${this._chartStatsHtml(metricKey, this._energyHistory[metricKey], 'energy')}</div><div class="chart-plot energy-chart-plot" data-energy-plot="${metricKey}">${this._chartSvg(metricKey, this._energyHistory[metricKey], 'energy', this._energyHistoryLoading[metricKey])}</div></section>`;
+      return `<section class="card chart-card energy-history-card"><div class="chart-head"><h2><span class="chart-icon">${this._svg('chart')}</span><span data-energy-chart-title>${this._escape(this._t(title))}</span></h2>${this._energyChartControlsHtml()}</div><div class="chart-stats" data-energy-stats="${metricKey}">${this._chartStatsHtml(metricKey, this._energyHistory[metricKey], 'energy')}</div><div class="chart-plot energy-chart-plot" data-energy-plot="${metricKey}">${this._energyBarSvg(metricKey, this._energyHistory[metricKey], this._energyHistoryLoading[metricKey])}</div></section>`;
     }
 
     _energyCoinArt() {
