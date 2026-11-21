@@ -94,6 +94,7 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn(".shell:not(.home-active)>.header>.tabs-top .tab{padding:15px 8px}", card)
         self.assertIn(".shell:not(.home-active)>.page-layout{display:block;margin-top:-40px}", card)
         self.assertEqual(card.count(".shell:not(.home-active)>.page-layout{display:block;margin-top:-40px}"), 2)
+        self.assertIn(".shell:not(.home-active)>.header{align-items:flex-start;padding-bottom:1px;z-index:2}", card)
         self.assertIn(".shell:not(.home-active)>.page-layout>.tabs-side{display:none}", card)
 
     def test_energy_tab_has_one_history_chart_with_energy_cost_toggle(self):
@@ -244,7 +245,7 @@ class RepositoryContractTests(unittest.TestCase):
 
     def test_non_home_header_aligns_with_menu_and_reduces_content_gap(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
-        self.assertIn(".shell:not(.home-active)>.header{align-items:flex-start;padding-bottom:1px}", card)
+        self.assertIn(".shell:not(.home-active)>.header{align-items:flex-start;padding-bottom:1px;z-index:2}", card)
         self.assertIn("@container (max-width:959px){.shell:not(.home-active)>.header{padding-bottom:1px}.shell:not(.home-active)>.header>.tabs-top{margin-bottom:0}}", card)
         self.assertIn(".shell:not(.home-active)>.header>.tabs-top{margin:0 0 4px}", card)
 
