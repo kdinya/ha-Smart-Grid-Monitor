@@ -231,7 +231,7 @@
     energy: '<path d="M24 3 8 25h12l-2 20 22-28H27z" fill="currentColor"/>',
     chart: '<path d="M7 40V25h8v15zm13 0V9h8v31zm13 0V18h8v22z" fill="currentColor"/>',
     params: '<path d="M7 11h34M7 24h34M7 37h34" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><circle cx="18" cy="11" r="5" fill="#14243a" stroke="currentColor" stroke-width="3"/><circle cx="31" cy="24" r="5" fill="#14243a" stroke="currentColor" stroke-width="3"/><circle cx="15" cy="37" r="5" fill="#14243a" stroke="currentColor" stroke-width="3"/>',
-    settings: '<path d="M20 4h8l2 6 5 3 6-1 4 7-4 5v6l4 5-4 7-6-1-5 3-2 6h-8l-2-6-5-3-6 1-4-7 4-5v-6l-4-5 4-7 6 1 5-3z" transform="translate(0 -3) scale(.9)" fill="none" stroke="currentColor" stroke-width="3.5"/><circle cx="24" cy="24" r="7" fill="none" stroke="currentColor" stroke-width="3.5"/>',
+    settings: '<path d="M21.2 8.2 L20.4 3.3 L27.6 3.3 L26.8 8.2 L33.2 10.9 L36 6.8 L41.2 12 L37.1 14.8 L39.8 21.2 L44.7 20.4 L44.7 27.6 L39.8 26.8 L37.1 33.2 L41.2 36 L36 41.2 L33.2 37.1 L26.8 39.8 L27.6 44.7 L20.4 44.7 L21.2 39.8 L14.8 37.1 L12 41.2 L6.8 36 L10.9 33.2 L8.2 26.8 L3.3 27.6 L3.3 20.4 L8.2 21.2 L10.9 14.8 L6.8 12 L12 6.8 L14.8 10.9Z M24 17a7 7 0 1 0 0 14 7 7 0 1 0 0-14Z" fill="currentColor" fill-rule="evenodd"/>',
     wifi: '<path d="M5 17a29 29 0 0 1 38 0M11 24a20 20 0 0 1 26 0m-20 7a10 10 0 0 1 14 0m-7 8h.1" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>',
     coin: '<path d="M24 5c-10 0-17 3-17 7s7 7 17 7 17-3 17-7-7-7-17-7Zm-17 7v8c0 4 7 7 17 7s17-3 17-7v-8m-34 8v8c0 4 7 7 17 7s17-3 17-7v-8m-34 8v8c0 4 7 7 17 7s17-3 17-7v-8" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>',
     check: '<path d="m11 25 9 9 18-20" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>',
@@ -1156,9 +1156,11 @@
           </div>
         </div>
         <div class="bottom-status">
-          <div class="card info"><span class="symbol green">${this._svg('home')}</span><div><div class="small">${this._escape(this._t('pzem_link'))}</div><strong data-role="home-mains" class="${status.pzemOnline ? 'good' : ''}">${this._escape(mainsText)}</strong></div></div>
+          <div class="card info info-system"><span class="symbol green">${this._svg('plug')}</span><div class="info-system-copy">
+            <div class="info-system-section"><div class="small">${this._escape(this._t('pzem_link'))}</div><strong data-role="home-mains" class="${status.pzemOnline ? 'good' : ''}">${this._escape(mainsText)}</strong></div>
+            <div class="info-system-section"><div class="small">${this._escape(this._t('esp_power_connection'))}</div><strong data-role="esp-power-label">${this._escape(espPower.label)}</strong><div class="small info-system-note" data-role="esp-power-note">${this._escape(espPower.note)}</div></div>
+          </div></div>
           <div class="card info"><span class="symbol blue">${this._svg('plug')}</span><div><div class="small">${this._escape(this._t('source'))}</div><strong data-role="home-source">${this._escape(sourceText)}</strong></div></div>
-          <div class="card info"><span class="symbol blue">${this._svg('plug')}</span><div><div class="small">${this._escape(this._t('esp_power_connection'))}</div><strong data-role="esp-power-label">${this._escape(espPower.label)}</strong><div class="small" data-role="esp-power-note">${this._escape(espPower.note)}</div></div></div>
           <div class="card info"><span class="symbol green">${this._svg('shield')}</span><div><div class="small">${this._escape(this._t('voltage_state'))}</div><strong data-role="home-voltage-quality" class="${status.pzemOnline && !status.alarm && !status.qualityUnknown ? 'good' : status.alarm ? 'alarm' : ''}">${this._escape(voltageQuality)}</strong></div></div>
           <div class="card info"><span class="symbol amber">${this._svg('coin')}</span><div><div class="small">${this._escape(this._t('today_consumption'))}</div><strong data-value-key="energy_today" data-value-digits="2">${this._escape(energy)}</strong><div class="small cost-line">≈ <span data-value-key="cost_today" data-value-digits="2">${this._escape(cost)}</span></div></div></div>
         </div>
@@ -2696,7 +2698,7 @@
         .chart-head .periods+.periods{margin-left:0}.chart-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:4px 0 10px}.chart-stats>div{background:#13243a;border:1px solid #2b4562;border-radius:14px;padding:9px 12px;min-width:0}.chart-stats span{display:block;color:#9fb5d1;font-size:13px}.chart-stats b{display:block;font-size:19px;margin-top:3px;overflow-wrap:anywhere}
         .voltage-brand{display:flex;align-items:flex-start;gap:10px;align-self:flex-start;width:100%;min-width:0;max-width:100%;margin-bottom:0;flex-wrap:wrap}.voltage-brand .logo{flex:none}.voltage-brand .brand{flex:1 1 auto}.voltage-brand .brand h1{margin:0 0 2px;line-height:1.15;font-size:clamp(20px,2.6cqw,32px)}.voltage-brand .brand p{font-size:clamp(13px,1.5cqw,16px);line-height:1.2}.voltage-brand .home-status{flex:none;align-self:flex-start;gap:8px;margin-left:auto;max-width:100%}.voltage-brand .home-status .connection small{margin-top:2px}.voltage .voltage-gauge{margin:0}.main-right{display:flex;flex-direction:column;gap:10px;min-width:0}.main-right>.metrics{flex:1}
         @container (min-width:960px){.shell.home-active>.tabs-top{display:none}.shell:not(.home-active)>.tabs-top{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:45%;min-width:360px;max-width:560px;margin:0 0 14px auto;padding:8px;gap:6px}.shell:not(.home-active)>.tabs-top .tab{padding:15px 8px}.shell:not(.home-active)>.page-layout{display:block}.shell:not(.home-active)>.page-layout>.tabs-side{display:none}.home-view .main-grid{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);grid-template-rows:auto;align-items:stretch}.home-view .main-grid>.voltage{grid-column:1;grid-row:1}.home-view .main-grid>.main-right{grid-column:2;grid-row:1}.home-view .main-right>.tabs-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:0;align-self:stretch;width:100%}}
-        @container (max-width:959px){.home-view .main-grid{grid-template-columns:minmax(0,1fr);align-items:start}.home-view .main-right{display:contents}.home-view .main-right>.tabs-side{display:none}.home-view .main-right>.metrics{grid-column:1;grid-row:1}.home-view .main-grid>.voltage{grid-column:1;grid-row:2}.shell:not(.home-active)>.tabs-top{display:grid}.shell:not(.home-active)>.page-layout{display:block}.shell:not(.home-active)>.page-layout>.tabs-side{display:none}}
+        @container (max-width:959px){.home-view .main-grid{grid-template-columns:minmax(0,1fr);align-items:start}.home-view .main-right{display:contents}.home-view .main-right>.tabs-side{display:none}.home-view .main-grid>.voltage{grid-column:1;grid-row:1}.home-view .main-right>.metrics{grid-column:1;grid-row:2}.shell:not(.home-active)>.tabs-top{display:grid}.shell:not(.home-active)>.page-layout{display:block}.shell:not(.home-active)>.page-layout>.tabs-side{display:none}}
         @container (max-width:760px){.shell{padding:12px}.header{gap:11px;padding:5px 2px 14px}.logo{width:58px;height:58px;border-radius:17px}.logo .icon{width:38px;height:38px}.headright{gap:8px}.connection strong{font-size:14px}.connection small{font-size:10px}.tabs{margin-bottom:12px}.tab{gap:5px;padding:12px 3px;font-size:12px}.tab .tab-icon{font-size:19px}.tab .icon{width:20px;height:20px}.main-grid{grid-template-columns:1fr;gap:10px}.voltage{min-height:300px}.voltage-gauge{width:min(100%,420px)}.metrics{gap:10px}.metric{min-height:135px}.metric-icon .icon{width:38px;height:38px}.metric-label{font-size:15px}.chart-card{padding:13px 11px}.chart-head h2{font-size:19px}.periods{width:100%;margin:0}.period-button{flex:1;padding:8px 4px;font-size:13px}.bottom-status{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.info{min-height:100px;padding:12px 8px}.info .symbol .icon{width:30px;height:30px}.info .small{font-size:13px}.info strong{font-size:16px}.banner{padding:14px;min-height:70px}.banner-check{width:38px;height:38px}.banner-check .icon{width:28px;height:28px}.house-art{width:80px}.detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.detail-panel{padding:16px}.detail-panel h2{font-size:22px}.action-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
         @container (max-width:420px){.connection small{max-width:105px}.tab{font-size:11px}.tab .tab-icon{display:none}.metric{min-height:122px;padding:12px 8px}.metric-value{font-size:clamp(25px,8cqw,34px)}.info{gap:8px}.info .symbol .icon{width:26px;height:26px}.info .small{font-size:12px}.info strong{font-size:14px}.detail-grid{grid-template-columns:1fr}.setting{align-items:stretch}}
         /* Premium instrument finish: layered glass, metal highlights and soft depth. */
@@ -2799,12 +2801,6 @@
         .info .small{font-size:13px;line-height:1.3;color:#9fb7d6}
         .info strong{font-size:17px;line-height:1.25;margin-top:4px;overflow-wrap:break-word;word-break:normal;hyphens:auto}
         .info .cost-line{font-size:13px;color:#9fb7d6;margin-top:4px}
-        .info:nth-child(3){grid-column:1/-1;order:9;padding:12px 18px}
-        .info:nth-child(3) .symbol{width:44px;height:44px;border-radius:14px}
-        .info:nth-child(3) .symbol .icon{width:24px;height:24px}
-        .info:nth-child(3)>div{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 14px}
-        .info:nth-child(3) .small:first-child{flex:none}
-        .info:nth-child(3) strong{margin-top:0}
 
         .banner{margin-top:16px;padding:12px 22px;min-height:84px;gap:16px}
         .banner strong{font-size:clamp(16px,1.9cqw,22px);font-weight:750}
@@ -2854,8 +2850,6 @@
           .info .symbol{width:44px;height:44px;border-radius:14px}
           .info .symbol .icon{width:24px;height:24px}
           .info strong{font-size:16px}
-          .info:nth-child(3){flex-direction:row;align-items:center;gap:12px}
-          .info:nth-child(3)>div{display:block}
           .banner{padding:12px 14px;min-height:76px;gap:12px}
           .banner strong{max-width:none}
           .house-art{width:88px;margin:-2px -2px -6px auto}
@@ -2945,9 +2939,152 @@
         @container (max-width:520px){.chart-reading-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.chart-reading{padding:10px}.chart-reading strong{font-size:16px}}
 
         .voltage{padding:5px 12px 4px;justify-content:space-between}
-        .shell:not(.home-active)>.header{align-items:flex-start;padding-bottom:6px}
-        @container (max-width:959px){.shell:not(.home-active)>.header{padding-bottom:4px}.shell:not(.home-active)>.header>.tabs-top{margin-bottom:1px}}
+        .shell:not(.home-active)>.header{align-items:flex-start;padding-bottom:2px}
+        @container (max-width:959px){.shell:not(.home-active)>.header{padding-bottom:2px}.shell:not(.home-active)>.header>.tabs-top{margin-bottom:0}}
         @container (max-width:760px){.voltage{padding:5px 10px 4px}}
+        .voltage-brand,.voltage-gauge,.state-indicator{transform:translateY(-4px)}
+        .action-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
+        @container (max-width:760px){.action-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;overflow:visible}.action-button{min-height:72px;padding:10px 8px;font-size:12px}.action-grid .action-button:nth-child(5){grid-column:1/-1}}
+
+        /* Mobile polish: readable layouts, touch-sized controls, and no sideways scrolling. */
+        @container (max-width:760px){
+          .shell{padding:10px;border-radius:22px}
+          .header{gap:9px;padding:4px 2px 10px}
+          .shell.home-active>.tabs-top{margin:0 0 10px}
+          .shell:not(.home-active)>.header>.tabs-top{margin:0 0 8px}
+          .tabs{gap:4px;padding:4px;margin-bottom:10px;border-radius:17px}
+          .tab{min-height:44px;gap:4px;padding:8px 3px;font-size:12px;border-radius:13px}
+          .home-view .main-grid{grid-template-columns:minmax(0,1fr);gap:10px}
+          .home-view .main-grid>.voltage{grid-column:1;grid-row:1}
+          .home-view .main-right>.metrics{grid-column:1;grid-row:2}
+          .voltage{min-height:0;padding:4px 10px 6px}
+          .voltage-brand{display:grid;grid-template-columns:50px minmax(0,1fr) auto;align-items:center;gap:8px;flex-wrap:nowrap}
+          .voltage-brand .logo{width:50px;height:50px;border-radius:15px}
+          .voltage-brand .logo .icon{width:32px;height:32px}
+          .voltage-brand .brand{min-width:0}
+          .voltage-brand .brand h1{font-size:clamp(17px,4.8cqw,22px);letter-spacing:-.4px}
+          .voltage-brand .brand p{font-size:clamp(10px,3cqw,12px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+          .voltage-brand .home-status{max-width:90px;min-width:0}
+          .voltage-brand .home-status .connection{text-align:right;white-space:normal}
+          .voltage-brand .home-status .connection strong{font-size:12px}
+          .voltage-brand .home-status .connection small{max-width:90px;font-size:9px;line-height:1.2;overflow-wrap:anywhere}
+          .voltage-gauge{width:min(100%,410px);margin:-7px 0 -4px;transform:translateY(-4px)}
+          .state-indicator{margin-top:-7px;padding:5px 14px 5px 10px;font-size:18px;transform:translateY(-4px)}
+          .state-indicator .check-mark{width:27px;height:27px}
+          .state-indicator .check-mark .icon{width:19px;height:19px}
+          .metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+          .metric{min-height:122px;padding:14px 8px;border-radius:18px}
+          .metric-icon .icon{width:34px;height:34px}
+          .metric-value{font-size:clamp(24px,7cqw,32px);gap:.16em}
+          .metric-label{font-size:13px}
+          .bottom-status{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:12px}
+          .info{min-height:106px;flex-direction:row;align-items:flex-start;justify-content:flex-start;gap:9px;padding:12px 10px;border-radius:18px}
+          .info .symbol{width:36px;height:36px;border-radius:12px}
+          .info .symbol .icon{width:21px;height:21px}
+          .info .small{font-size:11px;line-height:1.25}
+          .info strong{font-size:14px;line-height:1.25}
+          .info-system{grid-column:1/-1;min-height:0;align-items:flex-start}
+          .info-system .symbol{width:38px;height:38px}
+          .info-system-copy{flex:1;min-width:0}
+          .info-system-section+.info-system-section{margin-top:9px;padding-top:8px;border-top:1px solid #ffffff14}
+          .info-system-section strong{margin-top:3px}
+          .info-system-section .info-system-note{margin-top:3px;font-size:11px;line-height:1.3}
+          .banner{margin-top:12px;padding:12px 14px;min-height:68px;gap:10px}
+          .banner-check{width:34px;height:34px}
+          .banner-check .icon{width:25px;height:25px}
+          .banner strong{flex:1;min-width:0;max-width:none;font-size:clamp(14px,4cqw,17px);line-height:1.3}
+          .house-art{width:64px;max-width:20%;margin:0 -2px 0 auto}
+          .chart-card{margin-top:12px;padding:14px 12px 11px;border-radius:19px}
+          .chart-head{gap:8px}
+          .chart-head h2{font-size:18px}
+          .chart-head h2 .chart-icon .icon{width:23px;height:23px}
+          .periods{width:100%;margin:0;justify-content:stretch}
+          .period-button{flex:1;min-width:0;min-height:42px;padding:8px 4px;font-size:12px}
+          .chart-scrubber{margin-top:6px;gap:6px}
+          .chart-scrubber input[type=range]{min-height:30px}
+          .chart-readings{margin-top:8px;padding-top:10px}
+          .chart-readings-head h3{font-size:14px}
+          .chart-reading-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+          .chart-reading{padding:9px;border-radius:12px}
+          .chart-reading span{font-size:11px}
+          .chart-reading strong{font-size:14px}
+          .chart-stats{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+          .chart-stats>div{padding:8px;border-radius:11px}
+          .chart-stats span{font-size:11px}
+          .chart-stats b{font-size:15px}
+          .detail-panel{padding:18px 14px;border-radius:20px}
+          .detail-panel h2{font-size:21px;margin-bottom:14px}
+          .detail-panel h2.subheading{margin:22px 0 12px;font-size:12px}
+          .detail-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+          .detail{padding:12px 11px 12px 15px;border-radius:14px}
+          .detail>span,.detail label>span{font-size:12px}
+          .detail b{font-size:18px}
+          .settings-grid{grid-template-columns:1fr}
+          .setting{flex-direction:column;align-items:stretch;gap:8px}
+          .setting label,.setting-input{width:100%}
+          .setting-input input{min-height:44px}
+          .save-button{min-height:44px;width:100%}
+          .switch-button{min-height:46px}
+          .settings-hero{display:grid;grid-template-columns:46px minmax(0,1fr);gap:8px 10px;padding:12px;border-radius:17px}
+          .chip-art{width:46px;height:46px;grid-row:span 2}
+          .device-copy strong{font-size:14px}
+          .device-copy span{font-size:11px}
+          .device-status{grid-column:2;margin-left:0;font-size:11px}
+          .energy-hero{grid-template-columns:1fr;gap:10px}
+          .energy-visual{min-height:138px;padding:16px}
+          .energy-visual .hero-number{font-size:clamp(25px,7cqw,34px);max-width:76%}
+          .energy-object{width:65px;height:65px}
+          .energy-visual-grid{grid-template-columns:1fr;gap:10px}
+          .visual-card{padding:14px}
+          .bar-row{grid-template-columns:48px minmax(30px,1fr) minmax(70px,auto);gap:8px}
+          .action-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;overflow:visible}
+          .action-button{min-height:72px;padding:10px 8px;font-size:12px}
+          .action-grid .action-button:nth-child(5){grid-column:1/-1}
+          .footer{margin-top:12px;font-size:10px;flex-wrap:wrap}
+        }
+        @container (max-width:420px){
+          .header .logo{width:46px;height:46px;border-radius:14px}
+          .header .logo .icon{width:30px;height:30px}
+          .brand h1{font-size:clamp(17px,5cqw,21px)}
+          .brand p{font-size:11px}
+          .voltage-brand{grid-template-columns:44px minmax(0,1fr) auto;gap:7px}
+          .voltage-brand .logo{width:44px;height:44px}
+          .voltage-brand .logo .icon{width:29px;height:29px}
+          .voltage-brand .brand h1{font-size:clamp(16px,4.6cqw,19px)}
+          .voltage-brand .brand p{font-size:10px}
+          .voltage-brand .home-status{max-width:76px}
+          .voltage-brand .home-status .connection strong{font-size:11px}
+          .voltage-brand .home-status .connection small{font-size:8.5px}
+          .tab{font-size:11px}
+          .metric{min-height:112px;padding:12px 7px}
+          .metric-value{font-size:clamp(22px,7.4cqw,29px)}
+          .metric-icon .icon{width:30px;height:30px}
+          .info{padding:10px 9px;gap:8px}
+          .info .symbol{width:32px;height:32px}
+          .info .symbol .icon{width:19px;height:19px}
+          .info strong{font-size:13px}
+          .info-system{padding:11px}
+          .detail-panel{padding:16px 11px}
+          .detail-grid{gap:8px}
+          .detail{padding:11px 9px 11px 13px}
+          .detail>span,.detail label>span{font-size:11px}
+          .detail b{font-size:16px}
+          .range-card{padding:12px 11px}
+          .chart-reading-grid{gap:7px}
+          .chart-reading strong{font-size:13px}
+          .action-button{min-height:68px;font-size:11.5px}
+          .banner{padding:11px 10px}
+          .banner-check{width:31px;height:31px}
+          .house-art{width:52px}
+        }
+        @container (max-width:360px){
+          .bottom-status{grid-template-columns:1fr}
+          .info-system{grid-column:auto}
+          .detail-grid:not(.settings-grid){grid-template-columns:1fr}
+          .banner .house-art{display:none}
+          .tabs{gap:2px;padding:3px}
+          .tab{padding:8px 1px;font-size:10px}
+        }
 
       `;
     }

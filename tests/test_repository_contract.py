@@ -77,8 +77,8 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("<div class=\"headright home-status\">", card)
         self.assertNotIn('data-role="wifi-icon"', card)
         self.assertNotIn("_updateWifiTitle", card)
-        last_gauge_rule = card[card.rfind(".voltage-gauge{"):].split("}", 1)[0]
-        self.assertIn("width:min(110%,594px)", last_gauge_rule)
+        self.assertIn(".voltage-gauge{width:min(110%,594px);margin:-4px 0 0}", card)
+        self.assertIn(".voltage-gauge{width:min(100%,410px);margin:-7px 0 -4px;transform:translateY(-4px)}", card)
 
     def test_other_pages_keep_full_width_content_below_the_top_right_menu(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
@@ -95,6 +95,36 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn(".shell:not(.home-active)>.page-layout{display:block}", card)
         self.assertIn(".shell:not(.home-active)>.page-layout>.tabs-side{display:none}", card)
 
+    def test_settings_tab_uses_centered_gear_and_actions_stay_in_one_row(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        settings_icon = card.split("    settings: '", 1)[1].split("',", 1)[0]
+        self.assertNotIn("transform=", settings_icon)
+        self.assertIn("fill-rule=\"evenodd\"", settings_icon)
+        self.assertIn("M24 17a7 7 0 1 0 0 14 7 7 0 1 0 0-14Z", settings_icon)
+        self.assertIn(".action-grid{grid-template-columns:repeat(5,minmax(0,1fr))}", card)
+        self.assertIn(".action-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;overflow:visible}", card)
+        self.assertIn(".action-grid .action-button:nth-child(5){grid-column:1/-1}", card)
+        self.assertNotIn("minmax(104px,1fr)", card)
+
+    def test_home_combines_pzem_and_power_scheme_in_one_card(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        home = card.split("    _home() {", 1)[1].split("    _id(", 1)[0]
+        self.assertIn('class="card info info-system"', home)
+        self.assertIn('class="info-system-section"', home)
+        self.assertEqual(home.count('data-role="home-mains"'), 1)
+        self.assertEqual(home.count('data-role="esp-power-label"'), 1)
+        self.assertIn('data-role="esp-power-note"', home)
+        self.assertIn(".bottom-status{grid-template-columns:repeat(4,minmax(0,1fr))", card)
+
+    def test_mobile_layout_prioritizes_voltage_and_avoids_horizontal_action_scrolling(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        self.assertIn(".home-view .main-grid>.voltage{grid-column:1;grid-row:1}", card)
+        self.assertIn(".home-view .main-right>.metrics{grid-column:1;grid-row:2}", card)
+        self.assertIn(".voltage-gauge{width:min(100%,410px);margin:-7px 0 -4px;transform:translateY(-4px)}", card)
+        self.assertIn(".voltage-brand,.voltage-gauge,.state-indicator{transform:translateY(-4px)}", card)
+        self.assertIn(".detail-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}", card)
+        self.assertIn(".settings-grid{grid-template-columns:1fr}", card)
+
     def test_voltage_panel_reduces_vertical_padding_and_lowers_caption(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
         self.assertIn('<text x="250" y="281" text-anchor="middle" class="voltage-label">', card)
@@ -103,8 +133,8 @@ class RepositoryContractTests(unittest.TestCase):
 
     def test_non_home_header_aligns_with_menu_and_reduces_content_gap(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
-        self.assertIn(".shell:not(.home-active)>.header{align-items:flex-start;padding-bottom:6px}", card)
-        self.assertIn("@container (max-width:959px){.shell:not(.home-active)>.header{padding-bottom:4px}.shell:not(.home-active)>.header>.tabs-top{margin-bottom:1px}}", card)
+        self.assertIn(".shell:not(.home-active)>.header{align-items:flex-start;padding-bottom:2px}", card)
+        self.assertIn("@container (max-width:959px){.shell:not(.home-active)>.header{padding-bottom:2px}.shell:not(.home-active)>.header>.tabs-top{margin-bottom:0}}", card)
 
     def test_chart_scrubber_shows_full_width_historical_measurements_and_metric_correct_marker(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
