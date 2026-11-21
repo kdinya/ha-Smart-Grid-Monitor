@@ -86,8 +86,19 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertNotIn("_headRightHtml", header)
         self.assertIn("${this._activeTab === 'home' ? '' : this._tabs('side')}", card)
         self.assertIn(".shell:not(.home-active)>.page-layout{display:grid", card)
-        self.assertIn(".shell:not(.home-active)>.page-layout>.tabs-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))", card)
+        self.assertIn(".shell:not(.home-active)>.page-layout>.tabs-side{display:grid;grid-template-columns:minmax(0,1fr)", card)
         self.assertIn(".shell:not(.home-active)>.page-layout>.tabs-side{display:none}", card)
+
+    def test_daily_voltage_and_power_minima_ignore_invalid_restored_values(self):
+        firmware = (ROOT / "esphome/grid-monitor.yaml").read_text(encoding="utf-8")
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        self.assertIn("id(g_v_min) <= 150.0f || id(g_v_min) > 300.0f", firmware)
+        self.assertIn("v > 150.0f && v <= 300.0f", firmware)
+        self.assertIn("id(g_p_min) <= 0.0f || id(g_p_min) > 30000.0f", firmware)
+        self.assertIn("x > 0.0f && x < id(g_p_min)", firmware)
+        self.assertIn("accuracy_decimals: 1", firmware.split('name: "Power Min Today"', 1)[1].split('name: "Current Min Today"', 1)[0])
+        self.assertIn("minDigits: 1, maxDigits: 0", card)
+        self.assertIn('data-value-key="power_min" data-value-digits="1"', card)
 
     def test_gauge_arc_ticks_and_marker_share_one_geometry(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
