@@ -84,7 +84,13 @@
   };
 
   const SETTING_ENTITY_KEYS = new Set(['sag_threshold', 'swell_threshold', 'nominal_voltage', 'tariff_day', 'tariff_night']);
-  const TIMESTAMP_ENTITY_KEYS = new Set(['voltage', 'power', 'current']);
+  const TIMESTAMP_ENTITY_KEYS = new Set(['voltage', 'power', 'current', 'uptime']);
+  const HEARTBEAT_TIMEOUT_MS = 15000;
+  const LIVE_MEASUREMENT_KEYS = new Set([
+    'voltage', 'current', 'power', 'frequency', 'power_factor', 'apparent_power',
+    'reactive_power', 'phase_angle', 'voltage_deviation', 'voltage_average', 'cost_rate',
+  ]);
+  const LIVE_DISPLAY_KEYS = new Set([...LIVE_MEASUREMENT_KEYS, 'voltage_status']);
 
   const TEXT = {
     uk: {
@@ -762,6 +768,7 @@
       this._chartW = 0;
       this._chartPts = [];
       this._measureQueued = false;
+      this._heartbeatTimer = null;
       this.shadowRoot.addEventListener('click', (event) => this._handleCardClick(event));
       this.shadowRoot.addEventListener('pointermove', (event) => {
         if (event.target?.closest?.('[data-role="chart-plot"]')) this._chartHover(event);
@@ -773,14 +780,18 @@
     }
 
     connectedCallback() {
-      if (typeof ResizeObserver !== 'function' || this._resizeObserver) return;
-      this._resizeObserver = new ResizeObserver(() => this._queueChartMeasure());
-      this._resizeObserver.observe(this);
+      if (typeof ResizeObserver === 'function' && !this._resizeObserver) {
+        this._resizeObserver = new ResizeObserver(() => this._queueChartMeasure());
+        this._resizeObserver.observe(this);
+      }
+      this._scheduleHeartbeatExpiry();
     }
 
     disconnectedCallback() {
       this._resizeObserver?.disconnect();
       this._resizeObserver = null;
+      if (this._heartbeatTimer !== null) window.clearTimeout(this._heartbeatTimer);
+      this._heartbeatTimer = null;
     }
 
     _queueChartMeasure() {
@@ -811,9 +822,11 @@
       this._config = { ...config, entities, name: config.name || null, esp_power_mode: powerMode };
       this._stateSnapshot = this._captureStateSnapshot();
       this._render();
+      this._scheduleHeartbeatExpiry();
     }
 
     set hass(value) {
+      const wasEspOnline = this._config && this._effectiveEspStatus() === 'on';
       this._hass = value;
       const nextSnapshot = this._captureStateSnapshot();
       if (!this._config || !this._hasRendered || this._renderedLanguage !== this._lang()) {
@@ -821,9 +834,12 @@
         this._render();
       } else {
         const changed = this._diffStateSnapshots(this._stateSnapshot, nextSnapshot);
+        const isEspOnline = this._effectiveEspStatus() === 'on';
+        if (wasEspOnline !== isEspOnline) changed.add('esp_connectivity');
         this._stateSnapshot = nextSnapshot;
         if (changed.size) this._scheduleStateUpdate(changed);
       }
+      this._scheduleHeartbeatExpiry();
       this._ensureHistory();
     }
 
@@ -904,7 +920,44 @@
     }
     _state(key) { return this._hass?.states?.[this._entity(key)] || null; }
     _raw(key) { return this._state(key)?.state ?? null; }
+    _heartbeatFresh() {
+      const updatedAt = Date.parse(this._state('uptime')?.last_updated || '');
+      if (!Number.isFinite(updatedAt)) return null;
+      return Date.now() - updatedAt <= HEARTBEAT_TIMEOUT_MS;
+    }
+    _effectiveEspStatus() {
+      const state = this._raw('esp_status');
+      if (state === 'off' || state === 'unavailable') return 'off';
+      if (state !== 'on') return state;
+      return this._heartbeatFresh() === false ? 'off' : 'on';
+    }
+    _scheduleHeartbeatExpiry() {
+      if (this._heartbeatTimer !== null) window.clearTimeout(this._heartbeatTimer);
+      this._heartbeatTimer = null;
+      if (this._raw('esp_status') !== 'on' || this._effectiveEspStatus() !== 'on') return;
+      const updatedAt = Date.parse(this._state('uptime')?.last_updated || '');
+      if (!Number.isFinite(updatedAt)) return;
+      const remaining = updatedAt + HEARTBEAT_TIMEOUT_MS - Date.now() + 25;
+      if (remaining <= 0) {
+        this._refreshConnectivityUI();
+        return;
+      }
+      this._heartbeatTimer = window.setTimeout(() => {
+        this._heartbeatTimer = null;
+        if (this._effectiveEspStatus() !== 'on') this._refreshConnectivityUI();
+      }, remaining);
+    }
+    _refreshConnectivityUI() {
+      this._updateConnectionStatus();
+      this._updateStatusClasses();
+      this._updateValueBindings(LIVE_DISPLAY_KEYS);
+      this._updateHome(LIVE_MEASUREMENT_KEYS);
+      if (this._activeTab === 'home') this._updateHomeStatus();
+      if (this._activeTab === 'params') this._updateRange();
+      if (this._activeTab === 'settings') this._updateDeviceStatus();
+    }
     _num(key) {
+      if (LIVE_MEASUREMENT_KEYS.has(key) && this._effectiveEspStatus() === 'off') return null;
       const raw = this._raw(key);
       if (raw === null || raw === 'unknown' || raw === 'unavailable') return null;
       const n = Number(raw);
@@ -919,6 +972,7 @@
       return ({ V: 'В', A: 'А', W: 'Вт', Hz: 'Гц', kWh: 'кВт·год', VA: 'ВА', var: 'вар', UAH: 'грн', 'UAH/kWh': 'грн/кВт·год', 'UAH/h': 'грн/год', min: 'хв', h: 'год', dBm: 'дБм' })[unit] || unit;
     }
     _formatted(key, digits = 1) {
+      if (LIVE_DISPLAY_KEYS.has(key) && this._effectiveEspStatus() === 'off') return this._t('unavailable');
       const n = this._num(key);
       if (n === null) {
         const raw = this._raw(key);
@@ -967,21 +1021,22 @@
 
     _displayStatus() {
       const mains = this._raw('mains');
-      const esp = this._raw('esp_status');
+      const esp = this._effectiveEspStatus();
       const sourceStatus = this._raw('source_status');
       const legacyFirmware = sourceStatus === null;
-      const pzemOnline = sourceStatus === 'pzem_online_source_unconfirmed' || (legacyFirmware && mains === 'on');
-      // The legacy on_inverter entity was inferred from PZEM silence, not an independent inverter signal.
-      const pzemOffline = sourceStatus === 'pzem_offline_source_unknown' || (legacyFirmware && this._raw('inverter') === 'on');
-      const waitingForPzem = sourceStatus === 'waiting_for_pzem';
+      const canTrustTelemetry = esp !== 'off';
+      const pzemOnline = canTrustTelemetry && (sourceStatus === 'pzem_online_source_unconfirmed' || (legacyFirmware && mains === 'on'));
+      // PZEM silence never confirms inverter operation; it only describes telemetry availability.
+      const pzemOffline = canTrustTelemetry && (sourceStatus === 'pzem_offline_source_unknown' || (legacyFirmware && this._raw('inverter') === 'on'));
+      const waitingForPzem = canTrustTelemetry && sourceStatus === 'waiting_for_pzem';
       const voltageAlarm = this._raw('voltage_alarm');
       const alarm = pzemOnline && voltageAlarm === 'on';
       const qualityUnknown = pzemOnline && voltageAlarm !== 'on' && voltageAlarm !== 'off';
       const healthy = esp === 'on' && pzemOnline && voltageAlarm === 'off';
-      const stateClass = alarm ? 'alarm' : esp === 'off' ? 'offline' : pzemOffline ? 'pzem-offline' : healthy ? 'healthy' : 'unknown';
-      const source = pzemOffline ? this._t('pzem_source_offline') : pzemOnline ? this._t('source_unconfirmed') : waitingForPzem ? this._t('detecting') : this._t('source_unknown');
-      const banner = pzemOffline ? this._t('pzem_offline_banner') : alarm ? this._t('alarm_banner') : esp === 'off' ? this._t('offline_banner') : qualityUnknown ? this._t('quality_unknown') : healthy ? this._t('healthy') : waitingForPzem ? this._t('detecting') : this._t('source_unknown');
-      const status = pzemOffline ? this._t('pzem_offline') : alarm ? this._t('alarm') : healthy ? this._t('normal') : esp === 'off' ? this._t('offline') : waitingForPzem ? this._t('detecting') : this._t('unknown');
+      const stateClass = esp === 'off' ? 'offline' : alarm ? 'alarm' : pzemOffline ? 'pzem-offline' : healthy ? 'healthy' : 'unknown';
+      const source = esp === 'off' ? this._t('source_unknown') : pzemOffline ? this._t('pzem_source_offline') : pzemOnline ? this._t('source_unconfirmed') : waitingForPzem ? this._t('detecting') : this._t('source_unknown');
+      const banner = esp === 'off' ? this._t('offline_banner') : pzemOffline ? this._t('pzem_offline_banner') : alarm ? this._t('alarm_banner') : qualityUnknown ? this._t('quality_unknown') : healthy ? this._t('healthy') : waitingForPzem ? this._t('detecting') : this._t('source_unknown');
+      const status = esp === 'off' ? this._t('offline') : pzemOffline ? this._t('pzem_offline') : alarm ? this._t('alarm') : healthy ? this._t('normal') : waitingForPzem ? this._t('detecting') : this._t('unknown');
       return { mains, pzemOnline, pzemOffline, esp, alarm, qualityUnknown, stateClass, source, banner, status };
     }
 
@@ -993,7 +1048,7 @@
       const voltageUnit = voltage === null ? '' : this._unit('voltage') || (this._lang() === 'uk' ? 'В' : 'V');
       const [markerX, markerY] = gaugeMarker(progress);
       const gaugeDot = `<circle class="gauge-dot" data-role="gauge-dot" cx="${markerX.toFixed(1)}" cy="${markerY.toFixed(1)}" r="9" visibility="${voltage === null ? 'hidden' : 'visible'}"/>`;
-      const mainsText = status.pzemOnline ? this._t('pzem_online') : status.pzemOffline ? this._t('pzem_offline') : this._t('detecting');
+      const mainsText = status.esp === 'off' ? this._t('no_voltage') : status.pzemOnline ? this._t('pzem_online') : status.pzemOffline ? this._t('pzem_offline') : this._t('detecting');
       const sourceText = status.source;
       const voltageQuality = this._formatted('voltage_status');
       const espPower = this._espPowerStatus();
@@ -1564,7 +1619,7 @@
 
     _settings() {
       const twoZone = this._raw('two_zone') === 'on';
-      const esp = this._raw('esp_status');
+      const esp = this._effectiveEspStatus();
       const deviceState = esp === 'on' ? this._t('online') : esp === 'off' ? this._t('offline') : esp === 'unavailable' ? this._t('unavailable') : this._t('unknown');
       const deviceClass = esp === 'on' ? 'online' : esp === 'off' ? 'offline' : 'unknown';
       return `<section class="detail-panel settings-panel"><h2>${this._escape(this._t('settings_title'))}</h2>
@@ -1761,7 +1816,7 @@
 
     _updateChanged(changed) {
       this._updateValueBindings(changed);
-      if (changed.has('esp_status')) this._updateConnectionStatus();
+      if (changed.has('esp_status') || changed.has('esp_connectivity')) this._refreshConnectivityUI();
       if (changed.has('voltage') || changed.has('power') || changed.has('current')) this._updateHeaderTime();
       if (changed.has('wifi_signal')) this._updateWifiTitle();
       if (changed.has('mains') || changed.has('inverter') || changed.has('source_status') || changed.has('voltage_status') || changed.has('esp_status') || changed.has('voltage_alarm')) {
@@ -1775,7 +1830,7 @@
     }
 
     _updateConnectionStatus() {
-      const esp = this._raw('esp_status');
+      const esp = this._effectiveEspStatus();
       const connection = this.shadowRoot.querySelector('.connection');
       const label = connection?.querySelector('strong');
       if (!connection || !label) return;
@@ -1871,7 +1926,7 @@
 
     _updateHomeStatus() {
       const status = this._displayStatus();
-      const mainsText = status.pzemOnline ? this._t('pzem_online') : status.pzemOffline ? this._t('pzem_offline') : this._t('detecting');
+      const mainsText = status.esp === 'off' ? this._t('no_voltage') : status.pzemOnline ? this._t('pzem_online') : status.pzemOffline ? this._t('pzem_offline') : this._t('detecting');
       const sourceText = status.source;
       const voltageQuality = this._formatted('voltage_status');
       const mains = this.shadowRoot.querySelector('[data-role="home-mains"]');
@@ -1927,7 +1982,7 @@
         }
         if (save) save.disabled = !state;
       }
-      if (changed.has('esp_status')) this._updateDeviceStatus();
+      if (changed.has('esp_status') || changed.has('esp_connectivity')) this._updateDeviceStatus();
       if (changed.has('two_zone')) this._updateSwitch();
       for (const key of ['reset_energy', 'reset_events', 'reset_cost', 'restart']) {
         if (!changed.has(key)) continue;
@@ -1937,7 +1992,7 @@
     }
 
     _updateDeviceStatus() {
-      const esp = this._raw('esp_status');
+      const esp = this._effectiveEspStatus();
       const status = this.shadowRoot.querySelector('[data-role="device-status"]');
       const label = this.shadowRoot.querySelector('[data-role="device-state"]');
       if (!status || !label) return;
