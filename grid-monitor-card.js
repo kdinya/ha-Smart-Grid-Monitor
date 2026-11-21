@@ -36,18 +36,19 @@
     power_peak: ['power_peak_today', 'power_peak', 'peak_power'],
     sag_count: ['sag_count'],
     swell_count: ['swell_count'],
-    inverter_events: ['inverter_events', 'outage_count'],
-    inverter_current_duration: ['inverter_current_duration'],
-    last_inverter_duration: ['last_inverter_duration', 'last_outage_s'],
-    total_inverter_time: ['total_inverter_time', 'outage_total_s'],
+    inverter_events: ['pzem_offline_events', 'inverter_events', 'outage_count'],
+    inverter_current_duration: ['current_pzem_offline_duration', 'inverter_current_duration'],
+    last_inverter_duration: ['last_pzem_offline_duration', 'last_inverter_duration', 'last_outage_s'],
+    total_inverter_time: ['total_pzem_offline_time', 'total_inverter_time', 'outage_total_s'],
     wifi_signal: ['wifi_signal', 'wifi_rssi', 'rssi'],
     uptime: ['uptime', 'esp_uptime'],
     esp_temperature: ['esp_temperature', 'internal_temperature', 'temperature'],
     ip_address: ['ip_address', 'wifi_ip_address'],
     ssid: ['connected_ssid', 'wifi_ssid', 'ssid'],
     voltage_status: ['voltage_status'],
-    mains: ['mains_present', 'bin_mains_present', 'grid_present'],
-    inverter: ['on_inverter', 'bin_on_inverter', 'inverter_active'],
+    source_status: ['power_source_status'],
+    mains: ['pzem_online', 'mains_present', 'bin_mains_present', 'grid_present'],
+    inverter: ['pzem_offline', 'on_inverter', 'bin_on_inverter', 'inverter_active'],
     esp_status: ['esp_status', 'status'],
     voltage_alarm: ['voltage_out_of_range', 'bin_v_out_of_range'],
     sag_threshold: ['sag_threshold', 'th_low', 'sag_limit'],
@@ -66,7 +67,8 @@
     voltage: 'sensor.grid_monitor_voltage', current: 'sensor.grid_monitor_current',
     power: 'sensor.grid_monitor_power', frequency: 'sensor.grid_monitor_frequency',
     power_factor: 'sensor.grid_monitor_power_factor', voltage_status: 'sensor.grid_monitor_voltage_status',
-    mains: 'binary_sensor.grid_monitor_mains_present', inverter: 'binary_sensor.grid_monitor_on_inverter',
+    source_status: 'sensor.grid_monitor_power_source_status',
+    mains: 'binary_sensor.grid_monitor_pzem_online', inverter: 'binary_sensor.grid_monitor_pzem_offline',
     esp_status: 'binary_sensor.grid_monitor_esp_status', voltage_alarm: 'binary_sensor.grid_monitor_voltage_out_of_range',
     energy_total: 'sensor.grid_monitor_energy_total', energy_today: 'sensor.grid_monitor_energy_today', energy_month: 'sensor.grid_monitor_energy_month',
     cost_today: 'sensor.grid_monitor_cost_today', cost_month: 'sensor.grid_monitor_cost_month', cost_total: 'sensor.grid_monitor_cost_total',
@@ -74,8 +76,8 @@
     apparent_power: 'sensor.grid_monitor_apparent_power', reactive_power: 'sensor.grid_monitor_reactive_power',
     phase_angle: 'sensor.grid_monitor_phase_angle', voltage_deviation: 'sensor.grid_monitor_voltage_deviation', voltage_average: 'sensor.grid_monitor_voltage_5min_average',
     voltage_min: 'sensor.grid_monitor_voltage_min_today', voltage_max: 'sensor.grid_monitor_voltage_max_today', current_max: 'sensor.grid_monitor_current_max_today', power_peak: 'sensor.grid_monitor_power_peak_today',
-    sag_count: 'sensor.grid_monitor_sag_count', swell_count: 'sensor.grid_monitor_swell_count', inverter_events: 'sensor.grid_monitor_inverter_events',
-    inverter_current_duration: 'sensor.grid_monitor_inverter_current_duration', last_inverter_duration: 'sensor.grid_monitor_last_inverter_duration', total_inverter_time: 'sensor.grid_monitor_total_inverter_time',
+    sag_count: 'sensor.grid_monitor_sag_count', swell_count: 'sensor.grid_monitor_swell_count', inverter_events: 'sensor.grid_monitor_pzem_offline_events',
+    inverter_current_duration: 'sensor.grid_monitor_current_pzem_offline_duration', last_inverter_duration: 'sensor.grid_monitor_last_pzem_offline_duration', total_inverter_time: 'sensor.grid_monitor_total_pzem_offline_time',
     wifi_signal: 'sensor.grid_monitor_wifi_signal', uptime: 'sensor.grid_monitor_uptime', esp_temperature: 'sensor.grid_monitor_esp_temperature', ip_address: 'sensor.grid_monitor_ip_address', ssid: 'sensor.grid_monitor_connected_ssid',
     sag_threshold: 'number.grid_monitor_sag_threshold', swell_threshold: 'number.grid_monitor_swell_threshold', nominal_voltage: 'number.grid_monitor_nominal_voltage', tariff_day: 'number.grid_monitor_tariff_day', tariff_night: 'number.grid_monitor_tariff_night', two_zone: 'switch.grid_monitor_two_zone_tariff',
     reset_energy: 'button.grid_monitor_reset_pzem_energy', reset_events: 'button.grid_monitor_reset_event_counters', reset_cost: 'button.grid_monitor_reset_cost_counters', restart: 'button.grid_monitor_restart',
@@ -88,18 +90,19 @@
     uk: {
       title: 'Мережева напруга', subtitle: 'PZEM-004T v3.0 · Grid Monitor', online: 'Онлайн', offline: 'Офлайн', updated: 'Оновлено',
       home: 'Головна', params_tab: 'Параметри', energy_tab: 'Енергія', settings_tab: 'Налаштування',
-      network: 'Мережа', inverter: 'Інвертор', no_power: 'Немає напруги', detecting: 'Визначається', unknown: 'Невідомо', unavailable: 'Недоступно',
-      healthy: 'Усі системи працюють нормально', inverter_banner: 'Будинок працює від інвертора', alarm_banner: 'Напруга поза заданим діапазоном', offline_banner: 'ESP недоступна',
-      voltage: 'Напруга мережі', current: 'Струм', power: 'Потужність', frequency: 'Частота', pf: 'Коеф. потужності', normal: 'Норма', alarm: 'Поза нормою',
+      network: 'PZEM онлайн', inverter: 'Джерело невідоме', no_power: 'PZEM не відповідає', detecting: 'Очікування PZEM', unknown: 'Невідомо', unavailable: 'Недоступно',
+      healthy: 'PZEM онлайн; якість напруги в межах порогів', quality_unknown: 'Якість напруги невідома', alarm_banner: 'Напруга поза заданим діапазоном', offline_banner: 'ESP недоступна',
+      pzem_online: 'Дані PZEM доступні', pzem_offline: 'PZEM офлайн', source_unconfirmed: 'Джерело живлення не підтверджене', source_unknown: 'Джерело живлення невідоме', pzem_source_offline: 'PZEM офлайн; джерело живлення невідоме', pzem_offline_banner: 'PZEM не відповідає; джерело живлення невідоме',
+      voltage: 'Напруга мережі', sag_state: 'Просідання', swell_state: 'Перенапруга', current: 'Струм', power: 'Потужність', frequency: 'Частота', pf: 'Коеф. потужності', normal: 'Норма', alarm: 'Поза нормою',
       chart_title: 'Графік потужності', hour: 'Год', day: 'День', week: 'Тиждень', month: 'Місяць', loading: 'Завантаження історії…', no_history: 'Історія потужності поки недоступна',
-      mains: 'Мережа', has_voltage: 'Є напруга', no_voltage: 'Немає напруги', source: 'Джерело', from_mains: 'Від мережі', from_inverter: 'Від інвертора', pzem_link: 'Зв’язок з PZEM', active: 'Активний', inactive: 'Немає зв’язку', today_consumption: 'Споживання сьогодні',
+      mains: 'Зв’язок з PZEM', has_voltage: 'Дані доступні', no_voltage: 'Дані недоступні', source: 'Живлення ESP', from_mains: 'Мережа (не підтверджено)', from_inverter: 'Джерело невідоме', pzem_link: 'Зв’язок з PZEM', active: 'Онлайн', inactive: 'Офлайн', today_consumption: 'Споживання сьогодні',
       esp_power_connection: 'Схема живлення ESP', esp_power_shared: 'Від мережі разом із модулем', esp_power_after_avr: 'Після АВР', esp_power_independent: 'Незалежне живлення', esp_power_avr_note: 'ESP може живитися від інвертора', pzem_grid_note: 'PZEM вимірює мережу в усіх режимах',
       params_title: 'Електричні параметри', energy_title: 'Енергія та вартість', settings_title: 'Налаштування та діагностика',
       apparent: 'Повна потужність', reactive: 'Реактивна потужність', phase: 'Кут фази', deviation: 'Відхилення напруги', average: 'Середня напруга за 5 хв', min_voltage: 'Мінімальна напруга сьогодні', max_voltage: 'Максимальна напруга сьогодні', max_current: 'Максимальний струм сьогодні', peak_power: 'Пікова потужність сьогодні', voltage_state: 'Статус напруги',
       today: 'Сьогодні', energy_month: 'Споживання за місяць', energy_total: 'Загальна енергія PZEM', cost_today: 'Вартість сьогодні', cost_month: 'Вартість за місяць', cost_total: 'Загальна розрахована вартість', tariff: 'Поточний тариф', cost_rate: 'Вартість за годину', two_zone: 'Двозонний облік',
       estimated_cost: 'Орієнтовна вартість', current_load: 'Поточне навантаження', tariff_compare: 'Порівняння тарифів', current_rate: 'Активний тариф', night: 'Ніч', device_name: 'Grid Monitor · ESP32-C3', device_description: 'Контролер ESPHome · PZEM-004T', diagnostics: 'Діагностика',
       sag: 'Поріг просідання', swell: 'Поріг перенапруги', nominal: 'Номінальна напруга', tariff_day: 'Денний тариф', tariff_night: 'Нічний тариф', wifi: 'Сигнал Wi‑Fi', temperature: 'Температура ESP32', uptime: 'Час роботи ESP32', ip: 'IP-адреса', ssid: 'Wi‑Fi мережа',
-      events: 'Події інвертора', inverter_events: 'Кількість відключень', current_duration: 'Поточна тривалість', last_duration: 'Остання тривалість', total_duration: 'Загальний час від інвертора', sag_events: 'Просідання напруги', swell_events: 'Перенапруги', save: 'Зберегти', on: 'Увімкнено', off: 'Вимкнено',
+      events: 'Переривання зв’язку з PZEM', inverter_events: 'Кількість переривань PZEM', current_duration: 'Поточний час без PZEM', last_duration: 'Остання тривалість без PZEM', total_duration: 'Загальний час без PZEM', sag_events: 'Просідання напруги', swell_events: 'Перенапруги', save: 'Зберегти', on: 'Увімкнено', off: 'Вимкнено',
             editor_title: 'Налаштування Smart Grid Monitor',
       editor_device_select: 'Вибір пристрою ESP32 / Префікс',
       editor_device_hint: 'Показано лише пристрої ESPHome. За потреби введіть власний префікс нижче.',
@@ -126,18 +129,19 @@
     en: {
       title: 'Grid voltage', subtitle: 'PZEM-004T v3.0 · Grid Monitor', online: 'Online', offline: 'Offline', updated: 'Updated',
       home: 'Home', params_tab: 'Parameters', energy_tab: 'Energy', settings_tab: 'Settings',
-      network: 'Mains', inverter: 'Inverter', no_power: 'No voltage', detecting: 'Detecting', unknown: 'Unknown', unavailable: 'Unavailable',
-      healthy: 'All systems operating normally', inverter_banner: 'House is running from the inverter', alarm_banner: 'Voltage is outside the configured range', offline_banner: 'ESP is offline',
-      voltage: 'Grid voltage', current: 'Current', power: 'Power', frequency: 'Frequency', pf: 'Power factor', normal: 'Normal', alarm: 'Out of range',
+      network: 'PZEM online', inverter: 'Source unknown', no_power: 'PZEM is not responding', detecting: 'Waiting for PZEM', unknown: 'Unknown', unavailable: 'Unavailable',
+      healthy: 'PZEM online; voltage is within configured thresholds', quality_unknown: 'Voltage quality is unknown', alarm_banner: 'Voltage is outside the configured range', offline_banner: 'ESP is offline',
+      pzem_online: 'PZEM data available', pzem_offline: 'PZEM offline', source_unconfirmed: 'Power source is not confirmed', source_unknown: 'Power source unknown', pzem_source_offline: 'PZEM offline; power source unknown', pzem_offline_banner: 'PZEM is not responding; power source is unknown',
+      voltage: 'Grid voltage', sag_state: 'Sag', swell_state: 'Swell', current: 'Current', power: 'Power', frequency: 'Frequency', pf: 'Power factor', normal: 'Normal', alarm: 'Out of range',
       chart_title: 'Power history', hour: 'Hour', day: 'Day', week: 'Week', month: 'Month', loading: 'Loading history…', no_history: 'Power history is not available yet',
-      mains: 'Mains', has_voltage: 'Voltage present', no_voltage: 'No voltage', source: 'Source', from_mains: 'From mains', from_inverter: 'From inverter', pzem_link: 'PZEM connection', active: 'Active', inactive: 'No connection', today_consumption: 'Consumption today',
+      mains: 'PZEM connection', has_voltage: 'Data available', no_voltage: 'Data unavailable', source: 'ESP power source', from_mains: 'Mains (not confirmed)', from_inverter: 'Source unknown', pzem_link: 'PZEM connection', active: 'Online', inactive: 'Offline', today_consumption: 'Consumption today',
       esp_power_connection: 'ESP power arrangement', esp_power_shared: 'Mains shared with the module', esp_power_after_avr: 'After AVR', esp_power_independent: 'Independent power', esp_power_avr_note: 'ESP may be powered by the inverter', pzem_grid_note: 'PZEM measures mains in every mode',
       params_title: 'Electrical parameters', energy_title: 'Energy and cost', settings_title: 'Settings and diagnostics',
       apparent: 'Apparent power', reactive: 'Reactive power', phase: 'Phase angle', deviation: 'Voltage deviation', average: '5-minute average voltage', min_voltage: 'Minimum voltage today', max_voltage: 'Maximum voltage today', max_current: 'Maximum current today', peak_power: 'Peak power today', voltage_state: 'Voltage status',
       today: 'Today', energy_month: 'Consumption this month', energy_total: 'Total PZEM energy', cost_today: 'Cost today', cost_month: 'Cost this month', cost_total: 'Total calculated cost', tariff: 'Current tariff', cost_rate: 'Cost per hour', two_zone: 'Two-zone tariff',
       estimated_cost: 'Estimated cost', current_load: 'Current load', tariff_compare: 'Tariff comparison', current_rate: 'Active tariff', night: 'Night', device_name: 'Grid Monitor · ESP32-C3', device_description: 'ESPHome controller · PZEM-004T', diagnostics: 'Diagnostics',
       sag: 'Sag threshold', swell: 'Swell threshold', nominal: 'Nominal voltage', tariff_day: 'Day tariff', tariff_night: 'Night tariff', wifi: 'Wi-Fi signal', temperature: 'ESP32 temperature', uptime: 'ESP32 uptime', ip: 'IP address', ssid: 'Wi-Fi network',
-      events: 'Inverter events', inverter_events: 'Outage count', current_duration: 'Current duration', last_duration: 'Last duration', total_duration: 'Total inverter time', sag_events: 'Voltage sags', swell_events: 'Voltage swells', save: 'Save', on: 'On', off: 'Off',
+      events: 'PZEM communication outages', inverter_events: 'PZEM outage count', current_duration: 'Current time without PZEM', last_duration: 'Last PZEM outage duration', total_duration: 'Total time without PZEM', sag_events: 'Voltage sags', swell_events: 'Voltage swells', save: 'Save', on: 'On', off: 'Off',
             editor_title: 'Smart Grid Monitor Settings',
       editor_device_select: 'ESP32 Device / Prefix Selection',
       editor_device_hint: 'Only ESPHome devices are listed. Enter a custom prefix below if needed.',
@@ -309,8 +313,8 @@
 
       const suffixes = [
         '_voltage', '_current', '_power', '_frequency', '_power_factor',
-        '_energy_total', '_mains_present', '_on_inverter', '_esp_status',
-        '_voltage_out_of_range', '_sag_threshold', '_tariff_day'
+        '_energy_total', '_pzem_online', '_pzem_offline', '_power_source_status', '_mains_present', '_on_inverter', '_esp_status',
+        '_voltage_out_of_range', '_pzem_offline_events', '_sag_threshold', '_tariff_day'
       ];
 
       espHomeEntityIds.forEach((id) => {
@@ -612,7 +616,7 @@
           <div class="custom-grid">
             ${['voltage', 'current', 'power', 'frequency', 'power_factor', 'energy_today', 'cost_today', 'mains', 'inverter'].map((k) => `
               <div class="field" style="margin-bottom:8px">
-                <label style="font-size:0.75rem">${k}</label>
+                <label style="font-size:0.75rem">${this._escape(k === 'mains' ? this._t('pzem_link') : k === 'inverter' ? this._t('pzem_offline') : k)}</label>
                 <input type="text" data-entity-key="${k}" list="entity_options_${k}" value="${this._escape(this._config.entities?.[k] || '')}" placeholder="${DEFAULTS[k] || ''}">
                 <datalist id="entity_options_${k}">${this._getEntityDatalistOptions(k)}</datalist>
               </div>
@@ -753,6 +757,7 @@
       }
       Object.assign(entities, config.entities || {});
       const powerMode = ['grid_shared', 'after_avr', 'independent'].includes(config.esp_power_mode) ? config.esp_power_mode : 'after_avr';
+      this._entityOverrides = { ...(config.entities || {}) };
       this._config = { ...config, entities, name: config.name || null, esp_power_mode: powerMode };
       this._stateSnapshot = this._captureStateSnapshot();
       this._render();
@@ -822,24 +827,30 @@
     _t(key) { return TEXT[this._lang()][key] || key; }
     _locale() { return this._lang() === 'uk' ? 'uk-UA' : 'en-US'; }
     _entity(key) {
-      if (this._config?.entities?.[key]) return this._config.entities[key];
       const prefix = this._config?.prefix || 'grid_monitor';
       const defId = DEFAULTS[key];
       if (!defId) return '';
       const domain = defId.split('.')[0];
       const suffix = defId.split('.').slice(1).join('.').replace(/^grid_monitor_/, '');
       const candidate = `${domain}.${prefix}_${suffix}`;
-      if (this._hass?.states?.[candidate]) return candidate;
-      if (this._hass?.states?.[defId]) return defId;
-      if (typeof ALIAS_SUFFIXES !== 'undefined' && ALIAS_SUFFIXES[key] && this._hass?.states) {
-        for (const s of ALIAS_SUFFIXES[key]) {
-          const c1 = `${domain}.${prefix}_${s}`;
-          if (this._hass.states[c1]) return c1;
-          const c2 = `${domain}.${s}`;
-          if (this._hass.states[c2]) return c2;
-        }
+      const requested = this._entityOverrides?.[key];
+      const states = this._hass?.states;
+      const aliases = ALIAS_SUFFIXES[key] || [];
+      const requestedParts = requested?.split('.') || [];
+      const requestedSuffix = requestedParts[1]?.startsWith(`${prefix}_`) ? requestedParts[1].slice(prefix.length + 1) : '';
+      const isKnownDefault = requestedParts[0] === domain && [suffix, ...aliases].includes(requestedSuffix);
+      const usable = (entityId) => {
+        const state = states?.[entityId]?.state;
+        return state !== undefined && state !== 'unknown' && state !== 'unavailable';
+      };
+      if (requested && !isKnownDefault) return requested;
+      if (usable(candidate)) return candidate;
+      for (const alias of aliases) {
+        const aliasId = `${domain}.${prefix}_${alias}`;
+        if (usable(aliasId)) return aliasId;
       }
-      return candidate;
+      if (requested && states?.[requested]) return requested;
+      return requested || candidate;
     }
     _state(key) { return this._hass?.states?.[this._entity(key)] || null; }
     _raw(key) { return this._state(key)?.state ?? null; }
@@ -863,6 +874,13 @@
         const raw = this._raw(key);
         if (raw === 'unavailable') return this._t('unavailable');
         if (raw === 'unknown' || raw === null) return this._t('unknown');
+        if (key === 'voltage_status') {
+          if (raw === 'PZEM Offline') return this._t('pzem_offline');
+          if (raw === 'Waiting for PZEM') return this._t('detecting');
+          if (raw === 'Normal') return this._t('normal');
+          if (raw === 'Sag') return this._t('sag_state');
+          if (raw === 'Swell') return this._t('swell_state');
+        }
         return raw;
       }
       const value = n.toLocaleString(this._locale(), { maximumFractionDigits: digits });
@@ -894,14 +912,22 @@
 
     _displayStatus() {
       const mains = this._raw('mains');
-      const inverter = this._raw('inverter') === 'on';
       const esp = this._raw('esp_status');
-      const alarm = this._raw('voltage_alarm') === 'on';
-      const stateClass = inverter ? 'inverter' : alarm ? 'alarm' : esp === 'on' && mains === 'on' ? 'healthy' : esp === 'off' ? 'offline' : 'unknown';
-      const source = inverter ? this._t('inverter') : mains === 'on' ? this._t('network') : mains === 'off' && this._raw('inverter') === 'off' ? this._t('no_power') : this._t('detecting');
-      const banner = inverter ? this._t('inverter_banner') : alarm ? this._t('alarm_banner') : esp === 'off' ? this._t('offline_banner') : stateClass === 'healthy' ? this._t('healthy') : this._t('detecting');
-      const status = inverter ? this._t('inverter') : alarm ? this._t('alarm') : stateClass === 'healthy' ? this._t('normal') : esp === 'off' ? this._t('offline') : this._t('detecting');
-      return { mains, inverter, esp, alarm, stateClass, source, banner, status };
+      const sourceStatus = this._raw('source_status');
+      const legacyFirmware = sourceStatus === null;
+      const pzemOnline = sourceStatus === 'pzem_online_source_unconfirmed' || (legacyFirmware && mains === 'on');
+      // The legacy on_inverter entity was inferred from PZEM silence, not an independent inverter signal.
+      const pzemOffline = sourceStatus === 'pzem_offline_source_unknown' || (legacyFirmware && this._raw('inverter') === 'on');
+      const waitingForPzem = sourceStatus === 'waiting_for_pzem';
+      const voltageAlarm = this._raw('voltage_alarm');
+      const alarm = pzemOnline && voltageAlarm === 'on';
+      const qualityUnknown = pzemOnline && voltageAlarm !== 'on' && voltageAlarm !== 'off';
+      const healthy = esp === 'on' && pzemOnline && voltageAlarm === 'off';
+      const stateClass = alarm ? 'alarm' : esp === 'off' ? 'offline' : pzemOffline ? 'pzem-offline' : healthy ? 'healthy' : 'unknown';
+      const source = pzemOffline ? this._t('pzem_source_offline') : pzemOnline ? this._t('source_unconfirmed') : waitingForPzem ? this._t('detecting') : this._t('source_unknown');
+      const banner = pzemOffline ? this._t('pzem_offline_banner') : alarm ? this._t('alarm_banner') : esp === 'off' ? this._t('offline_banner') : qualityUnknown ? this._t('quality_unknown') : healthy ? this._t('healthy') : waitingForPzem ? this._t('detecting') : this._t('source_unknown');
+      const status = pzemOffline ? this._t('pzem_offline') : alarm ? this._t('alarm') : healthy ? this._t('normal') : esp === 'off' ? this._t('offline') : waitingForPzem ? this._t('detecting') : this._t('unknown');
+      return { mains, pzemOnline, pzemOffline, esp, alarm, qualityUnknown, stateClass, source, banner, status };
     }
 
     _home() {
@@ -912,9 +938,9 @@
       const voltageUnit = voltage === null ? '' : this._unit('voltage') || (this._lang() === 'uk' ? 'В' : 'V');
       const gaugeAngle = (180 + progress * 1.8) * Math.PI / 180;
       const gaugeDot = `<circle class="gauge-dot" data-role="gauge-dot" cx="${(250 + 190 * Math.cos(gaugeAngle)).toFixed(1)}" cy="${(270 + 190 * Math.sin(gaugeAngle)).toFixed(1)}" r="7" visibility="${voltage === null ? 'hidden' : 'visible'}"/>`;
-      const pzemText = status.mains === 'on' ? this._t('active') : status.inverter ? this._t('inactive') : this._t('detecting');
-      const mainsText = status.mains === 'on' ? this._t('has_voltage') : status.inverter ? this._t('no_voltage') : this._t('detecting');
-      const sourceText = status.inverter ? this._t('from_inverter') : status.mains === 'on' ? this._t('from_mains') : this._t('detecting');
+      const mainsText = status.pzemOnline ? this._t('pzem_online') : status.pzemOffline ? this._t('pzem_offline') : this._t('detecting');
+      const sourceText = status.source;
+      const voltageQuality = this._formatted('voltage_status');
       const espPower = this._espPowerStatus();
       const energy = this._formatted('energy_today', 2);
       const cost = this._formatted('cost_today', 2);
@@ -952,10 +978,10 @@
         </div>
         ${this._chart()}
         <div class="bottom-status">
-          <div class="card info"><span class="symbol green">${this._svg('home')}</span><div><div class="small">${this._escape(this._t('mains'))}</div><strong data-role="home-mains" class="${status.mains === 'on' ? 'good' : ''}">${this._escape(mainsText)}</strong></div></div>
+          <div class="card info"><span class="symbol green">${this._svg('home')}</span><div><div class="small">${this._escape(this._t('pzem_link'))}</div><strong data-role="home-mains" class="${status.pzemOnline ? 'good' : ''}">${this._escape(mainsText)}</strong></div></div>
           <div class="card info"><span class="symbol blue">${this._svg('plug')}</span><div><div class="small">${this._escape(this._t('source'))}</div><strong data-role="home-source">${this._escape(sourceText)}</strong></div></div>
           <div class="card info"><span class="symbol blue">${this._svg('plug')}</span><div><div class="small">${this._escape(this._t('esp_power_connection'))}</div><strong data-role="esp-power-label">${this._escape(espPower.label)}</strong><div class="small" data-role="esp-power-note">${this._escape(espPower.note)}</div></div></div>
-          <div class="card info"><span class="symbol green">${this._svg('shield')}</span><div><div class="small">${this._escape(this._t('pzem_link'))}</div><strong data-role="home-pzem" class="${status.mains === 'on' ? 'good' : ''}">${this._escape(pzemText)}</strong></div></div>
+          <div class="card info"><span class="symbol green">${this._svg('shield')}</span><div><div class="small">${this._escape(this._t('voltage_state'))}</div><strong data-role="home-voltage-quality" class="${status.pzemOnline && !status.alarm && !status.qualityUnknown ? 'good' : status.alarm ? 'alarm' : ''}">${this._escape(voltageQuality)}</strong></div></div>
           <div class="card info"><span class="symbol amber">${this._svg('coin')}</span><div><div class="small">${this._escape(this._t('today_consumption'))}</div><strong data-value-key="energy_today" data-value-digits="2">${this._escape(energy)}</strong><div class="small cost-line">≈ <span data-value-key="cost_today" data-value-digits="2">${this._escape(cost)}</span></div></div></div>
         </div>
         <div class="card banner ${status.stateClass}" data-role="home-banner"><span class="banner-check">${this._svg('check')}</span><strong data-role="home-banner-label">${this._escape(status.banner)}</strong><span class="house-art" aria-hidden="true">${this._houseArt()}</span></div>
@@ -1526,7 +1552,7 @@
       if (changed.has('esp_status')) this._updateConnectionStatus();
       if (changed.has('voltage') || changed.has('power') || changed.has('current')) this._updateHeaderTime();
       if (changed.has('wifi_signal')) this._updateWifiTitle();
-      if (changed.has('mains') || changed.has('inverter') || changed.has('esp_status') || changed.has('voltage_alarm')) {
+      if (changed.has('mains') || changed.has('inverter') || changed.has('source_status') || changed.has('voltage_status') || changed.has('esp_status') || changed.has('voltage_alarm')) {
         this._updateStatusClasses();
         if (this._activeTab === 'home') this._updateHomeStatus();
       }
@@ -1636,15 +1662,19 @@
 
     _updateHomeStatus() {
       const status = this._displayStatus();
-      const mainsText = status.mains === 'on' ? this._t('has_voltage') : status.inverter ? this._t('no_voltage') : this._t('detecting');
-      const pzemText = status.mains === 'on' ? this._t('active') : status.inverter ? this._t('inactive') : this._t('detecting');
-      const sourceText = status.inverter ? this._t('from_inverter') : status.mains === 'on' ? this._t('from_mains') : this._t('detecting');
+      const mainsText = status.pzemOnline ? this._t('pzem_online') : status.pzemOffline ? this._t('pzem_offline') : this._t('detecting');
+      const sourceText = status.source;
+      const voltageQuality = this._formatted('voltage_status');
       const mains = this.shadowRoot.querySelector('[data-role="home-mains"]');
       const source = this.shadowRoot.querySelector('[data-role="home-source"]');
-      const pzem = this.shadowRoot.querySelector('[data-role="home-pzem"]');
-      if (mains) { mains.textContent = mainsText; mains.classList.toggle('good', status.mains === 'on'); }
+      const quality = this.shadowRoot.querySelector('[data-role="home-voltage-quality"]');
+      if (mains) { mains.textContent = mainsText; mains.classList.toggle('good', status.pzemOnline); }
       if (source) source.textContent = sourceText;
-      if (pzem) { pzem.textContent = pzemText; pzem.classList.toggle('good', status.mains === 'on'); }
+      if (quality) {
+        quality.textContent = voltageQuality;
+        quality.classList.toggle('good', status.pzemOnline && !status.alarm && !status.qualityUnknown);
+        quality.classList.toggle('alarm', status.alarm);
+      }
     }
 
     _updateTariffBars() {
@@ -1854,11 +1884,11 @@
         .icon{width:1em;height:1em;display:block;fill:currentColor}.header{display:flex;align-items:center;gap:18px;padding:4px 2px 18px}.logo{width:88px;height:88px;flex:none;border:1px solid #087ed0;border-radius:24px;background:linear-gradient(145deg,#073e7b,#07172d);display:grid;place-items:center;box-shadow:0 0 25px #008fff40;color:#39baff}.logo .icon{width:55px;height:55px;filter:drop-shadow(0 0 9px #00aaff)}
         .brand{min-width:0}.brand h1{font-size:clamp(23px,3.2cqw,39px);margin:0 0 3px;letter-spacing:-1px;line-height:1.1}.brand p{margin:0;color:#a9bedc;font-size:clamp(14px,1.8cqw,20px)}.headright{margin-left:auto;display:flex;align-items:center;gap:20px;color:#9eb5d5}.connection{text-align:right;white-space:nowrap}.connection strong{color:var(--green);font-size:18px}.connection.offline strong{color:var(--red)}.connection.unknown strong{color:var(--muted)}.connection small{display:block;color:#9eb5d5;margin-top:4px}.dot{display:inline-block;width:12px;height:12px;background:var(--green);border-radius:50%;margin-right:9px;box-shadow:0 0 15px var(--green)}.connection.offline .dot{background:var(--red);box-shadow:0 0 15px var(--red)}.connection.unknown .dot{background:#8194a9;box-shadow:none}.wifi-icon{font-size:30px;color:#149fff;border-left:1px solid #29415d;padding-left:20px}.wifi-icon .icon{width:32px;height:32px}
         .tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:6px;gap:5px;margin-bottom:18px;background:linear-gradient(100deg,#15263b,#1b2c44)}.tab{border:0;background:transparent;color:#a9bedc;padding:13px 8px;border-radius:17px;font:inherit;font-size:clamp(13px,1.5cqw,18px);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:11px;transition:background .18s,color .18s}.tab .tab-icon{font-size:24px;color:inherit}.tab .icon{width:25px;height:25px}.tab.active{background:linear-gradient(110deg,#078be9,#0875d5);color:white;box-shadow:0 5px 20px #008dff40}.tab:focus-visible,.period-button:focus-visible,.action-button:focus-visible,.save-button:focus-visible,.switch-button:focus-visible{outline:2px solid #8ce1ff;outline-offset:2px}
-        .main-grid{display:grid;grid-template-columns:1.03fr 1fr;gap:14px}.voltage{min-height:385px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px;position:relative;overflow:hidden}.voltage.alarm{border-color:#ff526d99}.voltage.inverter{border-color:#ffb51b99}.voltage-gauge{width:min(100%,490px);height:auto;overflow:visible}.voltage-value{font-size:70px;font-weight:800;letter-spacing:-2px;fill:#f7fbff}.voltage-unit{font-size:43px;letter-spacing:0}.voltage-label{font-size:25px;fill:#b3c8e4}.state-indicator{display:flex;align-items:center;gap:11px;color:var(--green);font-size:24px;font-weight:800;margin-top:-3px}.state-indicator.inverter{color:var(--amber)}.state-indicator.alarm,.state-indicator.offline{color:var(--red)}.state-indicator.unknown{color:var(--muted)}.check-mark{width:32px;height:32px;border-radius:50%;background:var(--green);color:#052116;display:grid;place-items:center;box-shadow:0 0 18px #35ed9166}.check-mark .icon{width:23px;height:23px}.state-indicator.inverter .check-mark{background:var(--amber);color:#392400}.state-indicator.alarm .check-mark,.state-indicator.offline .check-mark{background:var(--red);color:#390711}.state-indicator.unknown .check-mark{background:#53677e;color:#d6e5f6}
+        .main-grid{display:grid;grid-template-columns:1.03fr 1fr;gap:14px}.voltage{min-height:385px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px;position:relative;overflow:hidden}.voltage.alarm{border-color:#ff526d99}.voltage.inverter{border-color:#ffb51b99}.voltage.pzem-offline{border-color:#ffb51b99}.voltage-gauge{width:min(100%,490px);height:auto;overflow:visible}.voltage-value{font-size:70px;font-weight:800;letter-spacing:-2px;fill:#f7fbff}.voltage-unit{font-size:43px;letter-spacing:0}.voltage-label{font-size:25px;fill:#b3c8e4}.state-indicator{display:flex;align-items:center;gap:11px;color:var(--green);font-size:24px;font-weight:800;margin-top:-3px}.state-indicator.inverter{color:var(--amber)}.state-indicator.pzem-offline{color:var(--amber)}.state-indicator.alarm,.state-indicator.offline{color:var(--red)}.state-indicator.unknown{color:var(--muted)}.check-mark{width:32px;height:32px;border-radius:50%;background:var(--green);color:#052116;display:grid;place-items:center;box-shadow:0 0 18px #35ed9166}.check-mark .icon{width:23px;height:23px}.state-indicator.inverter .check-mark{background:var(--amber);color:#392400}.state-indicator.pzem-offline .check-mark{background:var(--amber);color:#392400}.state-indicator.alarm .check-mark,.state-indicator.offline .check-mark{background:var(--red);color:#390711}.state-indicator.unknown .check-mark{background:#53677e;color:#d6e5f6}
         .metrics{display:grid;grid-template-columns:1fr 1fr;gap:14px}.metric{min-height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;text-align:center}.metric-icon{font-size:48px;line-height:1.15;color:var(--blue);text-shadow:0 0 15px #009dff66}.metric-icon .icon{width:52px;height:52px}.metric.current .metric-icon{color:var(--cyan)}.metric.frequency .metric-icon{color:#08d6e7}.metric.pf .metric-icon{color:var(--purple)}.metric-value{font-size:clamp(30px,4cqw,53px);font-weight:800;letter-spacing:-1.5px;margin:4px 0;overflow-wrap:anywhere}.metric-value .unit{font-size:.62em;letter-spacing:0;white-space:nowrap}.metric-label{color:#b2c6e1;font-size:19px}
         .chart-card{margin-top:14px;padding:17px 20px 12px}.chart-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px}.chart-head h2{font-size:24px;margin:0;display:flex;align-items:center;gap:12px}.chart-icon{color:var(--blue);font-size:28px}.chart-icon .icon{width:30px;height:30px}.periods{margin-left:auto;display:flex;background:#1a2b42;border-radius:15px;padding:4px;gap:3px}.period-button{border:0;background:transparent;color:#b4c7e0;padding:8px 15px;border-radius:12px;font:inherit;font-size:15px;cursor:pointer}.period-button.active{background:#078de9;color:white;box-shadow:0 3px 12px #008fff55}.chart{width:100%;height:auto;display:block;overflow:visible}.chart-grid{fill:none;stroke:#29415c;stroke-width:1}.chart-grid text{fill:#b7c9df;stroke:none;font-size:14px}.chart-glow{fill:none;stroke:#0aaaff;stroke-width:8;opacity:.55}.chart-line{fill:none;stroke:#16b5ff;stroke-width:3.5;stroke-linejoin:round;stroke-linecap:round}.chart-dot{fill:#18baff;filter:drop-shadow(0 0 7px #18baff)}.chart-tag{fill:#0d2035;stroke:#08aaff}.chart-tag-text{fill:#fff!important;font-size:15px!important;font-weight:bold}.chart-empty{height:205px;display:grid;place-items:center;color:#91a8c3;font-size:14px;text-align:center;padding:20px}
         .bottom-status{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:13px;margin-top:14px}.info{padding:17px 12px;min-height:128px;display:flex;align-items:center;justify-content:center;gap:12px;min-width:0}.info .symbol{font-size:38px;flex:none;color:var(--green);filter:drop-shadow(0 0 10px #35ed9166)}.info .symbol .icon{width:42px;height:42px}.info .symbol.blue{color:#91b8e9}.info .symbol.amber{color:var(--amber)}.info .small{color:#b6c9e2;font-size:16px}.info strong{display:block;font-size:20px;margin-top:5px;overflow-wrap:anywhere}.info .good{color:var(--green)}.info .cost-line{margin-top:3px}
-        .banner{margin-top:14px;padding:18px 24px;min-height:88px;display:flex;align-items:center;gap:18px;border:1px solid #39d77e;background:linear-gradient(90deg,#0c302a,#0c2631 68%,#102b42);box-shadow:0 0 24px #28d87920}.banner.inverter{border-color:#ffb51b;background:linear-gradient(90deg,#382711,#18283a 80%);box-shadow:0 0 24px #ffb51b20}.banner.alarm,.banner.offline{border-color:#ff526d;background:linear-gradient(90deg,#3a1420,#18283a 80%);box-shadow:0 0 24px #ff526d20}.banner.unknown{border-color:#53677e;background:linear-gradient(90deg,#1a2939,#101e30)}.banner-check{width:48px;height:48px;border-radius:50%;background:var(--green);color:#052116;display:grid;place-items:center;flex:none;box-shadow:0 0 18px #35ed9166}.banner-check .icon{width:36px;height:36px}.banner.inverter .banner-check{background:var(--amber);color:#392400}.banner.alarm .banner-check,.banner.offline .banner-check{background:var(--red);color:#390711}.banner.unknown .banner-check{background:#53677e;color:#d6e5f6}.banner strong{color:#4df29a;font-size:clamp(17px,2cqw,24px)}.banner.inverter strong{color:#ffd078}.banner.alarm strong,.banner.offline strong{color:#ff8a9a}.banner.unknown strong{color:#b4c7df}.house-art{margin-left:auto;width:130px;max-width:22%;flex:none;filter:drop-shadow(0 0 11px #1b8fff)}.house-art svg{display:block;width:100%;height:auto}
+        .banner{margin-top:14px;padding:18px 24px;min-height:88px;display:flex;align-items:center;gap:18px;border:1px solid #39d77e;background:linear-gradient(90deg,#0c302a,#0c2631 68%,#102b42);box-shadow:0 0 24px #28d87920}.banner.inverter{border-color:#ffb51b;background:linear-gradient(90deg,#382711,#18283a 80%);box-shadow:0 0 24px #ffb51b20}.banner.pzem-offline{border-color:#ffb51b;background:linear-gradient(90deg,#382711,#18283a 80%);box-shadow:0 0 24px #ffb51b20}.banner.alarm,.banner.offline{border-color:#ff526d;background:linear-gradient(90deg,#3a1420,#18283a 80%);box-shadow:0 0 24px #ff526d20}.banner.unknown{border-color:#53677e;background:linear-gradient(90deg,#1a2939,#101e30)}.banner-check{width:48px;height:48px;border-radius:50%;background:var(--green);color:#052116;display:grid;place-items:center;flex:none;box-shadow:0 0 18px #35ed9166}.banner-check .icon{width:36px;height:36px}.banner.inverter .banner-check{background:var(--amber);color:#392400}.banner.pzem-offline .banner-check{background:var(--amber);color:#392400}.banner.alarm .banner-check,.banner.offline .banner-check{background:var(--red);color:#390711}.banner.unknown .banner-check{background:#53677e;color:#d6e5f6}.banner strong{color:#4df29a;font-size:clamp(17px,2cqw,24px)}.banner.inverter strong{color:#ffd078}.banner.pzem-offline strong{color:#ffd078}.banner.alarm strong,.banner.offline strong{color:#ff8a9a}.banner.unknown strong{color:#b4c7df}.house-art{margin-left:auto;width:130px;max-width:22%;flex:none;filter:drop-shadow(0 0 11px #1b8fff)}.house-art svg{display:block;width:100%;height:auto}
         .detail-panel{padding:22px;margin-top:2px}.detail-panel h2{margin:0 0 18px;font-size:25px}.detail-panel h2.subheading{margin:24px 0 14px;font-size:19px}.detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.detail{padding:16px;border-radius:16px;background:#13243a;border:1px solid #2b4562;min-width:0}.detail>span,.detail label>span{display:block;color:#9fb5d1;font-size:14px;margin-bottom:7px}.detail b{font-size:22px;overflow-wrap:anywhere}.setting{display:flex;align-items:end;gap:10px}.setting label{flex:1;min-width:0}.setting-input{display:flex;align-items:center;gap:8px}.setting-input input{width:100%;min-width:0;background:#091727;border:1px solid #37526f;border-radius:9px;color:var(--text);padding:10px;font:inherit;font-size:18px}.setting-input small{color:#9fb5d1;white-space:nowrap}.save-button,.switch-button,.action-button{border:1px solid #278ed0;background:#092645;color:#d7efff;border-radius:10px;padding:9px 12px;font:inherit;cursor:pointer}.save-button:hover,.switch-button:hover,.action-button:hover{background:#0c3962}.save-button:disabled,.switch-button:disabled,.action-button:disabled{opacity:.45;cursor:not-allowed}.switch-setting{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.switch-setting>span{color:#9fb5d1;font-size:14px}.switch-setting>strong{font-size:16px}.switch-button{grid-column:1/-1;display:flex;align-items:center;gap:8px;justify-content:center}.switch-button .icon{width:20px;height:20px}.switch-button.on{border-color:#35ed91;color:#35ed91}.action-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.action-button{min-height:68px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;font-size:13px;border-color:#2b8ed0}.action-button span{font-size:22px;color:#45bdff}.action-button .icon{width:25px;height:25px}.footer{display:flex;justify-content:space-between;gap:10px;margin:14px 2px 0;color:#6885a2;font-size:11px}.footer span:last-child{max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
         @container (max-width:760px){.shell{padding:12px}.header{gap:11px;padding:5px 2px 14px}.logo{width:58px;height:58px;border-radius:17px}.logo .icon{width:38px;height:38px}.headright{gap:8px}.connection strong{font-size:14px}.connection small{font-size:10px}.wifi-icon{font-size:21px;padding-left:10px}.wifi-icon .icon{width:24px;height:24px}.tabs{margin-bottom:12px}.tab{gap:5px;padding:12px 3px;font-size:12px}.tab .tab-icon{font-size:19px}.tab .icon{width:20px;height:20px}.main-grid{grid-template-columns:1fr;gap:10px}.voltage{min-height:300px}.voltage-gauge{width:min(100%,420px)}.metrics{gap:10px}.metric{min-height:135px}.metric-icon .icon{width:38px;height:38px}.metric-label{font-size:15px}.chart-card{padding:13px 11px}.chart-head h2{font-size:19px}.periods{width:100%;margin:0}.period-button{flex:1;padding:8px 4px;font-size:13px}.bottom-status{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.info{min-height:100px;padding:12px 8px}.info .symbol .icon{width:30px;height:30px}.info .small{font-size:13px}.info strong{font-size:16px}.banner{padding:14px;min-height:70px}.banner-check{width:38px;height:38px}.banner-check .icon{width:28px;height:28px}.house-art{width:80px}.detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.detail-panel{padding:16px}.detail-panel h2{font-size:22px}.action-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
         @container (max-width:420px){.headright .wifi-icon{display:none}.connection small{max-width:105px}.tab{font-size:11px}.tab .tab-icon{display:none}.metric{min-height:122px;padding:12px 8px}.metric-value{font-size:clamp(25px,8cqw,34px)}.info{gap:8px}.info .symbol .icon{width:26px;height:26px}.info .small{font-size:12px}.info strong{font-size:14px}.detail-grid{grid-template-columns:1fr}.setting{align-items:stretch}}
@@ -1872,7 +1902,7 @@
         .voltage{isolation:isolate;background:radial-gradient(ellipse at 50% 42%,#0093ff30,transparent 48%),linear-gradient(145deg,#173553,#071323 72%);border-color:#72b8ea4f;box-shadow:0 18px 38px #0007,inset 0 2px 0 #ffffff22,inset 0 -12px 28px #0007}.voltage:before{background:linear-gradient(125deg,#ffffff14,transparent 30%,transparent 72%,#26aeff12)}.voltage:after{content:"";position:absolute;inset:9px;z-index:0;pointer-events:none;border:1px solid #9fdfff13;border-radius:17px;box-shadow:inset 0 0 34px #0091ff18}.voltage-gauge{position:relative;z-index:1;filter:drop-shadow(0 14px 18px #0006);overflow:visible}.dial-tick{fill:none;stroke:#81b5d2;stroke-opacity:.54;stroke-width:1.7}.dial-tick.active{stroke:#b5f7ff;stroke-opacity:.96;filter:drop-shadow(0 0 4px #19bdff)}.gauge-dot{fill:#f3ffff;stroke:#08aaff;stroke-width:5;filter:drop-shadow(0 0 8px #08c5ff)}.tower-shadow{fill:#031322;opacity:.54}.tower-frame{stroke-width:1.55}.tower-frame .tower-rail{stroke-width:3}.tower-frame .tower-arm{stroke-width:2.7}.tower-frame .tower-crossarm{stroke-width:1.4;opacity:.78}.tower-frame .tower-insulator{stroke:#c8f6ff;stroke-width:1.1}.tower-frame .tower-wire{stroke:#5bc8ff;stroke-width:1;opacity:.65}.tower-foot{fill:none;stroke:#c0eeff;stroke-width:2.6;filter:drop-shadow(0 0 5px #09aaff)}.voltage-value{filter:drop-shadow(0 3px 8px #0009)}.state-indicator{position:relative;z-index:1;text-shadow:0 0 16px currentColor}.state-indicator .check-mark{box-shadow:0 0 0 5px #3fffa411,0 0 24px #3fffa070,inset 0 2px 4px #ffffff66}
         .metric{background:linear-gradient(145deg,#1c3452,#091628);border-color:#70aee247;box-shadow:inset 0 1px 0 #ffffff20,0 14px 28px #0006,inset 0 -8px 17px #0005}.metric:before{content:"";position:absolute;right:-62px;top:-76px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,#00aeff40,transparent 70%);pointer-events:none}.metric-icon{filter:drop-shadow(0 5px 9px #00a6ff65)}.metric-value{text-shadow:0 3px 14px #0007}.info{background:linear-gradient(145deg,#1a314d,#081425);border-color:#69a4d944;box-shadow:inset 0 1px 0 #ffffff1d,0 12px 27px #0006,inset 0 -7px 16px #0005}.info .symbol{filter:drop-shadow(0 5px 8px #0006) drop-shadow(0 0 10px currentColor)}
         .chart-card{background:linear-gradient(145deg,#142b45f7,#071221fa);box-shadow:0 18px 36px #0007,inset 0 1px 0 #ffffff20,inset 0 -9px 20px #0005}.chart-line{filter:drop-shadow(0 0 3px #05baff)}.chart-tag{filter:drop-shadow(0 5px 8px #0008)}
-        .banner{position:relative;overflow:hidden;background:linear-gradient(105deg,#07362bf7,#082830f7 55%,#082038f7);border-color:#43f5a0b3;box-shadow:0 0 0 1px #43f5a01a,0 0 30px #29dc8621,inset 0 1px 0 #ffffff2e,inset 0 -8px 20px #0005}.banner strong{text-shadow:0 2px 12px #24ff9d45}.banner .banner-check{box-shadow:0 0 0 6px #3fffa414,0 0 24px #3fffa078,inset 0 2px 4px #ffffff5c}.banner.inverter{background:linear-gradient(105deg,#403014f7,#222a32f7 58%,#10233af7)}.banner.alarm,.banner.offline{background:linear-gradient(105deg,#401b27f7,#202336f7 62%,#171c2af7)}
+        .banner{position:relative;overflow:hidden;background:linear-gradient(105deg,#07362bf7,#082830f7 55%,#082038f7);border-color:#43f5a0b3;box-shadow:0 0 0 1px #43f5a01a,0 0 30px #29dc8621,inset 0 1px 0 #ffffff2e,inset 0 -8px 20px #0005}.banner strong{text-shadow:0 2px 12px #24ff9d45}.banner .banner-check{box-shadow:0 0 0 6px #3fffa414,0 0 24px #3fffa078,inset 0 2px 4px #ffffff5c}.banner.inverter{background:linear-gradient(105deg,#403014f7,#222a32f7 58%,#10233af7)}.banner.pzem-offline{background:linear-gradient(105deg,#403014f7,#222a32f7 58%,#10233af7)}.banner.alarm,.banner.offline{background:linear-gradient(105deg,#401b27f7,#202336f7 62%,#171c2af7)}
         .house-art{width:min(30%,210px);max-width:210px;filter:drop-shadow(0 8px 15px #000a) drop-shadow(0 0 15px #0082ff54);opacity:.98}.house-art svg{display:block;width:100%;height:auto}
         .energy-hero{display:grid;grid-template-columns:1.08fr .92fr;gap:15px;margin:0 0 15px}.energy-visual{position:relative;isolation:isolate;min-height:170px;overflow:hidden;padding:20px;border-radius:19px;border:1px solid #70aee24f;box-shadow:inset 0 1px 0 #ffffff2c,0 16px 32px #0006,inset 0 -10px 20px #0004;display:flex;flex-direction:column;justify-content:center;align-items:flex-start}.energy-visual:before{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(circle at 82% 24%,#ffbd4a42,transparent 34%),linear-gradient(125deg,#193e68,#10213d 58%,#201d45)}.energy-load:before{background:radial-gradient(circle at 82% 24%,#19cdff40,transparent 35%),linear-gradient(125deg,#123f61,#10213d 60%,#122d50)}.energy-visual .eyebrow{color:#b4cbe6;font-size:12px;letter-spacing:.1em;text-transform:uppercase}.energy-visual .hero-number{position:relative;z-index:1;max-width:75%;margin:7px 0 3px;font-size:clamp(25px,4cqw,43px);line-height:1.12;font-weight:850;letter-spacing:-1px;text-shadow:0 4px 18px #0008;overflow-wrap:anywhere}.energy-visual small{position:relative;z-index:1;max-width:76%;color:#c1d4ea;font-size:13px}.energy-object{position:absolute;right:16px;bottom:10px;width:95px;height:95px;max-width:32%;max-height:80%;pointer-events:none;filter:drop-shadow(0 8px 14px #0008);opacity:.92;transition:transform .2s ease}.coin-object{transform:rotate(-3deg)}.plug-object{transform:rotate(4deg)}
         .energy-visual-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;margin-top:14px}.visual-card{padding:18px;border-radius:18px;background:linear-gradient(145deg,#1b334ff5,#0a1728fa);border:1px solid #69a4d944;box-shadow:inset 0 1px 0 #ffffff1e,0 11px 24px #0005}.visual-card h3{margin:0 0 15px;font-size:17px}.bar-list{display:grid;gap:14px}.bar-row{display:grid;grid-template-columns:64px minmax(36px,1fr) minmax(80px,auto);gap:11px;align-items:center;color:var(--muted);font-size:13px}.bar-row b{color:var(--text);font-size:14px;text-align:right}.bar-track{height:9px;border-radius:9px;overflow:hidden;background:#263c56;box-shadow:inset 0 2px 3px #0008}.bar-track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#078bff,#16d6e8);box-shadow:0 0 12px #0aaaff62;transition:width .55s ease}.bar-track i.night-rate{background:linear-gradient(90deg,#8057d8,#c07aff);box-shadow:0 0 12px #a875ff62}.rate-pulse{display:inline-flex;align-items:center;gap:7px;margin-top:13px;padding:6px 10px;border-radius:18px;background:#0b3440;border:1px solid #28bdc457;color:#69e6d4;font-size:12px;max-width:100%;flex-wrap:wrap}.rate-pulse .icon{width:17px;height:17px}.current-tariff{display:flex;flex-direction:column;justify-content:center;align-items:flex-start}.current-tariff .big-number{font-size:clamp(27px,3.5cqw,40px);overflow-wrap:anywhere}

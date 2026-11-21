@@ -24,13 +24,13 @@ views:
 
       - type: conditional
         conditions:
-          - entity: binary_sensor.grid_monitor_on_inverter
+          - entity: binary_sensor.grid_monitor_pzem_offline
             state: 'on'
         card:
           type: markdown
           content: |
-            ## 🔋 Будинок працює від інвертора
-            PZEM не відповідає, але ESP32 залишається доступною після автомата перемикання.
+            ## ⚠️ PZEM не відповідає; джерело живлення невідоме
+            Втрата зв’язку з PZEM не підтверджує роботу інвертора.
           card_mod:
             style: |
               ha-card {
@@ -38,6 +38,15 @@ views:
                 border: 1px solid #ffb020;
                 color: #ffd67a;
               }
+
+      - type: conditional
+        conditions:
+          - entity: binary_sensor.grid_monitor_pzem_online
+            state: 'on'
+        card:
+          type: markdown
+          content: |
+            **Джерело живлення ESP не підтверджене.** PZEM вимірює мережу й сам по собі не визначає, звідки ESP живиться після АВР.
 
       - type: grid
         columns: 1
@@ -90,22 +99,17 @@ views:
         square: false
         cards:
           - type: tile
-            entity: binary_sensor.grid_monitor_mains_present
-            name: Мережа
+            entity: binary_sensor.grid_monitor_pzem_online
+            name: Зв’язок з PZEM
             icon: mdi:transmission-tower
             color: green
-          - type: tile
-            entity: binary_sensor.grid_monitor_on_inverter
-            name: Джерело
-            icon: mdi:car-battery
-            color: amber
           - type: tile
             entity: binary_sensor.grid_monitor_esp_status
             name: Зв’язок з ESP
             icon: mdi:shield-check
             color: green
           - type: tile
-            entity: binary_sensor.grid_monitor_voltage_out_of_range
+            entity: sensor.grid_monitor_voltage_status
             name: Якість напруги
             icon: mdi:alert-circle
             color: red
@@ -187,20 +191,20 @@ views:
             icon: mdi:flash-alert
 
       - type: entities
-        title: Інвертор і події
+        title: Переривання зв’язку з PZEM
         show_header_toggle: false
         entities:
-          - entity: sensor.grid_monitor_inverter_events
-            name: Події інвертора
+          - entity: sensor.grid_monitor_pzem_offline_events
+            name: Втрати зв’язку з PZEM
             icon: mdi:power-plug-off
-          - entity: sensor.grid_monitor_inverter_current_duration
-            name: Поточна тривалість
+          - entity: sensor.grid_monitor_current_pzem_offline_duration
+            name: Поточний час без PZEM
             icon: mdi:timer-play
-          - entity: sensor.grid_monitor_last_inverter_duration
-            name: Остання тривалість
+          - entity: sensor.grid_monitor_last_pzem_offline_duration
+            name: Остання тривалість без PZEM
             icon: mdi:timer-sand
-          - entity: sensor.grid_monitor_total_inverter_time
-            name: Загальний час
+          - entity: sensor.grid_monitor_total_pzem_offline_time
+            name: Загальний час без PZEM
             icon: mdi:timer-off
 
       - type: entities

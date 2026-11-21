@@ -11,28 +11,25 @@ template:
       - name: "Grid Monitor Power Source"
         unique_id: grid_monitor_power_source
         icon: >-
-          {% set mains = states('binary_sensor.grid_monitor_mains_present') %}
-          {% set inverter = states('binary_sensor.grid_monitor_on_inverter') %}
-          {% if mains == 'on' %}mdi:transmission-tower
-          {% elif inverter == 'on' %}mdi:car-battery
+          {% set source = states('sensor.grid_monitor_power_source_status') %}
+          {% if source == 'pzem_online_source_unconfirmed' %}mdi:transmission-tower
+          {% elif source == 'pzem_offline_source_unknown' %}mdi:help-circle-outline
           {% else %}mdi:help-circle-outline{% endif %}
         state: >-
-          {% set mains = states('binary_sensor.grid_monitor_mains_present') %}
-          {% set inverter = states('binary_sensor.grid_monitor_on_inverter') %}
-          {% if mains in ['unavailable', 'unknown'] and inverter in ['unavailable', 'unknown'] %}
-            Немає напруги або немає зв'язку з ESP
-          {% elif mains == 'on' %}
-            Мережа
-          {% elif inverter == 'on' %}
-            Інвертор
+          {% set source = states('sensor.grid_monitor_power_source_status') %}
+          {% if source == 'pzem_online_source_unconfirmed' %}
+            PZEM онлайн; джерело живлення ESP не підтверджене
+          {% elif source == 'pzem_offline_source_unknown' %}
+            PZEM не відповідає; джерело живлення невідоме
           {% else %}
-            Визначається
+            Очікується відповідь PZEM
           {% endif %}
         attributes:
           source_state: >-
-            {% set mains = states('binary_sensor.grid_monitor_mains_present') %}
-            {% set inverter = states('binary_sensor.grid_monitor_on_inverter') %}
-            {% if mains == 'on' %}mains{% elif inverter == 'on' %}inverter{% else %}unknown{% endif %}
+            {% set source = states('sensor.grid_monitor_power_source_status') %}
+            {% if source == 'pzem_online_source_unconfirmed' %}pzem_online_source_unconfirmed
+            {% elif source == 'pzem_offline_source_unknown' %}pzem_offline_source_unknown
+            {% else %}unknown{% endif %}
 
   - binary_sensor:
       - name: "Grid Monitor Healthy"
@@ -40,9 +37,16 @@ template:
         device_class: connectivity
         state: >-
           {{ is_state('binary_sensor.grid_monitor_esp_status', 'on')
-             and not is_state('binary_sensor.grid_monitor_voltage_out_of_range', 'on') }}
+             and is_state('binary_sensor.grid_monitor_pzem_online', 'on')
+             and is_state('binary_sensor.grid_monitor_voltage_out_of_range', 'off') }}
         attributes:
           reason: >-
-            {% if not is_state('binary_sensor.grid_monitor_esp_status', 'on') %}ESP недоступна
+            {% set pzem = states('sensor.grid_monitor_power_source_status') %}
+            {% if states('binary_sensor.grid_monitor_esp_status') in ['unknown', 'unavailable'] %}Стан ESP невідомий
+            {% elif is_state('binary_sensor.grid_monitor_esp_status', 'off') %}ESP недоступна
+            {% elif pzem == 'pzem_offline_source_unknown' %}PZEM не відповідає; джерело живлення невідоме
+            {% elif states('binary_sensor.grid_monitor_pzem_online') in ['unknown', 'unavailable'] %}Стан зв’язку з PZEM невідомий
+            {% elif pzem != 'pzem_online_source_unconfirmed' %}Очікується достовірна телеметрія PZEM
             {% elif is_state('binary_sensor.grid_monitor_voltage_out_of_range', 'on') %}Напруга поза діапазоном
-            {% else %}Усі системи працюють нормально{% endif %}
+            {% elif states('binary_sensor.grid_monitor_voltage_out_of_range') in ['unknown', 'unavailable'] %}Якість напруги невідома
+            {% else %}Усі контрольовані стани доступні, напруга в заданому діапазоні{% endif %}

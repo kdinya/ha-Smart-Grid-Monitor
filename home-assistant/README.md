@@ -22,9 +22,9 @@ The default entity IDs use the `grid_monitor` prefix. Use `prefix: another_devic
 
 The dashboard assumes the default Home Assistant entity prefix `grid_monitor`. If your device has a different prefix, replace `grid_monitor_` in the YAML with the entity prefix shown under **Developer Tools → States**.
 
-## Optional source-of-power sensor
+## Optional source-status and health entities
 
-The package in [`packages/grid_monitor.yaml`](packages/grid_monitor.yaml) adds a friendly source sensor with four states: `Мережа`, `Інвертор`, `Немає напруги або немає зв'язку з ESP`, and `Визначається`.
+The package in [`packages/grid_monitor.yaml`](packages/grid_monitor.yaml) adds a friendly source-status sensor that distinguishes PZEM online with ESP supply unconfirmed, PZEM offline with source unknown, and waiting for PZEM. It never reports `Grid Monitor Healthy` while ESP, PZEM telemetry, or voltage quality is unknown or unavailable; a PZEM timeout is never called inverter operation.
 
 To enable it, add packages to `configuration.yaml`:
 
@@ -37,8 +37,8 @@ Copy the package into the configured packages directory, run **Settings → Syst
 
 ## Entity coverage
 
-The card and native view cover live voltage, current, power, frequency and power factor; apparent and reactive power, phase angle and voltage deviation; five-minute average, daily min/max and daily peak values; today/month/total energy and cost; current tariff and cost rate; sag, swell and inverter counters and durations; mains, inverter, ESP and voltage alarm states; thresholds, nominal voltage, tariffs and two-zone tariff; Wi-Fi, uptime, ESP temperature, IP and SSID diagnostics; and reset/restart actions.
+The card and native view cover live voltage, current, power, frequency and power factor; apparent and reactive power, phase angle and voltage deviation; five-minute average, daily min/max and daily peak values; today/month/total energy and cost; current tariff and cost rate; sag and swell counters; PZEM communication outage counters and durations; PZEM, ESP and voltage alarm states; thresholds, nominal voltage, tariffs and two-zone tariff; Wi-Fi, uptime, ESP temperature, IP and SSID diagnostics; and reset/restart actions.
 
 ## Design notes
 
-The visual language follows the supplied reference: dark navy surfaces, electric-blue accents, green healthy state, amber inverter state, a prominent voltage gauge, metric tiles and grouped energy, quality, event, settings and diagnostic sections. The native dashboard intentionally remains available because it can be restored without a custom JavaScript resource.
+The visual language follows the supplied reference: dark navy surfaces, electric-blue accents, green healthy state, amber unknown-source warning, a prominent voltage gauge, metric tiles and grouped energy, quality, event, settings and diagnostic sections. The native dashboard intentionally remains available because it can be restored without a custom JavaScript resource.
