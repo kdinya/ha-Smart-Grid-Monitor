@@ -92,7 +92,8 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertNotIn("${this._activeTab === 'home' ? '' : this._tabs('side')}", render)
         self.assertIn(".shell:not(.home-active)>.header>.tabs-top{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));flex:0 0 45%;width:45%;min-width:360px;max-width:560px;margin:0 0 0 auto", card)
         self.assertIn(".shell:not(.home-active)>.header>.tabs-top .tab{padding:15px 8px}", card)
-        self.assertIn(".shell:not(.home-active)>.page-layout{display:block;margin-top:-20px}", card)
+        self.assertIn(".shell:not(.home-active)>.page-layout{display:block;margin-top:-40px}", card)
+        self.assertEqual(card.count(".shell:not(.home-active)>.page-layout{display:block;margin-top:-40px}"), 2)
         self.assertIn(".shell:not(.home-active)>.page-layout>.tabs-side{display:none}", card)
 
     def test_energy_tab_has_one_history_chart_with_energy_cost_toggle(self):
@@ -248,7 +249,7 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("chart.dataset.chartMin", card)
         self.assertIn(".chart-reading-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr))", card)
         self.assertIn("this._queueChartReadings(point.t)", card)
-        self.assertIn(".shell:not(.home-active)>.page-layout{display:block;margin-top:-20px}", card)
+        self.assertIn(".shell:not(.home-active)>.page-layout{display:block;margin-top:-40px}", card)
         self.assertIn(".shell:not(.home-active)>.page-layout>.tabs-side{display:none}", card)
 
     def test_daily_voltage_and_power_minima_ignore_invalid_restored_values(self):
