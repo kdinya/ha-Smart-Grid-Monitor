@@ -933,6 +933,74 @@ assert.match(dailyStats, /Max per day<\/span><b>1\.76 kWh<\/b>/);
         )
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
+    def test_metric_info_buttons_render_on_requested_tiles_and_open_explanation(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = {
+  window: { customCards: [] },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+};
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+const text = {
+  power: 'Потужність', current: 'Струм', frequency: 'Частота', pf: 'Коеф. потужності',
+  apparent: 'Повна потужність', reactive: 'Реактивна потужність', phase: 'Кут фази',
+  metric_info_button: 'Пояснення показника', info_reactive_power: 'Reactive power explanation',
+};
+card._t = (key) => text[key] || key;
+card._escape = String;
+card._num = () => 12.5;
+card._formatted = () => '12,5';
+card._unit = () => 'W';
+card._locale = () => 'uk-UA';
+card._svg = () => '';
+
+for (const key of ['power', 'current', 'frequency', 'power_factor']) {
+  const html = card._heroMetric(key, key, 1);
+  assert.match(html, new RegExp(`data-metric-info="${key}"`));
+  assert.match(html, /aria-label="Пояснення показника:/);
+}
+for (const [key, label] of [
+  ['apparent_power', 'Повна потужність'],
+  ['reactive_power', 'Реактивна потужність'],
+  ['phase_angle', 'Кут фази'],
+]) {
+  const html = card._detail(key, label, 1);
+  assert.match(html, new RegExp(`data-metric-info="${key}"`));
+  assert.match(html, /class="detail metric-info-card"/);
+}
+assert.doesNotMatch(card._detail('voltage_deviation', 'Відхилення напруги', 1), /data-metric-info/);
+
+let opened;
+card._showDialog = (options) => { opened = options; };
+const clicked = {
+  dataset: { metricInfo: 'reactive_power' },
+  closest(selector) {
+    if (selector === '[data-dialog-action]') return null;
+    if (selector === '[data-metric-info]') return this;
+    return null;
+  },
+};
+card._handleCardClick({ target: clicked });
+assert.equal(JSON.stringify(opened), JSON.stringify({
+  title: 'Реактивна потужність',
+  message: 'Reactive power explanation',
+  info: true,
+}));
+"""
+        result = subprocess.run(
+            ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
     def test_energy_tab_renders_one_chart_with_energy_cost_toggle(self):
         script = r"""
 const assert = require('node:assert/strict');
@@ -990,7 +1058,7 @@ card._chartStatsHtml = (metric) => `stats-${metric}`;
 card._closeChartDateRangePopover = () => {};
 const button = { dataset: { energyMetric: 'cost_total' } };
 card._handleCardClick({ target: { closest: (query) => {
-  if (query === '.chart-date-range' || query === '[data-dialog-action]') return null;
+  if (query === '.chart-date-range' || query === '[data-dialog-action]' || query === '[data-metric-info]') return null;
   selector = query;
   return button;
 } } });
@@ -1109,7 +1177,7 @@ card.shadowRoot = {
   querySelectorAll: () => [],
 };
 const clickTarget = { dataset: { energyBar: '1' }, closest(query) {
-  if (query === '.chart-date-range' || query === '[data-dialog-action]') return null;
+  if (query === '.chart-date-range' || query === '[data-dialog-action]' || query === '[data-metric-info]') return null;
   return this;
 } };
 card._handleCardClick({ target: clickTarget });
