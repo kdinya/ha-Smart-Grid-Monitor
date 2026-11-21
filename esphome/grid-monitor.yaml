@@ -199,7 +199,11 @@ sensor:
               float v = x;
               id(last_pzem_ms) = millis();
               id(pzem_seen) = true;
-              if (v > 150.0f && v < id(g_v_min)) id(g_v_min) = v;
+              // Discard stale or implausible restored minima before comparing today's valid readings.
+              if (v > 150.0f && v <= 300.0f &&
+                  (id(g_v_min) <= 150.0f || id(g_v_min) > 300.0f || v < id(g_v_min))) {
+                id(g_v_min) = v;
+              }
               if (v > id(g_v_max)) id(g_v_max) = v;
               float lo = id(th_low).state;
               float hi = id(th_high).state;
@@ -239,7 +243,9 @@ sensor:
         then:
           - lambda: |-
               if (!std::isfinite(x)) return;
-              if (x < id(g_p_min)) id(g_p_min) = x;
+              // A zero-power reading is not a useful daily minimum; clear restored zero/invalid state.
+              if (id(g_p_min) <= 0.0f || id(g_p_min) > 30000.0f) id(g_p_min) = 1e9f;
+              if (x > 0.0f && x < id(g_p_min)) id(g_p_min) = x;
               if (x > id(g_p_max)) id(g_p_max) = x;
     frequency:
       id: grid_freq
@@ -388,7 +394,7 @@ sensor:
     accuracy_decimals: 1
     update_interval: 15s
     lambda: |-
-      return id(g_v_min) > 900 ? NAN : id(g_v_min);
+      return id(g_v_min) <= 150.0f || id(g_v_min) > 300.0f ? NAN : id(g_v_min);
   - platform: template
     name: "Voltage Max Today"
     unit_of_measurement: V
@@ -419,10 +425,10 @@ sensor:
     name: "Power Min Today"
     unit_of_measurement: W
     device_class: power
-    accuracy_decimals: 0
+    accuracy_decimals: 1
     update_interval: 15s
     lambda: |-
-      return id(g_p_min) > 1e8 ? NAN : id(g_p_min);
+      return id(g_p_min) <= 0.0f || id(g_p_min) > 30000.0f ? NAN : id(g_p_min);
   - platform: template
     name: "Current Min Today"
     unit_of_measurement: A

@@ -69,6 +69,37 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("grid-template-rows:auto", card)
         self.assertIn(".voltage:after{display:none}", card)
 
+    def test_home_status_is_top_right_without_wifi_icon_and_gauge_is_10_percent_larger(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        self.assertIn(".voltage-brand{display:flex;align-items:flex-start", card)
+        self.assertIn(".voltage-brand .home-status{flex:none;align-self:flex-start;", card)
+        self.assertIn("margin-left:auto", card.split(".voltage-brand .home-status{", 1)[1].split("}", 1)[0])
+        self.assertIn("<div class=\"headright home-status\">", card)
+        self.assertNotIn('data-role="wifi-icon"', card)
+        self.assertNotIn("_updateWifiTitle", card)
+        last_gauge_rule = card[card.rfind(".voltage-gauge{"):].split("}", 1)[0]
+        self.assertIn("width:min(110%,594px)", last_gauge_rule)
+
+    def test_other_pages_hide_status_and_use_the_right_side_menu_on_desktop(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        header = card.split("    _headerHtml() {", 1)[1].split("    _home() {", 1)[0]
+        self.assertNotIn("_headRightHtml", header)
+        self.assertIn("${this._activeTab === 'home' ? '' : this._tabs('side')}", card)
+        self.assertIn(".shell:not(.home-active)>.page-layout{display:grid", card)
+        self.assertIn(".shell:not(.home-active)>.page-layout>.tabs-side{display:grid;grid-template-columns:minmax(0,1fr)", card)
+        self.assertIn(".shell:not(.home-active)>.page-layout>.tabs-side{display:none}", card)
+
+    def test_daily_voltage_and_power_minima_ignore_invalid_restored_values(self):
+        firmware = (ROOT / "esphome/grid-monitor.yaml").read_text(encoding="utf-8")
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        self.assertIn("id(g_v_min) <= 150.0f || id(g_v_min) > 300.0f", firmware)
+        self.assertIn("v > 150.0f && v <= 300.0f", firmware)
+        self.assertIn("id(g_p_min) <= 0.0f || id(g_p_min) > 30000.0f", firmware)
+        self.assertIn("x > 0.0f && x < id(g_p_min)", firmware)
+        self.assertIn("accuracy_decimals: 1", firmware.split('name: "Power Min Today"', 1)[1].split('name: "Current Min Today"', 1)[0])
+        self.assertIn("minDigits: 1, maxDigits: 0", card)
+        self.assertIn('data-value-key="power_min" data-value-digits="1"', card)
+
     def test_gauge_arc_ticks_and_marker_share_one_geometry(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
         self.assertIn("const GAUGE = {", card)
