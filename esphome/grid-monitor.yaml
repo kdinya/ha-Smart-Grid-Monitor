@@ -1,6 +1,6 @@
 # ============================================================
 #  Grid Monitor: ESP32-C3 + PZEM-004T v3.0 (100A, CT)
-#  Проводка:  PZEM VCC (3.3V) -> 3V3 ESP, GND -> GND
+#  Проводка:  PZEM VCC -> згідно з маркуванням конкретного модуля, GND -> GND
 #             PZEM TX -> GPIO4 (RX ESP),  PZEM RX -> GPIO5 (TX ESP)
 #  secrets.yaml: wifi_ssid, wifi_password, fallback_password, api_key, ota_password
 # ============================================================
