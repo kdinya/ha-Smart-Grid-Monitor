@@ -163,9 +163,11 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn('popover="manual" data-scroll-top aria-label=', card)
         self.assertIn("document.addEventListener('scroll', this._scrollVisibilityHandler, { capture: true, passive: true })", card)
         self.assertIn("button.showPopover()", card)
+        self.assertIn("this._overlapsVisibleTab(button)", card)
         self.assertIn("window.scrollTo({ top: 0, behavior: 'smooth' })", card)
         self.assertIn("scroller.scrollTo({ top: 0, behavior: 'smooth' })", card)
         self.assertIn(".back-to-top{position:fixed;", card)
+        self.assertIn("const tabRects = this._visibleTabRects()", card)
 
     def test_plug_illustration_uses_rounded_european_pins_and_side_contacts(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
@@ -188,12 +190,21 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertTrue(connection_rules)
         self.assertTrue(all("animation" not in rule for rule in connection_rules))
 
-    def test_settings_tab_uses_centered_gear_and_actions_stay_in_one_row(self):
+    def test_settings_tab_uses_centered_gear_and_places_history_controls_in_actions(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
         settings_icon = card.split("    settings: '", 1)[1].split("',", 1)[0]
         self.assertNotIn("transform=", settings_icon)
         self.assertIn("fill-rule=\"evenodd\"", settings_icon)
         self.assertIn("M24 17a7 7 0 1 0 0 14 7 7 0 1 0 0-14Z", settings_icon)
+        settings = card.split("    _settings() {", 1)[1].split("    _chipArt()", 1)[0]
+        action_grid = settings.split('<div class="action-grid">', 1)[1].split("</div>", 1)[0]
+        self.assertIn("${this._historyCleanupActions()}", action_grid)
+        self.assertEqual(action_grid.count("this._action("), 5)
+        cleanup = card.split("    _historyCleanupActions() {", 1)[1].split("    _updateHistoryCleanupControls()", 1)[0]
+        self.assertEqual(cleanup.count('class=\"action-button\"'), 2)
+        self.assertNotIn("history-delete-button", card)
+        self.assertNotIn("history-cleanup-actions", card)
+        self.assertIn("history_cleanup_hint", settings)
         self.assertIn(".action-grid{grid-template-columns:repeat(5,minmax(0,1fr))}", card)
         self.assertIn(".action-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;overflow:visible}", card)
         self.assertIn(".action-grid .action-button:nth-child(5){grid-column:1/-1}", card)

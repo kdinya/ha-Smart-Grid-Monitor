@@ -1096,6 +1096,35 @@
       return scroller.scrollTop || 0;
     }
 
+    _visibleTabRects() {
+      const tabs = this.shadowRoot?.querySelectorAll?.('[data-tab]') || [];
+      return [...tabs].map((tab) => {
+        let rect;
+        try { rect = tab.getBoundingClientRect?.(); } catch (_error) { return null; }
+        if (!rect || rect.width <= 0 || rect.height <= 0) return null;
+        try {
+          const style = window.getComputedStyle?.(tab);
+          if (style?.display === 'none' || style?.visibility === 'hidden') return null;
+        } catch (_error) {}
+        return rect;
+      }).filter(Boolean);
+    }
+
+    _rectanglesOverlap(first, second) {
+      const firstRight = Number.isFinite(first.right) ? first.right : first.left + first.width;
+      const firstBottom = Number.isFinite(first.bottom) ? first.bottom : first.top + first.height;
+      const secondRight = Number.isFinite(second.right) ? second.right : second.left + second.width;
+      const secondBottom = Number.isFinite(second.bottom) ? second.bottom : second.top + second.height;
+      return first.left < secondRight && firstRight > second.left && first.top < secondBottom && firstBottom > second.top;
+    }
+
+    _overlapsVisibleTab(element) {
+      let rect;
+      try { rect = element?.getBoundingClientRect?.(); } catch (_error) { return false; }
+      if (!rect || rect.width <= 0 || rect.height <= 0) return false;
+      return this._visibleTabRects().some((tabRect) => this._rectanglesOverlap(rect, tabRect));
+    }
+
     _updateScrollTopVisibility() {
       const button = this.shadowRoot?.querySelector('[data-scroll-top]');
       if (!button) return;
@@ -1104,10 +1133,21 @@
         let isOpen = false;
         try { isOpen = button.matches(':popover-open'); } catch (_error) { isOpen = false; }
         try {
-          if (shouldShow && !isOpen) button.showPopover();
-          else if (!shouldShow && isOpen) button.hidePopover();
-        } catch (_error) { button.hidden = !shouldShow; }
-      } else button.hidden = !shouldShow;
+          if (shouldShow && !isOpen) {
+            button.showPopover();
+            isOpen = true;
+          }
+          const mayShow = shouldShow && !this._overlapsVisibleTab(button);
+          if (mayShow && !isOpen) button.showPopover();
+          else if (!mayShow && isOpen) button.hidePopover();
+        } catch (_error) {
+          const mayShow = shouldShow && !this._overlapsVisibleTab(button);
+          button.hidden = !mayShow;
+        }
+      } else {
+        button.hidden = !shouldShow;
+        if (shouldShow && this._overlapsVisibleTab(button)) button.hidden = true;
+      }
     }
 
     _scrollPageToTop() {
@@ -1850,11 +1890,11 @@
       return [...ids].sort();
     }
 
-    _historyCleanupSetting() {
+    _historyCleanupActions() {
       const entityIds = this._panelHistoryEntityIds();
       const sensorIds = entityIds.filter((entityId) => entityId.startsWith('sensor.'));
       const disabled = this._historyDeleteInProgress ? 'disabled' : '';
-      return `<h2 class="subheading">${this._escape(this._t('history_cleanup_title'))}</h2><div class="history-cleanup"><p class="history-cleanup-hint">${this._escape(this._t('history_cleanup_hint'))}</p><div class="action-grid history-cleanup-actions"><button class="action-button history-delete-button" type="button" data-history-delete="recorder" aria-label="${this._escape(this._t('history_purge_button'))}" ${!entityIds.length || disabled}>${this._svg('chart')}<span>${this._escape(this._t('history_purge_button'))}</span></button><button class="action-button history-delete-button" type="button" data-history-delete="statistics" aria-label="${this._escape(this._t('history_stats_button'))}" ${!sensorIds.length || disabled}>${this._svg('chart')}<span>${this._escape(this._t('history_stats_button'))}</span></button></div></div>`;
+      return `<button class="action-button" type="button" data-history-delete="recorder" aria-label="${this._escape(this._t('history_purge_button'))}" ${!entityIds.length || disabled}>${this._svg('chart')}<span>${this._escape(this._t('history_purge_button'))}</span></button><button class="action-button" type="button" data-history-delete="statistics" aria-label="${this._escape(this._t('history_stats_button'))}" ${!sensorIds.length || disabled}>${this._svg('chart')}<span>${this._escape(this._t('history_stats_button'))}</span></button>`;
     }
 
     _updateHistoryCleanupControls() {
@@ -2114,14 +2154,33 @@
       if (!trigger || !panel) return;
       const anchor = trigger.getBoundingClientRect();
       panel.hidden = false;
+      panel.style.maxHeight = '';
       if (typeof panel.showPopover === 'function') panel.showPopover();
       else panel.removeAttribute('popover');
       const size = panel.getBoundingClientRect();
       const margin = 8;
       const left = Math.max(margin, Math.min(anchor.right - size.width, window.innerWidth - size.width - margin));
       const below = anchor.bottom + margin;
-      const top = below + size.height <= window.innerHeight - margin
+      let top = below + size.height <= window.innerHeight - margin
         ? below : Math.max(margin, anchor.top - size.height - margin);
+      const tabRects = this._visibleTabRects();
+      const overlapsTab = (candidate) => {
+        const rect = { left, right: left + size.width, top: candidate, bottom: candidate + size.height, width: size.width, height: size.height };
+        return tabRects.some((tabRect) => this._rectanglesOverlap(rect, tabRect));
+      };
+      if (overlapsTab(top) && tabRects.length) {
+        const tabTop = Math.min(...tabRects.map((rect) => rect.top));
+        const tabBottom = Math.max(...tabRects.map((rect) => rect.bottom));
+        const candidates = [
+          Math.max(top, tabBottom + margin),
+          tabTop - size.height - margin,
+        ].filter((candidate) => candidate >= margin && candidate + size.height <= window.innerHeight - margin && !overlapsTab(candidate));
+        if (candidates.length) top = candidates.sort((a, b) => Math.abs(a - top) - Math.abs(b - top))[0];
+        else if (tabBottom + margin < window.innerHeight - margin) {
+          top = tabBottom + margin;
+          panel.style.maxHeight = `${window.innerHeight - top - margin}px`;
+        }
+      }
       panel.style.left = `${left}px`;
       panel.style.top = `${top}px`;
       trigger.setAttribute('aria-expanded', 'true');
@@ -3723,10 +3782,10 @@
         <div class="detail-grid settings-grid">
         ${this._setting('sag_threshold', this._t('sag'))}${this._setting('swell_threshold', this._t('swell'))}${this._setting('nominal_voltage', this._t('nominal'))}${this._setting('tariff_day', this._t('tariff_day'))}${twoZone ? this._setting('tariff_night', this._t('tariff_night')) : ''}
         <div class="detail switch-setting"><span>${this._escape(this._t('two_zone'))}</span><strong data-role="switch-value">${this._escape(twoZone ? this._t('on') : this._t('off'))}</strong><button class="switch-button ${twoZone ? 'on' : ''}" data-switch="two_zone" aria-pressed="${twoZone}">${this._svg('gear')}<span data-role="switch-label">${this._escape(twoZone ? this._t('on') : this._t('off'))}</span></button></div>
-      </div>${this._statsStartSetting()}${this._historyCleanupSetting()}<h2 class="subheading">${this._escape(this._t('diagnostics'))}</h2><div class="detail-grid">
+      </div>${this._statsStartSetting()}<h2 class="subheading">${this._escape(this._t('diagnostics'))}</h2><div class="detail-grid">
         ${this._detail('wifi_signal', this._t('wifi'), 0)}${this._detail('esp_temperature', this._t('temperature'), 1)}${this._detail('uptime', this._t('uptime'), 0)}${this._detail('ip_address', this._t('ip'), 0)}${this._detail('ssid', this._t('ssid'), 0)}${this._detail('inverter_events', this._t('inverter_events'), 0)}
-      </div><h2 class="subheading">${this._escape(this._t('actions'))}</h2><div class="action-grid">
-        ${this._action('reset_energy', this._t('reset_energy'))}${this._action('reset_events', this._t('reset_events'))}${this._action('reset_cost', this._t('reset_cost'))}${this._action('reset_stats', this._t('reset_stats'))}${this._action('restart', this._t('restart'))}
+      </div><h2 class="subheading">${this._escape(this._t('actions'))}</h2><p class="history-cleanup-hint">${this._escape(this._t('history_cleanup_hint'))}</p><div class="action-grid">
+        ${this._action('reset_energy', this._t('reset_energy'))}${this._action('reset_events', this._t('reset_events'))}${this._action('reset_cost', this._t('reset_cost'))}${this._action('reset_stats', this._t('reset_stats'))}${this._action('restart', this._t('restart'))}${this._historyCleanupActions()}
       </div></section>`;
     }
 
@@ -4626,13 +4685,7 @@
         .action-grid .action-button:nth-child(-n+3) span{color:#ffc54d}
         .action-grid .action-button:nth-child(4){border-color:#ff526d80;background:linear-gradient(145deg,#2c1520,#0d1b2e)}
         .action-grid .action-button:nth-child(4) span{color:#ff8a9a}
-        .history-cleanup{margin:0 0 18px;padding:14px;border:1px solid #ff526d55;border-radius:16px;background:linear-gradient(145deg,#241722,#0d1b2e)}
-        .history-cleanup-hint{margin:0 0 12px;color:#ffd3da;font-size:14px;line-height:1.5}
-        .history-cleanup-actions{margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;background:transparent;padding:0}
-        .history-cleanup-actions .history-delete-button{border-color:#ff526d99!important;background:linear-gradient(145deg,#371825,#151d30)!important;color:#ffe7eb}
-        .history-cleanup-actions .history-delete-button .icon{color:#ff8a9a}
-        .history-cleanup-actions .history-delete-button:disabled{opacity:.48;cursor:not-allowed;transform:none;box-shadow:none}
-        @container (max-width:520px){.history-cleanup{padding:11px}.history-cleanup .history-cleanup-actions{grid-template-columns:1fr}.history-cleanup-hint{font-size:13px}}
+        .history-cleanup-hint{margin:0 0 10px;color:#9fb5d1;font-size:13px;line-height:1.5}
 
         @container (max-width:520px){
           .detail-panel{padding:16px 12px}
