@@ -138,7 +138,7 @@
       healthy: 'PZEM онлайн; якість напруги в межах порогів', quality_unknown: 'Якість напруги невідома', alarm_banner: 'Напруга поза заданим діапазоном', offline_banner: 'ESP недоступна',
       pzem_online: 'Дані PZEM доступні', pzem_offline: 'PZEM офлайн', source_unconfirmed: 'Джерело живлення не підтверджене', source_unknown: 'Джерело живлення невідоме', pzem_source_offline: 'PZEM офлайн; джерело живлення невідоме', pzem_offline_banner: 'PZEM не відповідає; джерело живлення невідоме',
       voltage: 'Напруга мережі', sag_state: 'Просідання', swell_state: 'Перенапруга', current: 'Струм', power: 'Потужність', frequency: 'Частота', pf: 'Коеф. потужності', normal: 'Норма', alarm: 'Поза нормою',
-      chart_title: 'Детальний графік', since: 'З', stats_title: 'Статистика', stats_start_label: 'Початок статистики',
+      chart_title: 'Детальний графік', since: 'Період', stats_title: 'Статистика', stats_start_label: 'Початок статистики',
       stats_hint: 'Оберіть дату й час: графіки та мінімум/максимум рахуватимуться від цього моменту. Без значення діють добові дані.',
       stats_active: 'Графіки та мін/макс рахуються від', stats_apply: 'Застосувати', stats_clear: 'Скинути', chart_date_error_earlier: 'Дата не може бути раніше виставленого початку статистики',
       stats_error: 'Вкажіть коректні дату й час у минулому.', stats_note: 'Мін/макс від', power_range_period: 'Діапазон потужності за період', max_current_period: 'Максимальний струм за період', peak_power_period: 'Пікова потужність за період', stat_min: 'Мін.', stat_avg: 'Сер.', stat_max: 'Макс.', hour: 'Год', day: 'День', week: 'Тиждень', month: 'Місяць', loading: 'Завантаження історії…', no_history: 'Історія поки недоступна',
@@ -181,7 +181,7 @@
       healthy: 'PZEM online; voltage is within configured thresholds', quality_unknown: 'Voltage quality is unknown', alarm_banner: 'Voltage is outside the configured range', offline_banner: 'ESP is offline',
       pzem_online: 'PZEM data available', pzem_offline: 'PZEM offline', source_unconfirmed: 'Power source is not confirmed', source_unknown: 'Power source unknown', pzem_source_offline: 'PZEM offline; power source unknown', pzem_offline_banner: 'PZEM is not responding; power source is unknown',
       voltage: 'Grid voltage', sag_state: 'Sag', swell_state: 'Swell', current: 'Current', power: 'Power', frequency: 'Frequency', pf: 'Power factor', normal: 'Normal', alarm: 'Out of range',
-      chart_title: 'Detailed chart', since: 'Since', stats_title: 'Statistics', stats_start_label: 'Statistics start',
+      chart_title: 'Detailed chart', since: 'Period', stats_title: 'Statistics', stats_start_label: 'Statistics start',
       stats_hint: 'Pick a date and time: charts and min/max will be calculated from that moment. Empty means daily values.',
       stats_active: 'Charts and min/max are calculated from', stats_apply: 'Apply', stats_clear: 'Reset', chart_date_error_earlier: 'Date cannot be earlier than the statistics start time',
       stats_error: 'Enter a valid date and time in the past.', stats_note: 'Min/max since', power_range_period: 'Power range for the period', max_current_period: 'Peak current for the period', peak_power_period: 'Peak power for the period', stat_min: 'Min', stat_avg: 'Avg', stat_max: 'Max', hour: 'Hour', day: 'Day', week: 'Week', month: 'Month', loading: 'Loading history…', no_history: 'History is not available yet',
@@ -1430,7 +1430,7 @@
 
     _chart() {
       const labels = ['hour', 'day', 'week', 'month'];
-      const sinceButton = !Number.isFinite(this._statsStart) ? '' : `<button class="period-button since ${this._historyRange === 'since' ? 'active' : ''}" data-period="since" aria-pressed="${this._historyRange === 'since'}">${this._escape(`${this._t('since')} ${this._statsStartLabel()}`)}</button>`;
+      const sinceButton = !Number.isFinite(this._statsStart) ? '' : `<button class="period-button since ${this._historyRange === 'since' ? 'active' : ''}" data-period="since" aria-pressed="${this._historyRange === 'since'}">${this._escape(this._t('since'))}</button>`;
       const buttons = labels.map((period) => `<button class="period-button ${this._historyRange === period ? 'active' : ''}" data-period="${period}" aria-pressed="${this._historyRange === period}">${this._escape(this._t(period))}</button>`).join('') + sinceButton;
       const metricButtons = Object.keys(CHART_METRICS).map((metric) => `<button class="period-button ${this._chartMetric === metric ? 'active' : ''}" data-metric="${metric}" aria-pressed="${this._chartMetric === metric}">${this._escape(this._t(metric))}</button>`).join('');
       return `<section class="card chart-card detailed-chart"><div class="chart-head"><h2><span class="chart-icon">${this._svg('chart')}</span>${this._escape(this._t('chart_title'))}</h2><div class="periods" role="group" aria-label="${this._escape(this._t('chart_title'))}">${metricButtons}</div><div class="periods" role="group" aria-label="${this._escape(this._t('hour'))}">${buttons}</div><div class="chart-tools"><button class="chart-zoom-button" type="button" data-chart-zoom="out" aria-label="${this._escape(this._t('chart_zoom_out'))}" title="${this._escape(this._t('chart_zoom_out'))}">−</button><button class="chart-zoom-button" type="button" data-chart-zoom="in" aria-label="${this._escape(this._t('chart_zoom_in'))}" title="${this._escape(this._t('chart_zoom_in'))}">+</button>${this._chartDateRangeHtml()}</div></div><div class="chart-stats" data-role="chart-stats">${this._chartStatsHtml()}</div><div class="chart-plot" data-role="chart-plot">${this._chartSvg()}</div>${this._chartScrubberHtml()}${this._chartReadingsHtml()}</section>`;
@@ -1471,8 +1471,7 @@
     }
 
     _statsNote() {
-      if (!Number.isFinite(this._statsStart)) return '';
-      return `<div class="stats-note" data-role="stats-note">${this._escape(`${this._t('stats_note')} ${this._statsStartFullLabel()}`)}</div>`;
+      return '';
     }
 
     _statsStartSetting() {

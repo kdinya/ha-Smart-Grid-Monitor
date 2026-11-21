@@ -500,6 +500,19 @@ card._chartData = () => ({ series: [
 const html = card._chartStatsHtml();
 assert.ok(!html.includes('180'), 'min before statsStart is not shown');
 assert.ok(html.includes('230'), 'sample after statsStart is shown');
+
+// 6. Ensure statsStart timestamp is not displayed outside settings
+assert.equal(card._statsNote(), '', 'stats note on home tab is empty');
+card._t = (key) => ({ chart_title: 'Chart', since: 'Period', hour: 'Hour', day: 'Day', week: 'Week', month: 'Month' })[key] || key;
+card._svg = () => '';
+card._chartDateRangeHtml = () => '';
+card._chartStatsHtml = () => '';
+card._chartSvg = () => '';
+card._chartScrubberHtml = () => '';
+card._chartReadingsHtml = () => '';
+const chartHtml = card._chart();
+assert.ok(!chartHtml.includes('10:00'), 'chart period button does not show start time');
+assert.ok(chartHtml.includes('Period'), 'chart period button displays generic period label');
 """
         result = subprocess.run(
             ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
