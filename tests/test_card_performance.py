@@ -240,6 +240,65 @@ card._hass.callService = async (domain, service, data) => { saved = { domain, se
 """)
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
+    def test_missing_statistics_helper_can_be_created_from_settings_by_admin(self):
+        result = run_node(r"""
+const card = makeCard({}, { prefix: 'grid_monitor', language: 'en' });
+const markup = card._statsStartSetting();
+assert.match(markup, /data-stats-helper-create/);
+assert.match(markup, /Create helper/);
+const existing = makeCard({ 'input_text.grid_monitor_statistics_start': state('') }, { prefix: 'grid_monitor', language: 'en' });
+assert.equal(existing._canCreateStatsStartHelper(), false);
+assert.doesNotMatch(existing._statsStartSetting(), /data-stats-helper-create/);
+let request = null;
+const dialogs = [];
+card._hass.callWS = async (message) => { request = message; return { id: 'grid_monitor_statistics_start' }; };
+card._showDialog = async (options) => { dialogs.push(options); return true; };
+(async () => {
+  assert.equal(await card._createStatsStartHelper(), true);
+  assert.equal(request.type, 'input_text/create');
+  assert.equal(request.name, 'Grid Monitor Statistics Start');
+  assert.equal(request.min, 0);
+  assert.equal(request.max, 32);
+  assert.equal(request.icon, 'mdi:calendar-clock');
+  assert.equal(dialogs[0].confirm, true, 'helper creation requires an explicit confirmation');
+  assert.equal(card._canCreateStatsStartHelper(), false, 'a duplicate create button is hidden after success');
+})().catch((error) => { console.error(error); process.exit(1); });
+""")
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_statistics_helper_creation_reports_admin_permission_errors(self):
+        result = run_node(r"""
+const card = makeCard({}, { prefix: 'grid_monitor', language: 'en' });
+const dialogs = [];
+card._hass.callWS = async () => { throw new Error('Admin required'); };
+card._showDialog = async (options) => { dialogs.push(options); return true; };
+(async () => {
+  assert.equal(await card._createStatsStartHelper(), false);
+  assert.equal(dialogs.length, 2, 'show confirm and a failure explanation, but no success dialog');
+  assert.match(dialogs[1].message, /administrator/);
+  assert.equal(card._canCreateStatsStartHelper(), true, 'retry stays available after a permission error');
+})().catch((error) => { console.error(error); process.exit(1); });
+""")
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_statistics_helper_create_button_click_is_delegated(self):
+        result = run_node(r"""
+const card = makeCard();
+card._closeChartDateRangePopover = () => {};
+let calls = 0;
+card._createStatsStartHelper = () => { calls += 1; };
+const button = {
+  dataset: { statsHelperCreate: '' },
+  closest(selector) {
+    if (selector === '.chart-date-range') return null;
+    return selector.includes('[data-stats-helper-create]') ? this : null;
+  },
+};
+card._handleCardClick({ target: button });
+assert.equal(calls, 1);
+""")
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
     def test_statistics_helper_remains_canonical_for_custom_prefix_and_allows_override(self):
         result = run_node(r"""
 const canonical = 'input_text.grid_monitor_statistics_start';

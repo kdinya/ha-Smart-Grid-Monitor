@@ -148,7 +148,8 @@
       pzem_online: 'Дані PZEM доступні', pzem_offline: 'PZEM офлайн', source_unconfirmed: 'Джерело живлення не підтверджене', source_unknown: 'Джерело живлення невідоме', pzem_source_offline: 'PZEM офлайн; джерело живлення невідоме', pzem_offline_banner: 'PZEM не відповідає; джерело живлення невідоме',
       voltage: 'Напруга мережі', sag_state: 'Просідання', swell_state: 'Перенапруга', current: 'Струм', power: 'Потужність', frequency: 'Частота', pf: 'Коеф. потужності', normal: 'Норма', alarm: 'Поза нормою',
       chart_title: 'Детальний графік', energy_chart_title: 'Споживання електроенергії', cost_chart_title: 'Вартість електроенергії', energy_metric_group: 'Показати', energy_metric_energy: 'Енергія', energy_metric_cost: 'Вартість', energy_selected_interval: 'Вибраний інтервал', chart_period: 'Період графіків', since: 'Період', stats_title: 'Статистика', stats_start_label: 'Початок статистики',
-      stats_hint: 'Оберіть дату й час: графіки та мінімум/максимум рахуватимуться від цього моменту. Без значення діють добові дані.', stats_shared_hint: 'Для синхронізації між пристроями ввімкніть пакет Home Assistant із helper input_text.grid_monitor_statistics_start.', stats_sync_saved: 'Збережено в Home Assistant; налаштування синхронізується між пристроями.', stats_sync_missing: 'Helper не знайдено: значення діє лише до перезавантаження. Увімкніть optional package для синхронізації.',
+      stats_hint: 'Оберіть дату й час: графіки та мінімум/максимум рахуватимуться від цього моменту. Без значення діють добові дані.', stats_shared_hint: 'Для синхронізації між пристроями потрібен helper input_text.grid_monitor_statistics_start.', stats_sync_saved: 'Збережено в Home Assistant; налаштування синхронізується між пристроями.', stats_sync_missing: 'Helper не знайдено: значення діє лише до перезавантаження. Створіть його кнопкою нижче або ввімкніть пакет.',
+      stats_create_helper: 'Створити helper', stats_create_helper_confirm: 'Створити input_text.grid_monitor_statistics_start у Home Assistant? Потрібні права адміністратора. Після створення виберіть дату початку й натисніть «Застосувати».', stats_helper_created: 'Helper створено. Тепер виберіть дату початку статистики й натисніть «Застосувати», щоб зберегти її в Home Assistant.', stats_helper_error: 'Не вдалося створити helper. Переконайтеся, що ви ввійшли як адміністратор. Або створіть Text helper вручну в Settings → Devices & services → Helpers.',
       stats_active: 'Графіки та мін/макс рахуються від', stats_apply: 'Застосувати', stats_clear: 'Скинути', chart_date_error_earlier: 'Дата не може бути раніше виставленого початку статистики',
       stats_error: 'Вкажіть коректні дату й час у минулому.', stats_note: 'Мін/макс від', power_range_period: 'Діапазон потужності за період', max_current_period: 'Максимальний струм за період', peak_power_period: 'Пікова потужність за період', stat_min: 'Мін.', stat_avg: 'Сер.', stat_max: 'Макс.', hour: 'Год', day: 'День', week: 'Тиждень', month: 'Місяць', loading: 'Завантаження історії…', no_history: 'Історія поки недоступна',
       chart_select_time: 'Перетягуйте графік; двома пальцями масштабуйте, повзунком вибирайте час', chart_date_range: 'Вибрати період', chart_from: 'Від', chart_to: 'До', chart_apply: 'Показати', chart_date_error: 'Перевірте дати: кінець має бути пізніше початку й не в майбутньому', chart_zoom_in: 'Збільшити масштаб', chart_zoom_out: 'Зменшити масштаб', chart_readings: 'Дані на вибраний час', chart_readings_loading: 'Завантаження вимірювань…', chart_readings_unavailable: 'Історія вимірювань недоступна', chart_live: 'Зараз', active_power: 'Активна потужність',
@@ -209,7 +210,8 @@
       pzem_online: 'PZEM data available', pzem_offline: 'PZEM offline', source_unconfirmed: 'Power source is not confirmed', source_unknown: 'Power source unknown', pzem_source_offline: 'PZEM offline; power source unknown', pzem_offline_banner: 'PZEM is not responding; power source is unknown',
       voltage: 'Grid voltage', sag_state: 'Sag', swell_state: 'Swell', current: 'Current', power: 'Power', frequency: 'Frequency', pf: 'Power factor', normal: 'Normal', alarm: 'Out of range',
       chart_title: 'Detailed chart', energy_chart_title: 'Electricity consumption', cost_chart_title: 'Electricity cost', energy_metric_group: 'Show', energy_metric_energy: 'Energy', energy_metric_cost: 'Cost', energy_selected_interval: 'Selected interval', chart_period: 'Chart period', since: 'Period', stats_title: 'Statistics', stats_start_label: 'Statistics start',
-      stats_hint: 'Pick a date and time: charts and min/max will be calculated from that moment. Empty means daily values.', stats_shared_hint: 'To sync this setting across devices, enable the Home Assistant package with the input_text.grid_monitor_statistics_start helper.', stats_sync_saved: 'Saved in Home Assistant; this setting syncs across devices.', stats_sync_missing: 'Helper not found: this setting lasts only until reload. Enable the optional package to sync it.',
+      stats_hint: 'Pick a date and time: charts and min/max will be calculated from that moment. Empty means daily values.', stats_shared_hint: 'To sync this setting across devices, the input_text.grid_monitor_statistics_start helper is required.', stats_sync_saved: 'Saved in Home Assistant; this setting syncs across devices.', stats_sync_missing: 'Helper not found: this setting lasts only until reload. Create it with the button below or enable the package.',
+      stats_create_helper: 'Create helper', stats_create_helper_confirm: 'Create input_text.grid_monitor_statistics_start in Home Assistant? Administrator permissions are required. After creation, select the statistics start date and press Apply.', stats_helper_created: 'The helper was created. Select a statistics start date and press Apply to save it in Home Assistant.', stats_helper_error: 'Could not create the helper. Make sure you are signed in as a Home Assistant administrator, or create a Text helper manually under Settings → Devices & services → Helpers.',
       stats_active: 'Charts and min/max are calculated from', stats_apply: 'Apply', stats_clear: 'Reset', chart_date_error_earlier: 'Date cannot be earlier than the statistics start time',
       stats_error: 'Enter a valid date and time in the past.', stats_note: 'Min/max since', power_range_period: 'Power range for the period', max_current_period: 'Peak current for the period', peak_power_period: 'Peak power for the period', stat_min: 'Min', stat_avg: 'Avg', stat_max: 'Max', hour: 'Hour', day: 'Day', week: 'Week', month: 'Month', loading: 'Loading history…', no_history: 'History is not available yet',
       chart_select_time: 'Drag the chart to pan; pinch to zoom, or use the slider to select a time', chart_date_range: 'Select period', chart_from: 'From', chart_to: 'To', chart_apply: 'Show', chart_date_error: 'Check dates: the end must be after the start and not in the future', chart_zoom_in: 'Zoom in', chart_zoom_out: 'Zoom out', chart_readings: 'Readings at selected time', chart_readings_loading: 'Loading readings…', chart_readings_unavailable: 'Measurement history is unavailable', chart_live: 'Now', active_power: 'Active power',
@@ -1765,6 +1767,48 @@
       }
     }
 
+    _hasStatsStartHelper() {
+      const helper = this._state('stats_start');
+      return Boolean(helper && !['unknown', 'unavailable'].includes(helper.state));
+    }
+
+    _canCreateStatsStartHelper() {
+      return !this._hasStatsStartHelper()
+        && !this._statsHelperCreated
+        && this._entity('stats_start') === DEFAULTS.stats_start;
+    }
+
+    async _createStatsStartHelper() {
+      if (!this._canCreateStatsStartHelper() || this._statsHelperCreating) return false;
+      this._statsHelperCreating = true;
+      if (this.shadowRoot?.querySelector) this._updateStatsControls();
+      try {
+        const confirmed = await this._showDialog({
+          title: this._t('dialog_confirm_title'),
+          message: this._t('stats_create_helper_confirm'),
+          confirm: true,
+        });
+        if (!confirmed) return false;
+        if (typeof this._hass?.callWS !== 'function') throw new Error('Home Assistant WebSocket API is unavailable');
+        await this._hass.callWS({
+          type: 'input_text/create',
+          name: 'Grid Monitor Statistics Start',
+          min: 0,
+          max: 32,
+          icon: 'mdi:calendar-clock',
+        });
+        this._statsHelperCreated = true;
+        await this._showDialog({ title: this._t('stats_title'), message: this._t('stats_helper_created') });
+        return true;
+      } catch (_error) {
+        await this._showDialog({ title: this._t('dialog_error_title'), message: this._t('stats_helper_error') });
+        return false;
+      } finally {
+        this._statsHelperCreating = false;
+        if (this.shadowRoot?.querySelector) this._updateStatsControls();
+      }
+    }
+
     _statsStartLabel() {
       if (!Number.isFinite(this._statsStart)) return '';
       const when = new Date(this._statsStart);
@@ -1785,7 +1829,8 @@
     _statsStartSetting() {
       const active = Number.isFinite(this._statsStart);
       const hint = active ? `${this._t('stats_active')} ${this._statsStartFullLabel()}` : this._t('stats_hint');
-      return `<h2 class="subheading">${this._escape(this._t('stats_title'))}</h2><div class="detail stats-start" data-role="stats-start"><label><span>${this._escape(this._t('stats_start_label'))}</span><div class="stats-start-controls"><input type="datetime-local" data-stats-start-input max="${this._formatDateTimeInput(Date.now())}" value="${active ? this._formatDateTimeInput(this._statsStart) : ''}"><button class="save-button" type="button" data-stats-start-apply>${this._escape(this._t('stats_apply'))}</button><button class="save-button ghost" type="button" data-stats-start-clear data-role="stats-start-clear" ${active ? '' : 'disabled'}>${this._escape(this._t('stats_clear'))}</button></div></label><p class="stats-start-hint" data-role="stats-start-hint">${this._escape(hint)}</p><p class="stats-start-sync" data-role="stats-start-sync">${this._escape(this._t('stats_shared_hint'))}</p><p class="stats-start-error" role="alert" data-role="stats-start-error"></p></div>`;
+      const createButton = this._canCreateStatsStartHelper() ? `<button class="save-button stats-start-create" type="button" data-stats-helper-create ${this._statsHelperCreating ? 'disabled' : ''}>${this._escape(this._t('stats_create_helper'))}</button>` : '';
+      return `<h2 class="subheading">${this._escape(this._t('stats_title'))}</h2><div class="detail stats-start" data-role="stats-start"><label><span>${this._escape(this._t('stats_start_label'))}</span><div class="stats-start-controls"><input type="datetime-local" data-stats-start-input max="${this._formatDateTimeInput(Date.now())}" value="${active ? this._formatDateTimeInput(this._statsStart) : ''}"><button class="save-button" type="button" data-stats-start-apply>${this._escape(this._t('stats_apply'))}</button><button class="save-button ghost" type="button" data-stats-start-clear data-role="stats-start-clear" ${active ? '' : 'disabled'}>${this._escape(this._t('stats_clear'))}</button></div></label><p class="stats-start-hint" data-role="stats-start-hint">${this._escape(hint)}</p><p class="stats-start-sync" data-role="stats-start-sync">${this._escape(this._t('stats_shared_hint'))}</p>${createButton}<p class="stats-start-error" role="alert" data-role="stats-start-error"></p></div>`;
     }
 
     _updateStatsControls() {
@@ -1800,6 +1845,11 @@
       if (error) error.textContent = '';
       const sync = this.shadowRoot.querySelector('[data-role="stats-start-sync"]');
       if (sync) sync.textContent = this._state('stats_start') && !['unknown', 'unavailable'].includes(this._raw('stats_start')) ? this._t('stats_sync_saved') : this._t('stats_sync_missing');
+      const createHelper = this.shadowRoot.querySelector('[data-stats-helper-create]');
+      if (createHelper) {
+        createHelper.hidden = !this._canCreateStatsStartHelper();
+        createHelper.disabled = Boolean(this._statsHelperCreating);
+      }
     }
 
     _applyStatsStartInput() {
@@ -3759,7 +3809,7 @@
         return;
       }
       if (!event.target?.closest?.('.chart-date-range')) this._closeChartDateRangePopover();
-      const target = event.target?.closest?.('[data-scroll-top], [data-tab], [data-period], [data-energy-period], [data-energy-metric], [data-energy-bar], [data-metric], [data-action], [data-number-save], [data-switch], [data-chart-live], [data-chart-zoom], [data-chart-date-toggle], [data-chart-date-apply], [data-stats-start-apply], [data-stats-start-clear]');
+      const target = event.target?.closest?.('[data-scroll-top], [data-tab], [data-period], [data-energy-period], [data-energy-metric], [data-energy-bar], [data-metric], [data-action], [data-number-save], [data-switch], [data-chart-live], [data-chart-zoom], [data-chart-date-toggle], [data-chart-date-apply], [data-stats-start-apply], [data-stats-start-clear], [data-stats-helper-create]');
       if (!target) return;
       if (target.dataset.scrollTop !== undefined) { this._scrollPageToTop(); return; }
       if (target.dataset.energyBar !== undefined) { this._selectEnergyBar(Number(target.dataset.energyBar)); return; }
@@ -3820,6 +3870,7 @@
       if (target.dataset.chartDateApply !== undefined) { this._applyChartDateRange(target.dataset.chartScope || 'params'); return; }
       if (target.dataset.statsStartApply !== undefined) { this._applyStatsStartInput(); return; }
       if (target.dataset.statsStartClear !== undefined) { this._setStatsStart(null); return; }
+      if (target.dataset.statsHelperCreate !== undefined) { this._createStatsStartHelper(); return; }
       if (target.dataset.metric) {
         if (this._chartMetric === target.dataset.metric) return;
         this._clearChartScrub();
@@ -3902,6 +3953,7 @@
 
     _updateChanged(changed) {
       if (changed.has('stats_start')) {
+        if (this._hasStatsStartHelper()) this._statsHelperCreated = false;
         const start = this._readStatsStart();
         if (start !== this._statsStart) this._setStatsStart(start, false);
         this._updateStatsControls();
@@ -4733,6 +4785,7 @@
         .stats-start-controls .save-button:disabled{opacity:.45;cursor:default}
         .stats-start-hint{margin:10px 0 0;color:#9fb7d6;font-size:13px;line-height:1.4}
         .stats-start-sync{margin:5px 0 0;color:#77bceb;font-size:12px;line-height:1.4;overflow-wrap:anywhere}
+        .stats-start-create{margin-top:9px;min-height:42px}
         .stats-start-error{margin:6px 0 0;min-height:0;color:#ff8a9a;font-size:13px}
         .stats-start-error:empty{display:none}
         .stats-note{margin:10px 4px 0;padding:6px 12px;border-radius:99px;border:1px solid #2f9bff40;background:#0a2038;color:#9fd2ff;font-size:12.5px;text-align:center}
