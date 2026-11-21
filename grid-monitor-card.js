@@ -1094,7 +1094,7 @@
         <div class="main-grid">
           <div class="card voltage ${status.stateClass}" data-role="voltage-card">
             <div class="voltage-brand"><div class="logo">${this._svg('bolt')}</div><div class="brand"><h1>${this._escape(this._config.name || this._t('title'))}</h1><p>${this._escape(this._t('subtitle'))}</p></div></div>
-            <svg class="voltage-gauge" viewBox="0 0 500 345" role="img" aria-label="${this._escape(this._t('voltage'))}">
+            <svg class="voltage-gauge" viewBox="0 0 500 330" role="img" aria-label="${this._escape(this._t('voltage'))}">
               <defs>
                 <linearGradient id="${this._id('arc')}" gradientUnits="userSpaceOnUse" x1="62" y1="0" x2="438" y2="0"><stop class="arc-a" stop-color="#0a84ff"/><stop class="arc-b" offset=".5" stop-color="#12d3e8"/><stop class="arc-c" offset="1" stop-color="#3cf08a"/></linearGradient>
                 <radialGradient id="${this._id('glow')}"><stop stop-color="#0a8cff" stop-opacity=".34"/><stop offset="1" stop-color="#0a8cff" stop-opacity="0"/></radialGradient>
@@ -1108,10 +1108,10 @@
               <path data-role="gauge-progress" visibility="${voltage === null ? 'hidden' : 'visible'}" d="${gaugeArcPath()}" fill="none" stroke="url(#${this._id('arc')})" stroke-width="26" stroke-linecap="round" stroke-dasharray="${progress} 100" pathLength="100"/>
               ${this._towerArtwork()}
               ${gaugeDot}
-              <text x="250" y="283" text-anchor="middle" class="voltage-value${voltage === null ? ' empty' : ''}" data-role="voltage-text"><tspan data-role="voltage-number">${this._escape(voltageNumber)}</tspan> <tspan class="voltage-unit" data-role="voltage-unit">${this._escape(voltageUnit)}</tspan></text>
-              <text x="250" y="315" text-anchor="middle" class="voltage-label">${this._escape(this._t('voltage'))}</text>
-              <text x="${gaugePoint(GAUGE.start)[0].toFixed(0)}" y="335" text-anchor="middle" class="gauge-end">${GAUGE.min}</text>
-              <text x="${gaugePoint(GAUGE.start + GAUGE.span)[0].toFixed(0)}" y="335" text-anchor="middle" class="gauge-end">${GAUGE.max}</text>
+              <text x="250" y="268" text-anchor="middle" class="voltage-value${voltage === null ? ' empty' : ''}" data-role="voltage-text"><tspan data-role="voltage-number">${this._escape(voltageNumber)}</tspan> <tspan class="voltage-unit" data-role="voltage-unit">${this._escape(voltageUnit)}</tspan></text>
+              <text x="250" y="294" text-anchor="middle" class="voltage-label">${this._escape(this._t('voltage'))}</text>
+              <text x="${gaugePoint(GAUGE.start)[0].toFixed(0)}" y="323" text-anchor="middle" class="gauge-end">${GAUGE.min}</text>
+              <text x="${gaugePoint(GAUGE.start + GAUGE.span)[0].toFixed(0)}" y="323" text-anchor="middle" class="gauge-end">${GAUGE.max}</text>
             </svg>
             <div class="state-indicator ${status.stateClass}" data-role="state-indicator"><span class="check-mark">${this._svg('check')}</span><span data-role="state-label">${this._escape(status.status)}</span></div>
           </div>
@@ -1149,26 +1149,26 @@
       }).join('');
     }
     _towerArtwork() {
-      const apex = 80; const base = 198; const half = 38;
+      const apex = 72; const base = 204; const half = 42;
       const hw = (y) => half * (y - apex) / (base - apex);
-      const levels = [apex, 110, 138, 166, base];
-      const legs = `M250 ${apex}L${250 - half} ${base}M250 ${apex}L${250 + half} ${base}M250 ${apex}V66`;
+      const levels = [apex, 106, 138, 170, base];
+      const legs = `M250 ${apex}L${250 - half} ${base}M250 ${apex}L${250 + half} ${base}M250 ${apex}V58`;
       const braces = levels.slice(1).map((y) => `M${(250 - hw(y)).toFixed(1)} ${y}H${(250 + hw(y)).toFixed(1)}`).join('');
       const diagonals = levels.slice(1, -1).map((ya, i) => {
         const yb = levels[i + 2];
         return `M${(250 - hw(ya)).toFixed(1)} ${ya}L${(250 + hw(yb)).toFixed(1)} ${yb}M${(250 + hw(ya)).toFixed(1)} ${ya}L${(250 - hw(yb)).toFixed(1)} ${yb}`;
       }).join('');
-      const arms = [[98, 40], [124, 54]];
+      const arms = [[92, 44], [122, 58]];
       const armPath = arms.map(([y, w]) => `M${250 - w} ${y}H${250 + w}`).join('');
       const struts = arms.map(([y, w]) => `M${250 - w} ${y}L${(250 - hw(y + 16)).toFixed(1)} ${y + 16}M${250 + w} ${y}L${(250 + hw(y + 16)).toFixed(1)} ${y + 16}`).join('');
       const insulators = arms.map(([y, w]) => `M${250 - w} ${y}v11M${250 + w} ${y}v11`).join('');
       const wires = arms.map(([y, w]) => `M${250 - w} ${y + 11}Q${250 - w - 34} ${y + 24} ${250 - w - 72} ${y + 15}M${250 + w} ${y + 11}Q${250 + w + 34} ${y + 24} ${250 + w + 72} ${y + 15}`).join('');
-      const trees = [148, 162, 176, 192, 208, 292, 308, 324, 338, 352].map((x, i) => {
+      const trees = [142, 158, 174, 190, 206, 294, 310, 326, 342, 358].map((x, i) => {
         const h = [24, 34, 22, 30, 20][i % 5];
-        return `M${x - 8} 200L${x} ${200 - h}L${x + 8} 200Z`;
+        return `M${x - 8} 206L${x} ${206 - h}L${x + 8} 206Z`;
       }).join('');
       return `<g class="tower-illustration">
-        <ellipse cx="250" cy="201" rx="112" ry="7" fill="#0a9bff" opacity=".2"/>
+        <ellipse cx="250" cy="206" rx="118" ry="7" fill="#0a9bff" opacity=".2"/>
         <path d="${trees}" fill="#0b3558" opacity=".9"/>
         <g class="tower-halo" filter="url(#${this._id('blur')})" fill="none" stroke="#38bdff" stroke-width="4" opacity=".5">
           <path d="${legs}${armPath}${braces}"/>
@@ -1181,7 +1181,7 @@
           <path class="tower-insulator" d="${insulators}"/>
           <path class="tower-wire" d="${wires}"/>
         </g>
-        <circle cx="250" cy="64" r="3.5" fill="#ff3b5c" class="tower-beacon"/>
+        <circle cx="250" cy="56" r="3.5" fill="#ff3b5c" class="tower-beacon"/>
       </g>`;
     }
     _houseArt() {
@@ -2291,7 +2291,7 @@
         .banner{margin-top:14px;padding:18px 24px;min-height:88px;display:flex;align-items:center;gap:18px;border:1px solid #39d77e;background:linear-gradient(90deg,#0c302a,#0c2631 68%,#102b42);box-shadow:0 0 24px #28d87920}.banner.inverter{border-color:#ffb51b;background:linear-gradient(90deg,#382711,#18283a 80%);box-shadow:0 0 24px #ffb51b20}.banner.pzem-offline{border-color:#ffb51b;background:linear-gradient(90deg,#382711,#18283a 80%);box-shadow:0 0 24px #ffb51b20}.banner.alarm,.banner.offline{border-color:#ff526d;background:linear-gradient(90deg,#3a1420,#18283a 80%);box-shadow:0 0 24px #ff526d20}.banner.unknown{border-color:#53677e;background:linear-gradient(90deg,#1a2939,#101e30)}.banner-check{width:48px;height:48px;border-radius:50%;background:var(--green);color:#052116;display:grid;place-items:center;flex:none;box-shadow:0 0 18px #35ed9166}.banner-check .icon{width:36px;height:36px}.banner.inverter .banner-check{background:var(--amber);color:#392400}.banner.pzem-offline .banner-check{background:var(--amber);color:#392400}.banner.alarm .banner-check,.banner.offline .banner-check{background:var(--red);color:#390711}.banner.unknown .banner-check{background:#53677e;color:#d6e5f6}.banner strong{color:#4df29a;font-size:clamp(17px,2cqw,24px)}.banner.inverter strong{color:#ffd078}.banner.pzem-offline strong{color:#ffd078}.banner.alarm strong,.banner.offline strong{color:#ff8a9a}.banner.unknown strong{color:#b4c7df}.house-art{margin-left:auto;width:130px;max-width:22%;flex:none;filter:drop-shadow(0 0 11px #1b8fff)}.house-art svg{display:block;width:100%;height:auto}
         .detail-panel{padding:22px;margin-top:2px}.detail-panel h2{margin:0 0 18px;font-size:25px}.detail-panel h2.subheading{margin:24px 0 14px;font-size:19px}.detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.detail{padding:16px;border-radius:16px;background:#13243a;border:1px solid #2b4562;min-width:0}.detail>span,.detail label>span{display:block;color:#9fb5d1;font-size:14px;margin-bottom:7px}.detail b{font-size:22px;overflow-wrap:anywhere}.setting{display:flex;align-items:end;gap:10px}.setting label{flex:1;min-width:0}.setting-input{display:flex;align-items:center;gap:8px}.setting-input input{width:100%;min-width:0;background:#091727;border:1px solid #37526f;border-radius:9px;color:var(--text);padding:10px;font:inherit;font-size:18px}.setting-input small{color:#9fb5d1;white-space:nowrap}.save-button,.switch-button,.action-button{border:1px solid #278ed0;background:#092645;color:#d7efff;border-radius:10px;padding:9px 12px;font:inherit;cursor:pointer}.save-button:hover,.switch-button:hover,.action-button:hover{background:#0c3962}.save-button:disabled,.switch-button:disabled,.action-button:disabled{opacity:.45;cursor:not-allowed}.switch-setting{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.switch-setting>span{color:#9fb5d1;font-size:14px}.switch-setting>strong{font-size:16px}.switch-button{grid-column:1/-1;display:flex;align-items:center;gap:8px;justify-content:center}.switch-button .icon{width:20px;height:20px}.switch-button.on{border-color:#35ed91;color:#35ed91}.action-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.action-button{min-height:68px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;font-size:13px;border-color:#2b8ed0}.action-button span{font-size:22px;color:#45bdff}.action-button .icon{width:25px;height:25px}.footer{display:flex;justify-content:space-between;gap:10px;margin:14px 2px 0;color:#6885a2;font-size:11px}.footer span:last-child{max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
         .chart-head .periods+.periods{margin-left:0}.chart-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:4px 0 10px}.chart-stats>div{background:#13243a;border:1px solid #2b4562;border-radius:14px;padding:9px 12px;min-width:0}.chart-stats span{display:block;color:#9fb5d1;font-size:13px}.chart-stats b{display:block;font-size:19px;margin-top:3px;overflow-wrap:anywhere}
-        .voltage-brand{display:flex;align-items:center;gap:18px;align-self:flex-start;min-width:0;max-width:100%}.voltage-brand .brand h1{font-size:clamp(20px,2.6cqw,32px)}.voltage-brand .brand p{font-size:clamp(13px,1.5cqw,16px)}.voltage .voltage-gauge{margin:auto 0}.main-right{display:flex;flex-direction:column;gap:14px;min-width:0}.main-right .home-status{margin:0 2px 0 auto}.main-right>.metrics{flex:1}
+        .voltage-brand{display:flex;align-items:center;gap:18px;align-self:flex-start;min-width:0;max-width:100%}.voltage-brand .brand h1{font-size:clamp(20px,2.6cqw,32px)}.voltage-brand .brand p{font-size:clamp(13px,1.5cqw,16px)}.voltage .voltage-gauge{margin:2px 0 0}.main-right{display:flex;flex-direction:column;gap:14px;min-width:0}.main-right .home-status{margin:0 2px 0 auto}.main-right>.metrics{flex:1}
         @container (min-width:960px){.shell.home-active>.tabs-top{display:none}.home-view .main-grid{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);grid-template-rows:auto;align-items:stretch}.home-view .main-grid>.voltage{grid-column:1;grid-row:1}.home-view .main-grid>.main-right{grid-column:2;grid-row:1}.home-view .main-right>.tabs-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:0;align-self:stretch;width:100%}}
         @container (max-width:760px){.shell{padding:12px}.header{gap:11px;padding:5px 2px 14px}.logo{width:58px;height:58px;border-radius:17px}.logo .icon{width:38px;height:38px}.headright{gap:8px}.connection strong{font-size:14px}.connection small{font-size:10px}.wifi-icon{font-size:21px;padding-left:10px}.wifi-icon .icon{width:24px;height:24px}.tabs{margin-bottom:12px}.tab{gap:5px;padding:12px 3px;font-size:12px}.tab .tab-icon{font-size:19px}.tab .icon{width:20px;height:20px}.main-grid{grid-template-columns:1fr;gap:10px}.voltage{min-height:300px}.voltage-gauge{width:min(100%,420px)}.metrics{gap:10px}.metric{min-height:135px}.metric-icon .icon{width:38px;height:38px}.metric-label{font-size:15px}.chart-card{padding:13px 11px}.chart-head h2{font-size:19px}.periods{width:100%;margin:0}.period-button{flex:1;padding:8px 4px;font-size:13px}.bottom-status{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.info{min-height:100px;padding:12px 8px}.info .symbol .icon{width:30px;height:30px}.info .small{font-size:13px}.info strong{font-size:16px}.banner{padding:14px;min-height:70px}.banner-check{width:38px;height:38px}.banner-check .icon{width:28px;height:28px}.house-art{width:80px}.detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.detail-panel{padding:16px}.detail-panel h2{font-size:22px}.action-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
         @container (max-width:420px){.headright .wifi-icon{display:none}.connection small{max-width:105px}.tab{font-size:11px}.tab .tab-icon{display:none}.metric{min-height:122px;padding:12px 8px}.metric-value{font-size:clamp(25px,8cqw,34px)}.info{gap:8px}.info .symbol .icon{width:26px;height:26px}.info .small{font-size:12px}.info strong{font-size:14px}.detail-grid{grid-template-columns:1fr}.setting{align-items:stretch}}
@@ -2333,7 +2333,7 @@
         .tab:not(.active):hover{background:#ffffff0d;color:#e6f4ff}
 
         .main-grid{gap:16px}
-        .voltage{min-height:0;padding:20px 16px 18px;justify-content:center}
+        .voltage{min-height:0;padding:16px;justify-content:center;gap:10px}
         .voltage-gauge{width:min(100%,540px);margin-top:2px}
         .voltage-value{font-size:72px;font-weight:800;letter-spacing:-2px}
         .voltage-unit{font-size:40px;font-weight:700;fill:#dcecff}
@@ -2355,7 +2355,7 @@
         .voltage.pzem-offline .arc-b,.voltage.inverter .arc-b{stop-color:#ffb51b}
         .voltage.pzem-offline .arc-c,.voltage.inverter .arc-c{stop-color:#ff8a3d}
         .voltage.offline .arc-a,.voltage.offline .arc-b,.voltage.offline .arc-c,.voltage.unknown .arc-a,.voltage.unknown .arc-b,.voltage.unknown .arc-c{stop-color:#6a7f99}
-        .state-indicator{margin-top:-6px;padding:7px 18px 7px 9px;border-radius:999px;background:#ffffff0a;border:1px solid #ffffff14;font-size:22px}
+        .state-indicator{margin-top:2px;padding:6px 18px 6px 10px;border-radius:999px;background:#ffffff0a;border:1px solid #ffffff14;font-size:20px}
 
         .metrics{gap:16px}
         .metric{min-height:0;padding:20px 12px 18px;gap:0}
