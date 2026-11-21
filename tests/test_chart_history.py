@@ -539,6 +539,7 @@ const context = {
 vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
 const Card = registry.get('grid-monitor-card');
 const card = Object.create(Card.prototype);
+card._state = () => ({ attributes: { unit_of_measurement: 'kWh' } });
 const start = Date.parse('2026-10-01T00:00:00Z');
 const end = Date.parse('2026-10-01T00:50:00Z');
 const response = [[
@@ -568,7 +569,7 @@ const liveResponse = [[
   { state: '100', last_changed: new Date(liveStart - 60e3).toISOString() },
   { state: '102', last_changed: new Date(liveEnd).toISOString() },
 ]];
-card._state = () => ({ last_changed: new Date(liveEnd).toISOString() });
+card._state = () => ({ last_changed: new Date(liveEnd).toISOString(), attributes: { unit_of_measurement: 'kWh' } });
 const live = card._parseCumulativeHistory(liveResponse, 'energy_total', { start: liveStart, end: liveEnd }, 103);
 assert.equal(live.at(-1).time.getTime(), liveEnd);
 assert.equal(live.at(-1).value, 3);
@@ -576,7 +577,7 @@ assert.equal(live.at(-1).value, 3);
 // A recent custom range must not consume a state updated after its end boundary.
 const recentPastEnd = Date.now() - 30e3;
 const recentPastStart = recentPastEnd - 20 * 60e3;
-card._state = () => ({ last_changed: new Date(recentPastEnd + 30e3).toISOString() });
+card._state = () => ({ last_changed: new Date(recentPastEnd + 30e3).toISOString(), attributes: { unit_of_measurement: 'kWh' } });
 const recentPast = card._parseCumulativeHistory([[
   { state: '100', last_changed: new Date(recentPastStart - 60e3).toISOString() },
   { state: '102', last_changed: new Date(recentPastEnd).toISOString() },
@@ -601,6 +602,183 @@ assert.equal(chartData.series.at(-1).v, 3);
         )
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
+
+    def test_energy_interval_bars_use_deltas_not_cumulative_counter_levels(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = {
+  window: { customCards: [] },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+};
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+card._locale = () => 'en-US';
+card._state = () => ({ attributes: { unit_of_measurement: 'kWh' } });
+const start = Date.parse('2026-10-01T00:00:00Z');
+const end = Date.parse('2026-10-03T00:00:00Z');
+
+// The absolute counter is about 3 million, but the two daily increases are only 100 and 300.
+const response = [[
+  { state: '2998500', last_changed: new Date(start - 30 * 60e3).toISOString() },
+  { state: '2998600', last_changed: new Date(start + 12 * 3600e3).toISOString() },
+  { state: '2998600', last_changed: new Date(start + 24 * 3600e3).toISOString() },
+  { state: '2998900', last_changed: new Date(start + 36 * 3600e3).toISOString() },
+  { state: '2998900', last_changed: new Date(end).toISOString() },
+]];
+const history = card._parseCumulativeHistory(response, 'energy_total', { start, end }, NaN);
+const daily = card._energyHistoryBars(history, { start, end }, 'week');
+assert.equal(JSON.stringify(daily.map(({ value }) => Math.round(value))), JSON.stringify([100, 300]));
+assert.equal(Math.round(daily.reduce((sum, bar) => sum + bar.value, 0)), 400);
+assert.ok(daily.every((bar) => bar.value < 1000), 'the cumulative 2,998,900 counter is never plotted as an interval amount');
+
+// A sparse counter update spanning hour boundaries is apportioned by elapsed overlap.
+const shortEnd = start + 3 * 3600e3;
+const hourly = card._energyHistoryBars([
+  { time: new Date(start), value: 0 },
+  { time: new Date(start + 3600e3), value: 4 },
+  { time: new Date(start + 2 * 3600e3), value: 8 },
+  { time: new Date(shortEnd), value: 10 },
+], { start, end: shortEnd }, 'day');
+assert.equal(JSON.stringify(hourly.map(({ value }) => Math.round(value))), JSON.stringify([4, 4, 2]));
+assert.equal(hourly.reduce((sum, bar) => sum + bar.value, 0), 10);
+const sparse = card._energyHistoryBars([
+  { time: new Date(start), value: 0 }, { time: new Date(shortEnd), value: 3 },
+], { start, end: shortEnd }, 'day');
+assert.equal(JSON.stringify(sparse.map(({ value }) => Math.round(value))), JSON.stringify([1, 1, 1]), 'a sparse increase is apportioned across its elapsed span');
+const customStart = Date.parse('2026-10-01T10:30:00Z');
+const customEnd = Date.parse('2026-10-01T13:15:00Z');
+const customHours = card._energyHistoryBars([
+  { time: new Date(customStart), value: 0 }, { time: new Date(customEnd), value: 1 },
+], { start: customStart, end: customEnd }, 'custom');
+assert.equal(customHours.length, 4, 'a custom range shorter than a day includes each intersected local hour');
+
+// Resets are already represented as monotonic increments by the cumulative-history parser.
+const resetEnd = start + 50 * 60e3;
+const resetHistory = card._parseCumulativeHistory([[
+  { state: '10', last_changed: new Date(start - 60e3).toISOString() },
+  { state: '12', last_changed: new Date(start + 10 * 60e3).toISOString() },
+  { state: '15', last_changed: new Date(start + 20 * 60e3).toISOString() },
+  { state: '2', last_changed: new Date(start + 30 * 60e3).toISOString() },
+  { state: '5', last_changed: new Date(start + 40 * 60e3).toISOString() },
+]], 'energy_total', { start, end: resetEnd }, NaN);
+const resetBars = card._energyHistoryBars(resetHistory, { start, end: resetEnd }, 'day');
+assert.equal(Math.round(resetBars.reduce((sum, bar) => sum + bar.value, 0)), 10);
+"""
+        result = subprocess.run(
+            ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
+            capture_output=True,
+            text=True,
+            check=False,
+            env={**os.environ, "TZ": "UTC"},
+        )
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+
+    def test_energy_bars_follow_calendar_hours_days_and_dst(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = {
+  window: { customCards: [] },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+};
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+card._locale = () => 'en-GB';
+const hours = (start, end) => card._energyHistoryBars([
+  { time: new Date(start), value: 0 }, { time: new Date(end), value: 0 },
+], { start, end }, 'day');
+const localStart = new Date(2026, 10, 21, 0, 0, 0, 0).getTime();
+const localNoon = new Date(2026, 10, 21, 12, 15, 0, 0).getTime();
+assert.equal(hours(localStart, localNoon).length, 13, 'today includes each clock hour and its current partial hour');
+const hourPreset = card._energyHistoryBars([
+  { time: new Date(localStart), value: 0 }, { time: new Date(localStart + 3600e3), value: 1 },
+], { start: localStart, end: localStart + 3600e3 }, 'hour');
+assert.equal(hourPreset.length, 1, 'the rolling one-hour preset is represented by one bar');
+
+const firstDay = new Date(2026, 9, 1, 0, 0, 0, 0).getTime();
+const thirdDay = new Date(2026, 9, 3, 0, 0, 0, 0).getTime();
+const daily = card._energyHistoryBars([
+  { time: new Date(firstDay), value: 0 }, { time: new Date(thirdDay), value: 0 },
+], { start: firstDay, end: thirdDay }, 'month');
+assert.equal(daily.length, 2, 'month view uses one bar per local date');
+
+const springStart = new Date(2026, 2, 29, 0, 0, 0, 0).getTime();
+const springEnd = new Date(2026, 2, 30, 0, 0, 0, 0).getTime();
+assert.equal(hours(springStart, springEnd).length, 23, 'spring DST day has 23 local-hour bars');
+const autumnStart = new Date(2026, 9, 25, 0, 0, 0, 0).getTime();
+const autumnEnd = new Date(2026, 9, 26, 0, 0, 0, 0).getTime();
+const autumn = hours(autumnStart, autumnEnd);
+assert.equal(autumn.length, 25, 'autumn DST day has 25 local-hour bars');
+const repeatedHours = autumn.filter(({ label }) => label.startsWith('03'));
+assert.equal(repeatedHours.length, 2, 'the repeated autumn hour has two bars');
+assert.notEqual(repeatedHours[0].label, repeatedHours[1].label, 'the repeated hours have distinct local labels');
+assert.match(repeatedHours[0].fullLabel, /03:00 UTC\+03–03:00 UTC\+02/, 'the first repeated-hour tooltip records both offsets');
+"""
+        result = subprocess.run(
+            ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
+            capture_output=True,
+            text=True,
+            check=False,
+            env={**os.environ, "TZ": "Europe/Kyiv"},
+        )
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+
+    def test_energy_history_normalizes_wh_to_kwh_for_chart_display(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = {
+  window: { customCards: [] },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+};
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+const start = Date.parse('2026-10-01T00:00:00Z');
+card._state = () => ({ attributes: { unit_of_measurement: 'Wh' } });
+const history = card._parseCumulativeHistory([[
+  { state: '100000', last_changed: new Date(start - 60e3).toISOString() },
+  { state: '103000', last_changed: new Date(start + 60e3).toISOString() },
+]], 'energy_total', { start, end: start + 60e3 }, NaN);
+assert.equal(history.at(-1).value, 3, '3,000 Wh must be represented as 3 kWh on the chart');
+assert.equal(card._energyHistoryUnitFactor('cost_total'), 1, 'cost values remain unchanged');
+card._state = () => ({ attributes: { unit_of_measurement: 'kWh' } });
+assert.equal(card._energyHistoryUnitFactor('energy_total'), 1, 'kWh values stay in kWh');
+card._state = () => ({ attributes: { unit_of_measurement: 'MWh' } });
+assert.equal(card._energyHistoryUnitFactor('energy_total'), 1000, 'MWh values are converted to kWh');
+card._state = () => ({ attributes: { unit_of_measurement: 'MJ' } });
+assert.equal(card._energyHistoryUnitFactor('energy_total'), null, 'unsupported units are rejected');
+assert.equal(JSON.stringify(card._parseCumulativeHistory([], 'energy_total', { start, end: start + 60e3 }, 10)), '[]', 'unsupported units do not produce chart data');
+card._state = () => ({ attributes: {} });
+assert.equal(card._energyHistoryUnitFactor('energy_total'), null, 'a missing unit is not silently assumed to be kWh');
+card._escape = String;
+card._t = (key) => key === 'energy_unit_unsupported' ? 'Unsupported energy unit' : key;
+assert.match(card._energyBarSvg('energy_total', [], false), /Unsupported energy unit/);
+assert.match(card._chartStatsHtml('energy_total', [], 'energy'), /Unsupported energy unit/);
+"""
+        result = subprocess.run(
+            ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+
     def test_energy_period_state_and_statistics_are_independent_from_parameters(self):
         script = r"""
 const assert = require('node:assert/strict');
@@ -621,6 +799,7 @@ card._statsStart = Date.parse('2026-10-01T00:00:00Z');
 card._energyHistoryRange = 'day';
 card._energyCustomRange = null;
 card._entity = (key) => `sensor.${key}`;
+card._state = () => ({ attributes: { unit_of_measurement: 'kWh' } });
 card._updateChartDateRangeControls = () => {};
 card._closeChartDateRangePopover = () => {};
 card._clearEnergyHistory = () => {};
@@ -647,14 +826,19 @@ card._lang = () => 'en';
 card._t = (key) => ({ stat_min: 'Min', stat_avg: 'Avg', stat_max: 'Max' })[key] || key;
 card._escape = (value) => String(value);
 card._formatChartStatTimestamp = () => 'time';
+card._energyHistoryBars = () => [
+  { start: beforeStats, value: 2 },
+  { start: middle, value: 6 },
+  { start: afterStats, value: 4 },
+];
 const html = card._chartStatsHtml('energy_total', [
   { time: new Date(beforeStats), value: 1 },
   { time: new Date(middle), value: 5 },
   { time: new Date(afterStats), value: 5 },
 ], 'energy');
-assert.match(html, /Min<\/span><b>1 kWh<\/b>/);
-assert.match(html, /Avg<\/span><b>3 kWh<\/b>/, 'average is time weighted, not sample weighted');
-assert.match(html, /Max<\/span><b>5 kWh<\/b>/);
+assert.match(html, /Min<\/span><b>2 kWh<\/b>/);
+assert.match(html, /Avg<\/span><b>4 kWh<\/b>/, 'average is calculated from interval bars');
+assert.match(html, /Max<\/span><b>6 kWh<\/b>/);
 """
         result = subprocess.run(
             ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
@@ -694,7 +878,7 @@ card._detail = () => '';
 card._tariffBars = () => '';
 card._chartDateRangeHtml = () => '';
 card._chartStatsHtml = () => '';
-card._chartSvg = () => '';
+card._energyBarSvg = () => '';
 const html = card._energy();
 assert.equal((html.match(/class="card chart-card energy-history-card"/g) || []).length, 1);
 assert.equal((html.match(/data-energy-plot="/g) || []).length, 1);
@@ -717,7 +901,7 @@ card.shadowRoot = {
   querySelector: (query) => ({ '[data-energy-plot]': plot, '[data-energy-stats]': stats, '[data-energy-chart-title]': title })[query],
   querySelectorAll: () => metricButtons,
 };
-card._chartSvg = (metric) => `svg-${metric}`;
+card._energyBarSvg = (metric) => `svg-${metric}`;
 card._chartStatsHtml = (metric) => `stats-${metric}`;
 card._closeChartDateRangePopover = () => {};
 const button = { dataset: { energyMetric: 'cost_total' } };
@@ -745,6 +929,51 @@ assert.equal(metricButtons[1].active, true);
             check=False,
         )
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_energy_renderer_outputs_interval_bars_without_line_series(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = {
+  window: { customCards: [] },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+};
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+const start = Date.parse('2026-10-01T00:00:00Z');
+card._energyHistoryRange = 'day';
+card._energyHistoryBounds = () => ({ start, end: start + 3 * 3600e3 });
+card._chartW = 480;
+card._locale = () => 'en-US';
+card._lang = () => 'en';
+card._currencyCode = () => 'UAH';
+card._state = () => ({ attributes: { unit_of_measurement: 'kWh' } });
+card._t = () => 'Electricity consumption';
+card._escape = (value) => String(value);
+const svg = card._energyBarSvg('energy_total', [
+  { time: new Date(start), value: 0 },
+  { time: new Date(start + 3600e3), value: 1.25 },
+  { time: new Date(start + 2 * 3600e3), value: 2.5 },
+  { time: new Date(start + 3 * 3600e3), value: 4 },
+], false);
+assert.match(svg, /class="energy-bars" data-energy-bar-count="3"/);
+assert.equal((svg.match(/data-energy-bar="/g) || []).length, 3);
+assert.match(svg, /<title>/, 'each bar includes an accessible tooltip');
+assert.doesNotMatch(svg, /class="chart-line"|class="chart-glow"/);
+"""
+        result = subprocess.run(
+            ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
+            capture_output=True,
+            text=True,
+            check=False,
+            env={**os.environ, "TZ": "UTC"},
+        )
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
 
     def test_single_touch_scrubs_chart_and_updates_slider_synchronously(self):
         script = r"""
