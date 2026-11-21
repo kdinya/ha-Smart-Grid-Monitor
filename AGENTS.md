@@ -9,6 +9,7 @@
 
 ## Project boundaries
 
+- Work on this repository only in its GitHub repository: branches, pull requests and `main`. Do not create, link or use a Lovable project for its code, firmware, card or documentation.
 - `esphome/grid-monitor.yaml` is the source of truth for firmware behavior and entity names.
 - The ESPHome device is the backend. The Home Assistant frontend must not duplicate measurement, outage, tariff or counter logic.
 - Preserve the distinction between unavailable ESP/PZEM states and a confirmed inverter state.
