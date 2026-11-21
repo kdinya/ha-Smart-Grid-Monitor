@@ -24,7 +24,7 @@ The dashboard assumes the default Home Assistant entity prefix `grid_monitor`. I
 
 ## Optional source-status and health entities
 
-The package in [`packages/grid_monitor.yaml`](packages/grid_monitor.yaml) adds a friendly source-status sensor that distinguishes PZEM online with ESP supply unconfirmed, PZEM offline with source unknown, and waiting for PZEM. It also creates `input_text.grid_monitor_statistics_start`, which lets the HACS card store the statistics-start timestamp in Home Assistant and sync it across clients. It never reports `Grid Monitor Healthy` while ESP, PZEM telemetry, or voltage quality is unknown or unavailable; a PZEM timeout is never called inverter operation.
+The package in [`packages/grid_monitor.yaml`](packages/grid_monitor.yaml) adds a friendly source-status sensor that distinguishes PZEM online with ESP supply unconfirmed, PZEM offline with source unknown, and waiting for PZEM. It also creates `input_text.grid_monitor_statistics_start`, which lets the HACS card store the statistics-start timestamp in Home Assistant and sync it across clients. This helper ID is canonical and does not change with a custom ESPHome prefix. It never reports `Grid Monitor Healthy` while ESP, PZEM telemetry, or voltage quality is unknown or unavailable; a PZEM timeout is never called inverter operation.
 
 To enable it, add packages to `configuration.yaml`:
 
@@ -33,7 +33,7 @@ homeassistant:
   packages: !include_dir_named packages
 ```
 
-Copy the package into the configured packages directory, run **Settings → System → Check configuration**, and restart Home Assistant. If packages are already enabled, copy only the file into that directory. The statistics-start control remains usable without the helper, but it will not persist across reloads or devices until the package is enabled.
+Copy the package into the configured packages directory, run **Settings → System → Check configuration**, and restart Home Assistant. If packages are already enabled, copy only the file into that directory. The statistics-start control remains usable without the helper, but its value is only held by the current card instance and will not persist across reloads or devices until the package is enabled.
 
 ## Entity coverage
 

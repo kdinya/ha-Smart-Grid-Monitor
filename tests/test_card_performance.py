@@ -240,6 +240,80 @@ card._hass.callService = async (domain, service, data) => { saved = { domain, se
 """)
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
+    def test_statistics_helper_remains_canonical_for_custom_prefix_and_allows_override(self):
+        result = run_node(r"""
+const canonical = 'input_text.grid_monitor_statistics_start';
+const savedAt = '2026-11-21T13:15:00.000Z';
+const card = makeCard({ [canonical]: state(savedAt) }, { prefix: 'custom_esp' });
+card._render = () => {};
+card._scheduleHeartbeatExpiry = () => {};
+card.setConfig({ prefix: 'custom_esp' });
+assert.equal(card._config.entities.stats_start, canonical);
+assert.equal(card._entity('stats_start'), canonical);
+assert.equal(card._statsStart, Date.parse(savedAt), 'setConfig reloads the persisted helper after a card refresh');
+let saved = null;
+card._hass.callService = async (domain, service, data) => { saved = { domain, service, data }; };
+
+const overrideId = 'input_text.house_statistics_start';
+const overridden = makeCard({ [overrideId]: state('2026-11-20T10:00:00.000Z') }, { prefix: 'custom_esp' });
+overridden._render = () => {};
+overridden._scheduleHeartbeatExpiry = () => {};
+overridden.setConfig({ prefix: 'custom_esp', entities: { stats_start: overrideId } });
+assert.equal(overridden._config.entities.stats_start, overrideId);
+assert.equal(overridden._entity('stats_start'), overrideId, 'an explicit helper override is not replaced by the canonical default');
+assert.equal(overridden._statsStart, Date.parse('2026-11-20T10:00:00.000Z'));
+
+(async () => {
+  await card._writeStatsStart(Date.parse('2026-11-21T14:20:00.000Z'));
+  assert.equal(saved.domain, 'input_text');
+  assert.equal(saved.service, 'set_value');
+  assert.equal(saved.data.entity_id, canonical, 'writes use the same canonical helper that reloads');
+})().catch((error) => { console.error(error); process.exit(1); });
+""")
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_changing_statistics_start_clears_energy_history_and_reloads_active_charts(self):
+        result = run_node(r"""
+const card = makeCard();
+card._activeTab = 'energy';
+card._historyRange = 'day';
+card._historyRequest = 0;
+card._historyLoading = false;
+card._voltageHistoryRequest = 0;
+card._voltageHistoryLoading = false;
+card._statsStart = Date.parse('2026-11-20T00:00:00Z');
+card._statsExtremesRequest = 0;
+card._energyHistoryRequests = { energy_total: 3, cost_total: 7 };
+card._energyHistoryLoading = { energy_total: true, cost_total: true };
+card._energyHistory = { energy_total: [{ value: 99 }], cost_total: [{ value: 50 }] };
+card._energyHistoryKeys = { energy_total: 'old-energy', cost_total: 'old-cost' };
+card._energyHistoryAt = { energy_total: 1, cost_total: 1 };
+card._energySelectedBar = { metricKey: 'energy_total', start: 1 };
+card._clearChartScrub = () => {};
+card._updateStatsControls = () => {};
+card._applyStatsExtremes = () => {};
+card._ensureStatsExtremes = () => {};
+card._ensureHistory = () => {};
+let refreshed = 0;
+let loaded = 0;
+card._refreshEnergyCharts = () => { refreshed += 1; };
+card._ensureEnergyHistory = () => { loaded += 1; };
+card._entity = (key) => `sensor.${key}`;
+const oldKey = card._energyHistoryCacheKey('energy_total');
+
+card._setStatsStart(Date.parse('2026-11-21T00:00:00Z'), false);
+assert.notEqual(card._energyHistoryCacheKey('energy_total'), oldKey, 'the cache identity includes the statistics start');
+assert.deepEqual(card._energyHistoryRequests, { energy_total: 4, cost_total: 8 });
+assert.deepEqual(card._energyHistoryLoading, { energy_total: false, cost_total: false });
+assert.equal(JSON.stringify(card._energyHistory), JSON.stringify({ energy_total: [], cost_total: [] }));
+assert.deepEqual(card._energyHistoryKeys, { energy_total: '', cost_total: '' });
+assert.deepEqual(card._energyHistoryAt, { energy_total: 0, cost_total: 0 });
+assert.equal(card._energySelectedBar, null);
+assert.equal(refreshed, 1);
+assert.equal(loaded, 1);
+""")
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
     def test_statistics_start_refresh_reads_only_new_history_and_merges_extremes(self):
         result = run_node(r"""
 const statsStart = Date.parse('2026-11-01T00:00:00Z');

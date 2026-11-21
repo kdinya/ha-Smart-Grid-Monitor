@@ -779,7 +779,7 @@ assert.match(card._chartStatsHtml('energy_total', [], 'energy'), /Unsupported en
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
 
-    def test_energy_period_state_and_statistics_are_independent_from_parameters(self):
+    def test_energy_period_is_independent_but_statistics_start_clips_energy_and_cost(self):
         script = r"""
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -795,7 +795,7 @@ const Card = registry.get('grid-monitor-card');
 const card = Object.create(Card.prototype);
 card._historyRange = 'month';
 card._historyCustomRange = null;
-card._statsStart = Date.parse('2026-10-01T00:00:00Z');
+card._statsStart = Date.parse('2026-10-01T00:15:00Z');
 card._energyHistoryRange = 'day';
 card._energyCustomRange = null;
 card._entity = (key) => `sensor.${key}`;
@@ -806,39 +806,66 @@ card._clearEnergyHistory = () => {};
 card._refreshEnergyCharts = () => {};
 card._ensureEnergyHistory = () => {};
 const customStart = Date.parse('2026-09-20T00:00:00Z');
-const customEnd = Date.parse('2026-09-21T00:00:00Z');
+const customEnd = Date.parse('2026-10-02T00:00:00Z');
 card._setCustomChartRange(customStart, customEnd, 'energy');
 assert.equal(card._energyHistoryRange, 'custom');
-assert.equal(JSON.stringify(card._energyHistoryBounds()), JSON.stringify({ start: customStart, end: customEnd }));
+assert.equal(JSON.stringify(card._energyHistoryBounds()), JSON.stringify({ start: card._statsStart, end: customEnd }));
 assert.equal(card._historyRange, 'month');
 assert.equal(card._historyCustomRange, null);
 
-// Settings' start-time filter must not clip Energy tab series or summary statistics.
-card._energyHistoryRange = 'day';
-card._energyCustomRange = null;
+// Preset and custom Energy windows cannot include data before the configured start.
+const now = Date.parse('2026-10-01T00:45:00Z');
+for (const range of ['hour', 'day', 'week', 'month']) {
+  const bounds = card._energyHistoryBounds(range, now);
+  assert.equal(bounds.start, card._statsStart, `${range} starts at the statistics start when it falls inside the period`);
+  assert.equal(bounds.end, now);
+}
 const beforeStats = Date.parse('2026-09-30T23:00:00Z');
-const middle = Date.parse('2026-10-01T00:00:00Z');
+const middle = Date.parse('2026-10-01T00:30:00Z');
 const afterStats = Date.parse('2026-10-01T01:00:00Z');
-card._energyHistoryBounds = () => ({ start: beforeStats, end: afterStats });
-card._chartData = () => ({ series: [{ v: 1, t: beforeStats }, { v: 5, t: middle }, { v: 5, t: afterStats }] });
+card._energyHistoryRange = 'custom';
+card._energyCustomRange = { start: beforeStats, end: afterStats };
+const bounds = card._energyHistoryBounds();
+assert.equal(bounds.start, card._statsStart);
+assert.equal(bounds.end, afterStats);
+card._energyCustomRange = { start: beforeStats, end: Date.parse('2026-10-01T00:10:00Z') };
+const emptyBounds = card._energyHistoryBounds();
+assert.equal(emptyBounds.start, card._statsStart);
+assert.equal(emptyBounds.end, card._statsStart, 'a custom range ending before the start is empty, not earlier data');
+card._energyCustomRange = { start: beforeStats, end: afterStats };
+
+card._state = () => ({ attributes: { unit_of_measurement: 'kWh' } });
 card._locale = () => 'en-US';
 card._lang = () => 'en';
+card._currencyCode = () => 'UAH';
 card._t = (key) => ({ stat_min: 'Min', stat_avg: 'Avg', stat_max: 'Max' })[key] || key;
 card._escape = (value) => String(value);
 card._formatChartStatTimestamp = () => 'time';
-card._energyHistoryBars = () => [
-  { start: beforeStats, value: 2 },
-  { start: middle, value: 6 },
-  { start: afterStats, value: 4 },
-];
-const html = card._chartStatsHtml('energy_total', [
-  { time: new Date(beforeStats), value: 1 },
-  { time: new Date(middle), value: 5 },
-  { time: new Date(afterStats), value: 5 },
-], 'energy');
-assert.match(html, /Min<\/span><b>2 kWh<\/b>/);
-assert.match(html, /Avg<\/span><b>4 kWh<\/b>/, 'average is calculated from interval bars');
-assert.match(html, /Max<\/span><b>6 kWh<\/b>/);
+const energy = card._parseCumulativeHistory([[
+  { state: '2998000', last_changed: '2026-09-30T22:00:00Z' },
+  { state: '2998600', last_changed: '2026-09-30T23:30:00Z' },
+  { state: '2998602', last_changed: '2026-10-01T00:30:00Z' },
+  { state: '2998606', last_changed: '2026-10-01T01:00:00Z' },
+]], 'energy_total', bounds, NaN);
+assert.equal(JSON.stringify(energy.map(({ value }) => value)), JSON.stringify([0, 2, 6]));
+const energyBars = card._energyHistoryBars(energy, bounds, 'custom');
+assert.equal(energyBars.length, 1);
+assert.equal(energyBars[0].value, 6, 'pre-start counter growth is excluded while post-start increments are retained');
+const energyHtml = card._chartStatsHtml('energy_total', energy, 'energy');
+assert.match(energyHtml, /Min<\/span><b>6 kWh<\/b>/);
+assert.match(energyHtml, /Avg<\/span><b>6 kWh<\/b>/);
+assert.match(energyHtml, /Max<\/span><b>6 kWh<\/b>/);
+assert.doesNotMatch(energyHtml, /2,998,606/);
+
+const cost = card._parseCumulativeHistory([[
+  { state: '50000', last_changed: '2026-09-30T22:00:00Z' },
+  { state: '51000', last_changed: '2026-09-30T23:30:00Z' },
+  { state: '51025', last_changed: '2026-10-01T00:30:00Z' },
+  { state: '51075', last_changed: '2026-10-01T01:00:00Z' },
+]], 'cost_total', bounds, NaN);
+const costBars = card._energyHistoryBars(cost, bounds, 'custom');
+assert.equal(costBars[0].value, 75, 'cost history also includes only increments after the statistics start');
+assert.match(card._chartStatsHtml('cost_total', cost, 'energy'), /75 UAH/);
 """
         result = subprocess.run(
             ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
@@ -962,6 +989,7 @@ const svg = card._energyBarSvg('energy_total', [
 ], false);
 assert.match(svg, /class="energy-bars" data-energy-bar-count="3"/);
 assert.equal((svg.match(/data-energy-bar="/g) || []).length, 3);
+assert.match(svg, /role="button" tabindex="0" aria-pressed="false"/);
 assert.match(svg, /<title>/, 'each bar includes an accessible tooltip');
 assert.doesNotMatch(svg, /class="chart-line"|class="chart-glow"/);
 """
@@ -974,6 +1002,86 @@ assert.doesNotMatch(svg, /class="chart-line"|class="chart-glow"/);
         )
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
+
+    def test_energy_bar_click_and_keyboard_show_selected_interval_and_value(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = {
+  window: { customCards: [] },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+};
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+const bars = [
+  { start: 1000, end: 2000, fullLabel: 'October 01, 09:00–10:00', value: 1.25 },
+  { start: 2000, end: 3000, fullLabel: 'October 01, 10:00–11:00', value: 42.5 },
+];
+card._energyChartMetric = 'cost_total';
+card._energyHistoryRange = 'day';
+card._energyHistory = { energy_total: [], cost_total: [] };
+card._energyHistoryLoading = { energy_total: false, cost_total: false };
+card._energyHistoryBounds = () => ({ start: 1000, end: 3000 });
+card._energyHistoryBars = () => bars;
+card._locale = () => 'en-US';
+card._lang = () => 'en';
+card._currencyCode = () => 'EUR';
+card._t = (key) => key === 'energy_selected_interval' ? 'Selected interval' : key;
+card._escape = String;
+card._energyBarSvg = (metric) => `svg-${metric}`;
+card._chartStatsHtml = (metric) => `stats-${metric}`;
+card._closeChartDateRangePopover = () => {};
+const plot = { dataset: {}, innerHTML: '' };
+const selection = { innerHTML: '' };
+const stats = { dataset: {}, innerHTML: '' };
+const title = { textContent: '' };
+let focused = false;
+const focusTarget = { focus: () => { focused = true; } };
+card.shadowRoot = {
+  querySelector: (query) => ({
+    '[data-energy-plot]': plot,
+    '[data-energy-selection]': selection,
+    '[data-energy-stats]': stats,
+    '[data-energy-chart-title]': title,
+    '[data-energy-bar="0"]': focusTarget,
+  })[query],
+  querySelectorAll: () => [],
+};
+const clickTarget = { dataset: { energyBar: '1' }, closest(query) {
+  if (query === '.chart-date-range' || query === '[data-dialog-action]') return null;
+  return this;
+} };
+card._handleCardClick({ target: clickTarget });
+assert.deepEqual({ ...card._energySelectedBar }, { metricKey: 'cost_total', start: 2000 });
+assert.match(selection.innerHTML, /Selected interval/);
+assert.match(selection.innerHTML, /October 01, 10:00–11:00/);
+assert.match(selection.innerHTML, /42\.5 EUR/);
+assert.equal(plot.innerHTML, 'svg-cost_total');
+assert.equal(stats.innerHTML, 'stats-cost_total');
+
+let prevented = false;
+card._handleCardKeydown({
+  key: 'Enter',
+  target: { dataset: { energyBar: '0' }, closest: () => ({ dataset: { energyBar: '0' } }) },
+  preventDefault: () => { prevented = true; },
+});
+assert.equal(prevented, true);
+assert.deepEqual({ ...card._energySelectedBar }, { metricKey: 'cost_total', start: 1000 });
+assert.match(selection.innerHTML, /October 01, 09:00–10:00/);
+assert.match(selection.innerHTML, /1\.25 EUR/);
+assert.equal(focused, true, 'keyboard activation keeps focus on the re-rendered selected bar');
+"""
+        result = subprocess.run(
+            ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
     def test_single_touch_scrubs_chart_and_updates_slider_synchronously(self):
         script = r"""
