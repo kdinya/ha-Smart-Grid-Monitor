@@ -181,7 +181,8 @@ sensor:
       accuracy_decimals: 1
       filters:
         - lambda: |-
-            if (!std::isfinite(x) || x < 0.0f || x > 300.0f) return {};
+            // Нижче 50 В — це не мережа, а частково знеструмлений модуль: пропускаємо, щоб не було фальшивого падіння або нуля.
+            if (!std::isfinite(x) || x < 50.0f || x > 300.0f) return {};
             return x;
         - timeout: 6s
       on_value:
@@ -636,6 +637,7 @@ interval:
           
           if (!ok && id(pzem_seen) && !id(outage_active)) {
             id(outage_active) = true;
+            id(v_state) = 0;  // скидаємо просідання/перенапругу: без вимірювань стан не відомий
             id(outage_start_ms) = id(last_pzem_ms);
             id(outage_count)++;
           } else if (ok && id(outage_active)) {
