@@ -56,6 +56,86 @@ class PeriodPickerStylingTests(unittest.TestCase):
         self.assertIn(".chart-date-range{flex:1 1 auto;min-width:0;position:relative}", card)
 
 
+class NavigationClickTests(unittest.TestCase):
+    def test_energy_and_settings_tabs_route_on_the_first_click(self):
+        result = run_node(r"""
+for (const [from, to] of [['params', 'energy'], ['energy', 'settings'], ['settings', 'energy'], ['energy', 'home']]) {
+  const card = makeCard();
+  card._activeTab = from;
+  const view = { innerHTML: '' };
+  const shell = { classList: { toggle() {} } };
+  card.shadowRoot = {
+    querySelector(selector) { return selector === '.shell' ? shell : selector === '.view' ? view : null; },
+    querySelectorAll() { return []; },
+  };
+  card._closeChartDateRangePopover = () => {};
+  card._clearChartScrub = () => {};
+  card._activeContent = () => `content:${card._activeTab}`;
+  card._queueChartMeasure = () => {};
+  card._ensureHistory = () => {};
+  card._ensureEnergyHistory = () => {};
+  let rendered = '';
+  card._render = () => { rendered = card._activeTab; };
+  const button = {
+    dataset: { tab: to },
+    closest(selector) { return selector.includes('[data-tab]') ? this : null; },
+  };
+  card._handleCardClick({ target: button });
+  assert.equal(card._activeTab, to, `${from} -> ${to} activates on one click`);
+  if (from === 'home' || to === 'home') assert.equal(rendered, to);
+  else assert.equal(view.innerHTML, `content:${to}`);
+}
+""")
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_scroll_to_top_hides_when_its_fixed_rect_overlaps_a_visible_tab(self):
+        result = run_node(r"""
+let open = false;
+let tabRect = { left: 300, right: 360, top: 710, bottom: 754, width: 60, height: 44 };
+const button = {
+  matches() { return open; },
+  showPopover() { open = true; },
+  hidePopover() { open = false; },
+  getBoundingClientRect() { return { left: 300, right: 354, top: 710, bottom: 764, width: 54, height: 54 }; },
+};
+const tab = { getBoundingClientRect() { return tabRect; } };
+const card = makeCard();
+card.shadowRoot = { querySelector: () => button, querySelectorAll: () => [tab] };
+card._scrollTop = () => 500;
+card._updateScrollTopVisibility();
+assert.equal(open, false, 'the scroll button must not cover a visible navigation tab');
+tabRect = { left: 10, right: 90, top: 300, bottom: 344, width: 80, height: 44 };
+card._updateScrollTopVisibility();
+assert.equal(open, true, 'the scroll button remains available when the menu is clear');
+tabRect = { left: 300, right: 360, top: 710, bottom: 754, width: 60, height: 44 };
+card._updateScrollTopVisibility();
+assert.equal(open, false, 'the scroll button hides if scrolling moves a tab beneath it');
+""")
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_date_range_popover_is_shifted_below_overlapping_visible_tabs(self):
+        result = run_node(r"""
+context.window.innerWidth = 390;
+context.window.innerHeight = 800;
+const tab = { getBoundingClientRect: () => ({ left: 0, right: 390, top: 40, bottom: 100, width: 390, height: 60 }) };
+const card = makeCard();
+card.shadowRoot = { querySelectorAll: () => [tab] };
+const trigger = {
+  getBoundingClientRect: () => ({ left: 140, right: 240, top: 12, bottom: 20 }),
+  setAttribute() {},
+};
+const panel = {
+  hidden: true,
+  style: {},
+  showPopover() {},
+  getBoundingClientRect: () => ({ width: 380, height: 160 }),
+};
+card._positionChartDateRangePopover(trigger, panel);
+assert.equal(panel.style.top, '108px', 'place the panel after the visible tab row');
+""")
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+
 class PowerSavingModeTests(unittest.TestCase):
     def test_power_saving_mode_is_opt_in_and_removes_continuous_effects(self):
         card = CARD.read_text(encoding="utf-8")

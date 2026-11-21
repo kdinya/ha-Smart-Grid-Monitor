@@ -107,6 +107,8 @@ Both interfaces cover the firmware's live electrical values, energy and cost cou
 
 In the card's **Settings** tab, the **Statistics** section lets you pick a date and time. After applying it, Energy and Cost charts exclude data before that moment; the Parameters chart gets a «From HH:MM» period, and minimum, maximum and peak values on the tiles and range cards are calculated from Home Assistant history since then. Clearing the field returns the charts to their regular ranges and the tiles to firmware daily values. With the optional package enabled, Home Assistant stores the ISO timestamp in `input_text.grid_monitor_statistics_start`, so it follows the dashboard across devices and browser sessions, including cards configured with a custom ESPHome prefix. Without the helper, the selection is session-only and is lost when the card reloads. The setting limits Energy data but does not change the Energy tab's selected hour/day/week/month/custom period.
 
+To delete the card's Recorder history or long-term sensor statistics, use the matching confirmation button in **Settings → Actions**. These buttons use the same layout and styling as the other action buttons, and target only entities referenced by this card; they do not clear the entire Recorder database.
+
 ## Electrical safety
 
 The PZEM module is connected to mains-voltage wiring. Use an enclosed, strain-relieved installation, keep the low-voltage and mains sections isolated, and work only with the breaker disconnected. Have a qualified electrician verify the CT and mains wiring if anything is uncertain.
