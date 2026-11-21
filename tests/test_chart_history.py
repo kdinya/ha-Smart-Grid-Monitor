@@ -636,5 +636,62 @@ assert.ok(card._chartPan !== null, 'second touch starts 2-finger pan');
         )
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
+    def test_chart_places_select_period_next_to_month_and_removes_zoom_buttons(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = {
+  window: { customCards: [] },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+};
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+card._lang = () => 'uk';
+card._t = (key) => {
+  const dict = {
+    chart_title: 'Детальний графік',
+    hour: 'Год',
+    day: 'День',
+    week: 'Тиждень',
+    month: 'Місяць',
+    chart_date_range: 'Вибрати період',
+    chart_from: 'Від',
+    chart_to: 'До',
+    chart_apply: 'Показати',
+  };
+  return dict[key] || key;
+};
+card._escape = (s) => s;
+card._svg = () => '<svg></svg>';
+card._historyRange = 'day';
+card._chartMetric = 'power';
+card._historyBounds = () => ({ start: 1000, end: 2000 });
+card._formatDateTimeInput = () => '2026-11-21T18:00';
+card._statsStart = null;
+card._chartStatsHtml = () => '';
+card._chartSvg = () => '';
+card._chartScrubberHtml = () => '';
+card._chartReadingsHtml = () => '';
+
+const html = card._chart();
+assert.ok(!html.includes('data-chart-zoom'), 'chart does not render plus/minus zoom buttons');
+assert.ok(!html.includes('chart-zoom-button'), 'chart does not render chart-zoom-button class');
+assert.ok(html.includes('data-period="month"'), 'renders month period button');
+assert.ok(html.indexOf('data-period="month"') < html.indexOf('chart-date-range'), 'Select period is placed to the right of Month button');
+assert.ok(html.includes('Вибрати період'), 'button is renamed to Вибрати період');
+"""
+        result = subprocess.run(
+            ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
+            capture_output=True,
+            text=True,
+            check=False,
+            env={**os.environ, "TZ": "UTC"},
+        )
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
 if __name__ == "__main__":
     unittest.main()

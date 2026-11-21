@@ -142,7 +142,7 @@
       stats_hint: 'Оберіть дату й час: графіки та мінімум/максимум рахуватимуться від цього моменту. Без значення діють добові дані.',
       stats_active: 'Графіки та мін/макс рахуються від', stats_apply: 'Застосувати', stats_clear: 'Скинути', chart_date_error_earlier: 'Дата не може бути раніше виставленого початку статистики',
       stats_error: 'Вкажіть коректні дату й час у минулому.', stats_note: 'Мін/макс від', power_range_period: 'Діапазон потужності за період', max_current_period: 'Максимальний струм за період', peak_power_period: 'Пікова потужність за період', stat_min: 'Мін.', stat_avg: 'Сер.', stat_max: 'Макс.', hour: 'Год', day: 'День', week: 'Тиждень', month: 'Місяць', loading: 'Завантаження історії…', no_history: 'Історія поки недоступна',
-      chart_select_time: 'Перетягуйте графік; двома пальцями масштабуйте, повзунком вибирайте час', chart_date_range: 'Дати', chart_from: 'Від', chart_to: 'До', chart_apply: 'Показати', chart_date_error: 'Перевірте дати: кінець має бути пізніше початку й не в майбутньому', chart_zoom_in: 'Збільшити масштаб', chart_zoom_out: 'Зменшити масштаб', chart_readings: 'Дані на вибраний час', chart_readings_loading: 'Завантаження вимірювань…', chart_readings_unavailable: 'Історія вимірювань недоступна', chart_live: 'Зараз', active_power: 'Активна потужність',
+      chart_select_time: 'Перетягуйте графік; двома пальцями масштабуйте, повзунком вибирайте час', chart_date_range: 'Вибрати період', chart_from: 'Від', chart_to: 'До', chart_apply: 'Показати', chart_date_error: 'Перевірте дати: кінець має бути пізніше початку й не в майбутньому', chart_zoom_in: 'Збільшити масштаб', chart_zoom_out: 'Зменшити масштаб', chart_readings: 'Дані на вибраний час', chart_readings_loading: 'Завантаження вимірювань…', chart_readings_unavailable: 'Історія вимірювань недоступна', chart_live: 'Зараз', active_power: 'Активна потужність',
       mains: 'Зв’язок з PZEM', has_voltage: 'Дані доступні', no_voltage: 'Дані недоступні', source: 'Живлення ESP', from_mains: 'Мережа (не підтверджено)', from_inverter: 'Джерело невідоме', pzem_link: 'Зв’язок з PZEM', active: 'Онлайн', inactive: 'Офлайн', today_consumption: 'Споживання сьогодні',
       esp_power_connection: 'Схема живлення ESP', esp_power_shared: 'Від мережі разом із модулем', esp_power_after_avr: 'Після АВР', esp_power_independent: 'Незалежне живлення', esp_power_avr_note: 'ESP може живитися від інвертора', pzem_grid_note: 'PZEM вимірює мережу в усіх режимах',
       params_title: 'Електричні параметри', range_title: 'Діапазон напруги на графіку', range_now: 'Зараз', energy_title: 'Енергія та вартість', settings_title: 'Налаштування та діагностика',
@@ -185,7 +185,7 @@
       stats_hint: 'Pick a date and time: charts and min/max will be calculated from that moment. Empty means daily values.',
       stats_active: 'Charts and min/max are calculated from', stats_apply: 'Apply', stats_clear: 'Reset', chart_date_error_earlier: 'Date cannot be earlier than the statistics start time',
       stats_error: 'Enter a valid date and time in the past.', stats_note: 'Min/max since', power_range_period: 'Power range for the period', max_current_period: 'Peak current for the period', peak_power_period: 'Peak power for the period', stat_min: 'Min', stat_avg: 'Avg', stat_max: 'Max', hour: 'Hour', day: 'Day', week: 'Week', month: 'Month', loading: 'Loading history…', no_history: 'History is not available yet',
-      chart_select_time: 'Drag the chart to pan; pinch to zoom, or use the slider to select a time', chart_date_range: 'Dates', chart_from: 'From', chart_to: 'To', chart_apply: 'Show', chart_date_error: 'Check dates: the end must be after the start and not in the future', chart_zoom_in: 'Zoom in', chart_zoom_out: 'Zoom out', chart_readings: 'Readings at selected time', chart_readings_loading: 'Loading readings…', chart_readings_unavailable: 'Measurement history is unavailable', chart_live: 'Now', active_power: 'Active power',
+      chart_select_time: 'Drag the chart to pan; pinch to zoom, or use the slider to select a time', chart_date_range: 'Select period', chart_from: 'From', chart_to: 'To', chart_apply: 'Show', chart_date_error: 'Check dates: the end must be after the start and not in the future', chart_zoom_in: 'Zoom in', chart_zoom_out: 'Zoom out', chart_readings: 'Readings at selected time', chart_readings_loading: 'Loading readings…', chart_readings_unavailable: 'Measurement history is unavailable', chart_live: 'Now', active_power: 'Active power',
       mains: 'PZEM connection', has_voltage: 'Data available', no_voltage: 'Data unavailable', source: 'ESP power source', from_mains: 'Mains (not confirmed)', from_inverter: 'Source unknown', pzem_link: 'PZEM connection', active: 'Online', inactive: 'Offline', today_consumption: 'Consumption today',
       esp_power_connection: 'ESP power arrangement', esp_power_shared: 'Mains shared with the module', esp_power_after_avr: 'After AVR', esp_power_independent: 'Independent power', esp_power_avr_note: 'ESP may be powered by the inverter', pzem_grid_note: 'PZEM measures mains in every mode',
       params_title: 'Electrical parameters', range_title: 'Voltage range on chart', range_now: 'Now', energy_title: 'Energy and cost', settings_title: 'Settings and diagnostics',
@@ -1439,7 +1439,7 @@
       const labels = ['hour', 'day', 'week', 'month'];
       const buttons = labels.map((period) => `<button class="period-button ${this._historyRange === period ? 'active' : ''}" data-period="${period}" aria-pressed="${this._historyRange === period}">${this._escape(this._t(period))}</button>`).join('');
       const metricButtons = Object.keys(CHART_METRICS).map((metric) => `<button class="period-button ${this._chartMetric === metric ? 'active' : ''}" data-metric="${metric}" aria-pressed="${this._chartMetric === metric}">${this._escape(this._t(metric))}</button>`).join('');
-      return `<section class="card chart-card detailed-chart"><div class="chart-head"><h2><span class="chart-icon">${this._svg('chart')}</span>${this._escape(this._t('chart_title'))}</h2><div class="periods" role="group" aria-label="${this._escape(this._t('chart_title'))}">${metricButtons}</div><div class="periods" role="group" aria-label="${this._escape(this._t('hour'))}">${buttons}</div><div class="chart-tools"><button class="chart-zoom-button" type="button" data-chart-zoom="out" aria-label="${this._escape(this._t('chart_zoom_out'))}" title="${this._escape(this._t('chart_zoom_out'))}">−</button><button class="chart-zoom-button" type="button" data-chart-zoom="in" aria-label="${this._escape(this._t('chart_zoom_in'))}" title="${this._escape(this._t('chart_zoom_in'))}">+</button>${this._chartDateRangeHtml()}</div></div><div class="chart-stats" data-role="chart-stats">${this._chartStatsHtml()}</div><div class="chart-plot" data-role="chart-plot">${this._chartSvg()}</div>${this._chartScrubberHtml()}${this._chartReadingsHtml()}</section>`;
+      return `<section class="card chart-card detailed-chart"><div class="chart-head"><h2><span class="chart-icon">${this._svg('chart')}</span>${this._escape(this._t('chart_title'))}</h2><div class="periods" role="group" aria-label="${this._escape(this._t('chart_title'))}">${metricButtons}</div><div class="periods" role="group" aria-label="${this._escape(this._t('hour'))}">${buttons}${this._chartDateRangeHtml()}</div></div><div class="chart-stats" data-role="chart-stats">${this._chartStatsHtml()}</div><div class="chart-plot" data-role="chart-plot">${this._chartSvg()}</div>${this._chartScrubberHtml()}${this._chartReadingsHtml()}</section>`;
     }
 
     _statsStorageKey() { return `${STATS_START_STORAGE_KEY}:${this._config?.prefix || 'grid_monitor'}`; }
@@ -1629,7 +1629,8 @@
     _chartDateRangeHtml() {
       const { start, end } = this._historyBounds();
       const minAttr = Number.isFinite(this._statsStart) ? ` min="${this._formatDateTimeInput(this._statsStart)}"` : '';
-      return `<details class="chart-date-range"><summary>${this._escape(this._t('chart_date_range'))}</summary><div class="chart-date-range-panel"><label>${this._escape(this._t('chart_from'))}<input type="datetime-local" data-chart-date-start${minAttr} value="${this._formatDateTimeInput(start)}"></label><label>${this._escape(this._t('chart_to'))}<input type="datetime-local" data-chart-date-end${minAttr} value="${this._formatDateTimeInput(end)}"></label><button type="button" class="chart-date-apply" data-chart-date-apply>${this._escape(this._t('chart_apply'))}</button><small data-role="chart-date-error" aria-live="polite"></small></div></details>`;
+      const isCustom = this._historyRange === 'custom';
+      return `<details class="chart-date-range ${isCustom ? 'active' : ''}"><summary class="period-button ${isCustom ? 'active' : ''}" role="button" aria-haspopup="dialog" aria-expanded="false">${this._escape(this._t('chart_date_range'))}</summary><div class="chart-date-range-panel" role="region"><label>${this._escape(this._t('chart_from'))}<input type="datetime-local" data-chart-date-start${minAttr} value="${this._formatDateTimeInput(start)}"></label><label>${this._escape(this._t('chart_to'))}<input type="datetime-local" data-chart-date-end${minAttr} value="${this._formatDateTimeInput(end)}"></label><button type="button" class="chart-date-apply" data-chart-date-apply>${this._escape(this._t('chart_apply'))}</button><small data-role="chart-date-error" aria-live="polite"></small></div></details>`;
     }
 
     _updateChartDateRangeControls() {
@@ -2987,6 +2988,10 @@
         this._finishDialog(dialogAction.dataset.dialogAction === 'confirm' || dialogAction.dataset.dialogAction === 'close');
         return;
       }
+      if (!event.target?.closest?.('.chart-date-range')) {
+        const picker = this.shadowRoot.querySelector('.chart-date-range[open]');
+        if (picker) picker.open = false;
+      }
       const target = event.target?.closest?.('[data-tab], [data-period], [data-metric], [data-action], [data-number-save], [data-switch], [data-chart-live], [data-chart-zoom], [data-chart-date-apply], [data-stats-start-apply], [data-stats-start-clear]');
       if (!target) return;
       if (target.dataset.tab) {
@@ -3839,10 +3844,10 @@
         .chart-tools{display:flex;align-items:center;gap:6px;margin-left:auto}
         .chart-zoom-button,.chart-date-apply{min-width:38px;min-height:36px;border:1px solid #278ed0;border-radius:10px;background:#092645;color:#d7efff;font:inherit;font-weight:700;cursor:pointer}
         .chart-zoom-button:hover,.chart-date-apply:hover{background:#0c3962}
-        .chart-date-range{position:relative;color:#d7e6f6}
-        .chart-date-range summary{list-style:none;min-height:36px;display:flex;align-items:center;padding:0 12px;border:1px solid #37526f;border-radius:10px;background:#13243a;cursor:pointer;font-size:13px}
+        .chart-date-range{position:relative;display:inline-flex}
+        .chart-date-range summary{list-style:none;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;user-select:none;-webkit-user-select:none}
         .chart-date-range summary::-webkit-details-marker{display:none}
-        .chart-date-range-panel{display:flex;align-items:end;flex-wrap:wrap;gap:9px;padding:12px;margin-top:8px;border:1px solid #37526f;border-radius:14px;background:#0b192a}
+        .chart-date-range-panel{position:absolute;top:calc(100% + 8px);right:0;z-index:30;display:flex;align-items:end;flex-wrap:wrap;gap:9px;padding:12px;border:1px solid #37526f;border-radius:14px;background:#0b192a;box-shadow:0 12px 35px rgba(0,0,0,.85)}
         .chart-date-range-panel label{display:grid;gap:4px;color:#9fb5d1;font-size:12px}
         .chart-date-range-panel input{min-width:190px;min-height:36px;padding:6px 8px;border:1px solid #37526f;border-radius:9px;background:#091727;color:#eef6ff;font:inherit;color-scheme:dark}
         .chart-date-range-panel small{flex-basis:100%;color:#ff9ba8;font-size:12px}
@@ -3859,9 +3864,9 @@
         .chart-plot.is-panning{cursor:grabbing}
         @container (max-width:760px){
           .chart-tools{width:100%;margin-left:0;justify-content:flex-end}
-          .chart-date-range{margin-left:auto}
-          .chart-date-range[open]{flex:1 0 100%;margin-left:0}
-          .chart-date-range-panel{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+          .chart-date-range{flex:1 1 auto;min-width:0}
+          .chart-date-range summary{width:100%;padding:8px 4px;font-size:12px}
+          .chart-date-range-panel{position:absolute;top:calc(100% + 6px);left:0;right:0;min-width:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
           .chart-date-range-panel input{min-width:0;width:100%;box-sizing:border-box;font-size:12px}
           .chart-date-apply{grid-column:1/-1}
           .banner{display:grid;grid-template-columns:38px minmax(0,1fr) 58px;align-items:center;gap:10px}
