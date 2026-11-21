@@ -181,5 +181,104 @@ card._hass = { callApi: async () => [[
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
 
+    def test_selected_time_loads_all_readings_from_states_not_after_selection(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = {
+  window: { customCards: [] },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+};
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+const timestamp = Date.parse('2026-11-21T10:00:00.000Z');
+const keys = ['current', 'power', 'apparent_power', 'phase_angle', 'reactive_power', 'power_factor'];
+const ids = Object.fromEntries(keys.map((key) => [key, `sensor.grid_monitor_${key}`]));
+const states = Object.fromEntries(Object.values(ids).map((id) => [id, { state: '1' }]));
+const values = ['1.23', '142.6', '150.2', '18.2', '49.1', '0.95'];
+const groups = keys.map((key, index) => [{
+  entity_id: ids[key], state: values[index], last_updated: new Date(timestamp - 2000).toISOString(),
+}]);
+groups[0].push({ entity_id: ids.current, state: '9.99', last_updated: new Date(timestamp + 1000).toISOString() });
+let requestedPath = '';
+card._config = { prefix: 'grid_monitor' };
+card._entityOverrides = {};
+card._entity = (key) => ids[key];
+card._hass = { states, callApi: async (method, path) => { requestedPath = `${method} ${path}`; return groups; } };
+card._scrubTime = timestamp;
+card._chartReadings = {};
+card._chartReadingsAt = null;
+card._chartReadingsLoading = false;
+card._chartReadingsError = false;
+card._chartReadingsRequest = 0;
+card._chartReadingsQueuedTime = null;
+card._updateChartReadings = () => {};
+(async () => {
+  await card._loadChartReadings(timestamp);
+  assert.match(requestedPath, /^GET history\/period\//);
+  assert.match(requestedPath, /filter_entity_id=/);
+  assert.equal(card._chartReadings.current, 1.23);
+  assert.equal(card._chartReadings.power, 142.6);
+  assert.equal(card._chartReadings.apparent_power, 150.2);
+  assert.equal(card._chartReadings.phase_angle, 18.2);
+  assert.equal(card._chartReadings.reactive_power, 49.1);
+  assert.equal(card._chartReadings.power_factor, 0.95);
+  assert.equal(card._chartReadingsAt, timestamp);
+  assert.equal(card._chartReadingsLoading, false);
+})().catch((error) => { console.error(error); process.exit(1); });
+"""
+        result = subprocess.run(
+            ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_live_marker_uses_voltage_value_scale_and_unit(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = {
+  window: { customCards: [] },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+};
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+const chart = {
+  dataset: { chartMin: '200', chartMax: '250', chartY0: '20', chartY1: '220', chartX1: '900' },
+  querySelector: () => null,
+};
+let marker;
+card._scrubTime = null;
+card._chartPts = [];
+card._chartMetric = 'voltage';
+card.shadowRoot = { querySelector: () => chart };
+card._num = (key) => { assert.equal(key, 'voltage'); return 230; };
+card._lang = () => 'en';
+card._locale = () => 'en-US';
+card._setChartMarker = (_chart, x, y, text) => { marker = { x, y, text }; };
+card._updateChartCurrent();
+assert.equal(marker.x, 900);
+assert.equal(marker.y, 100);
+assert.equal(marker.text, '230 V');
+"""
+        result = subprocess.run(
+            ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -85,11 +85,28 @@ class RepositoryContractTests(unittest.TestCase):
         header = card.split("    _headerHtml() {", 1)[1].split("    _home() {", 1)[0]
         render = card.split("    _render() {", 1)[1].split("    _activeContent()", 1)[0]
         self.assertNotIn("_headRightHtml", header)
-        self.assertIn("${this._tabs('top')}", render)
-        self.assertLess(render.index("${this._tabs('top')}"), render.index('<div class="page-layout">'))
+        self.assertIn("${this._tabs('top')}", header)
+        self.assertIn("${this._activeTab === 'home' ? this._tabs('top') : ''}", render)
+        header_call = "${this._activeTab === 'home' ? '' : this._headerHtml()}"
+        self.assertLess(render.index(header_call), render.index('<div class="page-layout">'))
         self.assertNotIn("${this._activeTab === 'home' ? '' : this._tabs('side')}", render)
-        self.assertIn(".shell:not(.home-active)>.tabs-top{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:45%;min-width:360px;max-width:560px;margin:0 0 14px auto;padding:8px;gap:6px}", card)
-        self.assertIn(".shell:not(.home-active)>.tabs-top .tab{padding:15px 8px}", card)
+        self.assertIn(".shell:not(.home-active)>.header>.tabs-top{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));flex:0 0 45%;width:45%;min-width:360px;max-width:560px;margin:0 0 0 auto", card)
+        self.assertIn(".shell:not(.home-active)>.header>.tabs-top .tab{padding:15px 8px}", card)
+        self.assertIn(".shell:not(.home-active)>.page-layout{display:block}", card)
+        self.assertIn(".shell:not(.home-active)>.page-layout>.tabs-side{display:none}", card)
+
+    def test_chart_scrubber_shows_full_width_historical_measurements_and_metric_correct_marker(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        self.assertIn("data-role=\"chart-scrubber\"", card)
+        self.assertIn("data-role=\"chart-readings\"", card)
+        self.assertIn("data-chart-reading=\"${key}\"", card)
+        for key in ("current", "power", "apparent_power", "phase_angle", "reactive_power", "power_factor"):
+            self.assertIn(f"key: '{key}'", card)
+        self.assertIn("const metricKey = this._chartMetric || 'power';", card)
+        self.assertIn("this._num(metricKey)", card)
+        self.assertIn("chart.dataset.chartMin", card)
+        self.assertIn(".chart-reading-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr))", card)
+        self.assertIn("this._queueChartReadings(point.t)", card)
         self.assertIn(".shell:not(.home-active)>.page-layout{display:block}", card)
         self.assertIn(".shell:not(.home-active)>.page-layout>.tabs-side{display:none}", card)
 

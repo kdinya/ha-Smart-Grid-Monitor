@@ -120,6 +120,7 @@
       pzem_online: 'Дані PZEM доступні', pzem_offline: 'PZEM офлайн', source_unconfirmed: 'Джерело живлення не підтверджене', source_unknown: 'Джерело живлення невідоме', pzem_source_offline: 'PZEM офлайн; джерело живлення невідоме', pzem_offline_banner: 'PZEM не відповідає; джерело живлення невідоме',
       voltage: 'Напруга мережі', sag_state: 'Просідання', swell_state: 'Перенапруга', current: 'Струм', power: 'Потужність', frequency: 'Частота', pf: 'Коеф. потужності', normal: 'Норма', alarm: 'Поза нормою',
       chart_title: 'Детальний графік', stat_min: 'Мін.', stat_avg: 'Сер.', stat_max: 'Макс.', hour: 'Год', day: 'День', week: 'Тиждень', month: 'Місяць', loading: 'Завантаження історії…', no_history: 'Історія поки недоступна',
+      chart_select_time: 'Перетягніть повзунок або графік, щоб вибрати час', chart_readings: 'Дані на вибраний час', chart_readings_loading: 'Завантаження вимірювань…', chart_readings_unavailable: 'Історія вимірювань недоступна', chart_live: 'Зараз', active_power: 'Активна потужність',
       mains: 'Зв’язок з PZEM', has_voltage: 'Дані доступні', no_voltage: 'Дані недоступні', source: 'Живлення ESP', from_mains: 'Мережа (не підтверджено)', from_inverter: 'Джерело невідоме', pzem_link: 'Зв’язок з PZEM', active: 'Онлайн', inactive: 'Офлайн', today_consumption: 'Споживання сьогодні',
       esp_power_connection: 'Схема живлення ESP', esp_power_shared: 'Від мережі разом із модулем', esp_power_after_avr: 'Після АВР', esp_power_independent: 'Незалежне живлення', esp_power_avr_note: 'ESP може живитися від інвертора', pzem_grid_note: 'PZEM вимірює мережу в усіх режимах',
       params_title: 'Електричні параметри', range_title: 'Діапазон напруги на графіку', range_now: 'Зараз', energy_title: 'Енергія та вартість', settings_title: 'Налаштування та діагностика',
@@ -159,6 +160,7 @@
       pzem_online: 'PZEM data available', pzem_offline: 'PZEM offline', source_unconfirmed: 'Power source is not confirmed', source_unknown: 'Power source unknown', pzem_source_offline: 'PZEM offline; power source unknown', pzem_offline_banner: 'PZEM is not responding; power source is unknown',
       voltage: 'Grid voltage', sag_state: 'Sag', swell_state: 'Swell', current: 'Current', power: 'Power', frequency: 'Frequency', pf: 'Power factor', normal: 'Normal', alarm: 'Out of range',
       chart_title: 'Detailed chart', stat_min: 'Min', stat_avg: 'Avg', stat_max: 'Max', hour: 'Hour', day: 'Day', week: 'Week', month: 'Month', loading: 'Loading history…', no_history: 'History is not available yet',
+      chart_select_time: 'Drag the slider or chart to select a time', chart_readings: 'Readings at selected time', chart_readings_loading: 'Loading readings…', chart_readings_unavailable: 'Measurement history is unavailable', chart_live: 'Now', active_power: 'Active power',
       mains: 'PZEM connection', has_voltage: 'Data available', no_voltage: 'Data unavailable', source: 'ESP power source', from_mains: 'Mains (not confirmed)', from_inverter: 'Source unknown', pzem_link: 'PZEM connection', active: 'Online', inactive: 'Offline', today_consumption: 'Consumption today',
       esp_power_connection: 'ESP power arrangement', esp_power_shared: 'Mains shared with the module', esp_power_after_avr: 'After AVR', esp_power_independent: 'Independent power', esp_power_avr_note: 'ESP may be powered by the inverter', pzem_grid_note: 'PZEM measures mains in every mode',
       params_title: 'Electrical parameters', range_title: 'Voltage range on chart', range_now: 'Now', energy_title: 'Energy and cost', settings_title: 'Settings and diagnostics',
@@ -197,6 +199,14 @@
     power: { digits: 0, plausible: [0, MAX_PLAUSIBLE_POWER_W], unit: (lang) => (lang === 'uk' ? 'Вт' : 'W') },
     voltage: { digits: 1, plausible: [50, 400], unit: (lang) => (lang === 'uk' ? 'В' : 'V') },
   };
+  const CHART_READINGS = [
+    { key: 'current', label: 'current', digits: 2, plausible: [0, 100] },
+    { key: 'power', label: 'active_power', digits: 1, plausible: [0, MAX_PLAUSIBLE_POWER_W] },
+    { key: 'apparent_power', label: 'apparent', digits: 1, plausible: [0, MAX_PLAUSIBLE_POWER_W] },
+    { key: 'phase_angle', label: 'phase', digits: 1, plausible: [0, 180] },
+    { key: 'reactive_power', label: 'reactive', digits: 1, plausible: [0, MAX_PLAUSIBLE_POWER_W] },
+    { key: 'power_factor', label: 'pf', digits: 2, plausible: [0, 1] },
+  ];
   // One shared geometry keeps the arc, ticks, tower and marker concentric.
   const GAUGE = { cx: 250, cy: 205, r: 185, start: 150, span: 240, min: 150, max: 280 };
   const gaugePoint = (degrees, radius = GAUGE.r) => {
@@ -796,11 +806,29 @@
       this._renderPending = false;
       this._chartW = 0;
       this._chartPts = [];
+      this._scrubTime = null;
+      this._chartReadings = {};
+      this._chartReadingsAt = null;
+      this._chartReadingsLoading = false;
+      this._chartReadingsError = false;
+      this._chartReadingsRequest = 0;
+      this._chartReadingsRequestTime = null;
+      this._chartReadingsQueuedTime = null;
+      this._chartReadingsPendingTime = null;
+      this._chartReadingsTimer = null;
       this._measureQueued = false;
       this._heartbeatTimer = null;
       this.shadowRoot.addEventListener('click', (event) => this._handleCardClick(event));
       this.shadowRoot.addEventListener('pointermove', (event) => {
         if (event.target?.closest?.('[data-role="chart-plot"]')) this._chartHover(event);
+      });
+      this.shadowRoot.addEventListener('input', (event) => {
+        const slider = event.target?.closest?.('[data-role="chart-scrubber"]');
+        if (slider) this._chartScrubberInput(slider.value);
+      });
+      this.shadowRoot.addEventListener('change', (event) => {
+        const slider = event.target?.closest?.('[data-role="chart-scrubber"]');
+        if (slider && this._scrubTime !== null) this._queueChartReadings(this._scrubTime, true);
       });
       this.shadowRoot.addEventListener('pointerout', (event) => {
         const plot = event.target?.closest?.('[data-role="chart-plot"]');
@@ -1075,7 +1103,7 @@
     }
 
     _headerHtml() {
-      return `<header class="header"><div class="logo">${this._svg('bolt')}</div><div class="brand"><h1>${this._escape(this._config.name || this._t('title'))}</h1><p>${this._escape(this._t('subtitle'))}</p></div></header>`;
+      return `<header class="header"><div class="logo">${this._svg('bolt')}</div><div class="brand"><h1>${this._escape(this._config.name || this._t('title'))}</h1><p>${this._escape(this._t('subtitle'))}</p></div>${this._tabs('top')}</header>`;
     }
 
     _home() {
@@ -1274,7 +1302,72 @@
       const labels = ['hour', 'day', 'week', 'month'];
       const buttons = labels.map((period) => `<button class="period-button ${this._historyRange === period ? 'active' : ''}" data-period="${period}" aria-pressed="${this._historyRange === period}">${this._escape(this._t(period))}</button>`).join('');
       const metricButtons = Object.keys(CHART_METRICS).map((metric) => `<button class="period-button ${this._chartMetric === metric ? 'active' : ''}" data-metric="${metric}" aria-pressed="${this._chartMetric === metric}">${this._escape(this._t(metric))}</button>`).join('');
-      return `<section class="card chart-card detailed-chart"><div class="chart-head"><h2><span class="chart-icon">${this._svg('chart')}</span>${this._escape(this._t('chart_title'))}</h2><div class="periods" role="group" aria-label="${this._escape(this._t('chart_title'))}">${metricButtons}</div><div class="periods" role="group" aria-label="${this._escape(this._t('hour'))}">${buttons}</div></div><div class="chart-stats" data-role="chart-stats">${this._chartStatsHtml()}</div><div class="chart-plot" data-role="chart-plot">${this._chartSvg()}</div></section>`;
+      return `<section class="card chart-card detailed-chart"><div class="chart-head"><h2><span class="chart-icon">${this._svg('chart')}</span>${this._escape(this._t('chart_title'))}</h2><div class="periods" role="group" aria-label="${this._escape(this._t('chart_title'))}">${metricButtons}</div><div class="periods" role="group" aria-label="${this._escape(this._t('hour'))}">${buttons}</div></div><div class="chart-stats" data-role="chart-stats">${this._chartStatsHtml()}</div><div class="chart-plot" data-role="chart-plot">${this._chartSvg()}</div>${this._chartScrubberHtml()}${this._chartReadingsHtml()}</section>`;
+    }
+
+    _chartScrubberHtml() {
+      const selected = this._scrubTime !== null;
+      const label = selected ? this._formatChartTimestamp(this._scrubTime) : this._t('chart_select_time');
+      return `<div class="chart-scrubber"><span class="chart-scrubber-label" data-role="chart-selected-time">${this._escape(label)}</span><input type="range" min="0" max="1000" step="1" value="${this._chartScrubPosition()}" data-role="chart-scrubber" aria-label="${this._escape(this._t('chart_select_time'))}" ${this._chartPts.length ? '' : 'disabled'}><button class="chart-live-button" type="button" data-chart-live ${selected ? '' : 'disabled'}>${this._escape(this._t('chart_live'))}</button></div>`;
+    }
+
+    _chartReadingsHtml() {
+      const selected = this._scrubTime !== null;
+      const readings = CHART_READINGS.map(({ key, label, digits }) => `<div class="chart-reading"><span>${this._escape(this._t(label))}</span><strong data-chart-reading="${key}">${this._escape(this._formatChartReading(key, digits))}</strong></div>`).join('');
+      return `<section class="chart-readings" data-role="chart-readings" aria-live="polite" ${selected ? '' : 'hidden'}><div class="chart-readings-head"><h3>${this._escape(this._t('chart_readings'))}</h3><span data-role="chart-readings-time">${selected ? this._escape(this._formatChartTimestamp(this._scrubTime)) : ''}</span><span class="chart-readings-status" data-role="chart-readings-status"></span></div><div class="chart-reading-grid">${readings}</div></section>`;
+    }
+
+    _formatChartTimestamp(timestamp) {
+      const when = new Date(timestamp);
+      const date = when.toLocaleDateString(this._locale(), { day: '2-digit', month: '2-digit', year: 'numeric' });
+      const time = when.toLocaleTimeString(this._locale(), { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+      return `${date} · ${time}`;
+    }
+
+    _chartTimeBounds() {
+      const chart = this.shadowRoot?.querySelector('svg.chart');
+      const chartStart = Number(chart?.dataset.chartStart);
+      const chartEnd = Number(chart?.dataset.chartEnd);
+      if (Number.isFinite(chartStart) && Number.isFinite(chartEnd) && chartEnd > chartStart) {
+        return { tStart: chartStart, tEnd: chartEnd, rangeMs: chartEnd - chartStart };
+      }
+      return this._chartData();
+    }
+
+    _chartScrubPosition() {
+      if (this._scrubTime === null) return 1000;
+      const data = this._chartTimeBounds();
+      if (!data || data.rangeMs <= 0) return 1000;
+      return Math.max(0, Math.min(1000, Math.round(((this._scrubTime - data.tStart) / data.rangeMs) * 1000)));
+    }
+
+    _formatChartReading(key, digits) {
+      const value = this._chartReadings?.[key];
+      if (!Number.isFinite(value)) return '—';
+      const number = value.toLocaleString(this._locale(), { maximumFractionDigits: digits });
+      const unit = this._unit(key);
+      return unit ? `${number} ${unit}` : number;
+    }
+
+    _updateChartReadings() {
+      const panel = this.shadowRoot.querySelector('[data-role="chart-readings"]');
+      if (!panel) return;
+      const selected = this._scrubTime !== null;
+      panel.hidden = !selected;
+      if (!selected) return;
+      const time = panel.querySelector('[data-role="chart-readings-time"]');
+      if (time) time.textContent = this._formatChartTimestamp(this._scrubTime);
+      CHART_READINGS.forEach(({ key, digits }) => {
+        const node = panel.querySelector(`[data-chart-reading="${key}"]`);
+        if (node) node.textContent = this._formatChartReading(key, digits);
+      });
+      const status = panel.querySelector('[data-role="chart-readings-status"]');
+      if (!status) return;
+      const hasValue = CHART_READINGS.some(({ key }) => Number.isFinite(this._chartReadings?.[key]));
+      const loading = this._chartReadingsLoading && this._chartReadingsRequestTime === this._scrubTime;
+      status.textContent = loading || this._chartReadingsAt !== this._scrubTime && !this._chartReadingsError
+        ? this._t('chart_readings_loading')
+        : this._chartReadingsError || !hasValue ? this._t('chart_readings_unavailable') : '';
     }
 
     _chartStatsHtml() {
@@ -1460,7 +1553,7 @@
       const latest = hasCurrent ? `${current.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits })} ${unit}` : '';
       const tagX = Math.min(Math.max(last.x - 42, x0 - 8), width - 86);
       const tagY = Math.max(2, last.y - 44);
-      return `<svg class="chart" data-chart-max="${scale.max}" data-chart-w="${width}" data-chart-x0="${x0}" data-chart-x1="${x1}" data-chart-y0="${y0}" data-chart-y1="${y1}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${this._escape(this._t('chart_title'))}"><defs><linearGradient id="${this._id('area')}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#0a96ff" stop-opacity=".5"/><stop offset="1" stop-color="#0a96ff" stop-opacity=".02"/></linearGradient><filter id="${this._id('line-glow')}" x="-5%" y="-30%" width="110%" height="160%"><feGaussianBlur stdDeviation="3"/></filter></defs><g class="chart-grid">${horizontal}${vertical}</g><path d="${area}" fill="url(#${this._id('area')})"/><path d="${line}" class="chart-glow" filter="url(#${this._id('line-glow')})"/><path d="${line}" class="chart-line"/><path class="chart-cross" data-role="chart-cross" d="M${last.x.toFixed(1)} ${y0}V${y1}" visibility="hidden"/><circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="6" class="chart-dot" data-role="chart-dot" visibility="${hasCurrent ? 'visible' : 'hidden'}"/><rect x="${tagX.toFixed(1)}" y="${tagY.toFixed(1)}" width="84" height="30" rx="10" class="chart-tag" data-role="chart-tag" visibility="${hasCurrent ? 'visible' : 'hidden'}"/><text x="${(tagX + 42).toFixed(1)}" y="${(tagY + 20).toFixed(1)}" text-anchor="middle" class="chart-tag-text" data-role="chart-tag-text" visibility="${hasCurrent ? 'visible' : 'hidden'}">${this._escape(latest)}</text><text x="${(tagX + 42).toFixed(1)}" y="${(tagY + 37).toFixed(1)}" text-anchor="middle" class="chart-tag-sub" data-role="chart-tag-sub" visibility="hidden"></text></svg>`;
+      return `<svg class="chart" data-chart-min="${scale.lo}" data-chart-max="${scale.max}" data-chart-start="${tStart}" data-chart-end="${tStart + rangeMs}" data-chart-w="${width}" data-chart-x0="${x0}" data-chart-x1="${x1}" data-chart-y0="${y0}" data-chart-y1="${y1}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${this._escape(this._t('chart_title'))}"><defs><linearGradient id="${this._id('area')}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#0a96ff" stop-opacity=".5"/><stop offset="1" stop-color="#0a96ff" stop-opacity=".02"/></linearGradient><filter id="${this._id('line-glow')}" x="-5%" y="-30%" width="110%" height="160%"><feGaussianBlur stdDeviation="3"/></filter></defs><g class="chart-grid">${horizontal}${vertical}</g><path d="${area}" fill="url(#${this._id('area')})"/><path d="${line}" class="chart-glow" filter="url(#${this._id('line-glow')})"/><path d="${line}" class="chart-line"/><path class="chart-cross" data-role="chart-cross" d="M${last.x.toFixed(1)} ${y0}V${y1}" visibility="hidden"/><circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="6" class="chart-dot" data-role="chart-dot" visibility="${hasCurrent ? 'visible' : 'hidden'}"/><rect x="${tagX.toFixed(1)}" y="${tagY.toFixed(1)}" width="84" height="30" rx="10" class="chart-tag" data-role="chart-tag" visibility="${hasCurrent ? 'visible' : 'hidden'}"/><text x="${(tagX + 42).toFixed(1)}" y="${(tagY + 20).toFixed(1)}" text-anchor="middle" class="chart-tag-text" data-role="chart-tag-text" visibility="${hasCurrent ? 'visible' : 'hidden'}">${this._escape(latest)}</text><text x="${(tagX + 42).toFixed(1)}" y="${(tagY + 37).toFixed(1)}" text-anchor="middle" class="chart-tag-sub" data-role="chart-tag-sub" visibility="hidden"></text></svg>`;
     }
 
     _setChartMarker(chart, x, y, text, sub = '') {
@@ -1480,6 +1573,71 @@
       if (subLabel) { subLabel.setAttribute('x', (boxX + boxW / 2).toFixed(1)); subLabel.setAttribute('y', (boxY + 37).toFixed(1)); subLabel.textContent = sub; subLabel.setAttribute('visibility', sub ? 'visible' : 'hidden'); }
     }
 
+    _nearestChartPoint(value) {
+      if (!this._chartPts.length || !Number.isFinite(value)) return null;
+      return this._chartPts.reduce((best, point) => Math.abs(point.t - value) < Math.abs(best.t - value) ? point : best, this._chartPts[0]);
+    }
+
+    _renderChartPoint(point) {
+      const chart = this.shadowRoot.querySelector('svg.chart');
+      if (!chart || !point) return;
+      const metric = CHART_METRICS[this._chartMetric || 'power'];
+      const unit = metric.unit(this._lang());
+      const when = new Date(point.t);
+      const sub = when.toLocaleDateString(this._locale(), { day: '2-digit', month: '2-digit' }) + ' ' + when.toLocaleTimeString(this._locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
+      this._setChartMarker(chart, point.x, point.y, `${point.v.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits })} ${unit}`, sub);
+      const cross = chart.querySelector('[data-role="chart-cross"]');
+      if (cross) {
+        cross.setAttribute('d', `M${point.x.toFixed(1)} ${chart.dataset.chartY0}V${chart.dataset.chartY1}`);
+        cross.setAttribute('visibility', 'visible');
+      }
+    }
+
+    _updateChartScrubber() {
+      const slider = this.shadowRoot.querySelector('[data-role="chart-scrubber"]');
+      if (slider) {
+        slider.value = String(this._chartScrubPosition());
+        slider.disabled = !this._chartPts.length;
+      }
+      const label = this.shadowRoot.querySelector('[data-role="chart-selected-time"]');
+      if (label) label.textContent = this._scrubTime === null ? this._t('chart_select_time') : this._formatChartTimestamp(this._scrubTime);
+      const live = this.shadowRoot.querySelector('[data-chart-live]');
+      if (live) live.disabled = this._scrubTime === null;
+    }
+
+    _selectChartPoint(point) {
+      if (!point) return;
+      const changed = this._scrubTime !== point.t;
+      this._scrubTime = point.t;
+      if (changed) {
+        this._chartReadings = {};
+        this._chartReadingsAt = null;
+        this._chartReadingsError = false;
+      }
+      this._renderChartPoint(point);
+      this._updateChartScrubber();
+      this._updateChartReadings();
+      if (changed && this._chartReadingsAt !== point.t) this._queueChartReadings(point.t);
+    }
+
+    _chartScrubberInput(value) {
+      const data = this._chartTimeBounds();
+      const position = Number(value);
+      if (!data || !Number.isFinite(position) || !this._chartPts.length) return;
+      const timestamp = data.tStart + (data.rangeMs * Math.max(0, Math.min(1000, position)) / 1000);
+      this._selectChartPoint(this._nearestChartPoint(timestamp));
+    }
+
+    _restoreChartScrub() {
+      if (this._scrubTime === null) return false;
+      const point = this._nearestChartPoint(this._scrubTime);
+      if (!point) return false;
+      this._renderChartPoint(point);
+      this._updateChartScrubber();
+      this._updateChartReadings();
+      return true;
+    }
+
     _chartHover(event) {
       const chart = this.shadowRoot.querySelector('svg.chart');
       if (!chart || !this._chartPts.length) return;
@@ -1488,17 +1646,96 @@
       const x = (event.clientX - rect.left) * ((Number(chart.dataset.chartW) || rect.width) / rect.width);
       let best = this._chartPts[0];
       this._chartPts.forEach((point) => { if (Math.abs(point.x - x) < Math.abs(best.x - x)) best = point; });
-      const metric = CHART_METRICS[this._chartMetric || 'power'];
-      const unit = metric.unit(this._lang());
-      const longRange = this._historyRange === 'week' || this._historyRange === 'month';
-      const when = new Date(best.t);
-      const sub = longRange ? when.toLocaleDateString(this._locale(), { day: '2-digit', month: '2-digit' }) + ' ' + when.toLocaleTimeString(this._locale(), { hour: '2-digit', minute: '2-digit', hour12: false }) : when.toLocaleTimeString(this._locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
-      this._setChartMarker(chart, best.x, best.y, `${best.v.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits })} ${unit}`, sub);
-      const cross = chart.querySelector('[data-role="chart-cross"]');
-      if (cross) {
-        cross.setAttribute('d', `M${best.x.toFixed(1)} ${chart.dataset.chartY0}V${chart.dataset.chartY1}`);
-        cross.setAttribute('visibility', 'visible');
+      this._selectChartPoint(best);
+    }
+
+    _queueChartReadings(timestamp, immediate = false) {
+      if (this._chartReadingsTimer !== null) window.clearTimeout(this._chartReadingsTimer);
+      this._chartReadingsPendingTime = timestamp;
+      this._chartReadingsTimer = window.setTimeout(() => {
+        this._chartReadingsTimer = null;
+        const pending = this._chartReadingsPendingTime;
+        this._chartReadingsPendingTime = null;
+        if (pending !== null) this._loadChartReadings(pending);
+      }, immediate ? 0 : 300);
+    }
+
+    async _loadChartReadings(timestamp) {
+      if (!this._hass || !Number.isFinite(timestamp) || this._scrubTime !== timestamp) return;
+      if (this._chartReadingsLoading) {
+        this._chartReadingsQueuedTime = timestamp;
+        return;
       }
+      const request = ++this._chartReadingsRequest;
+      const requestTime = timestamp;
+      const hass = this._hass;
+      const keys = CHART_READINGS.map(({ key }) => key);
+      const entityIds = keys.map((key) => this._entity(key)).filter((entityId) => hass.states?.[entityId]);
+      this._chartReadingsLoading = true;
+      this._chartReadingsRequestTime = requestTime;
+      this._chartReadingsError = false;
+      this._updateChartReadings();
+      try {
+        if (typeof hass.callApi !== 'function' || !entityIds.length) throw new Error('Measurement history unavailable');
+        const start = new Date(timestamp - 60000);
+        const end = new Date(timestamp + 1);
+        const path = `history/period/${encodeURIComponent(start.toISOString())}?filter_entity_id=${encodeURIComponent(entityIds.join(','))}&end_time=${encodeURIComponent(end.toISOString())}&minimal_response&no_attributes`;
+        const response = await hass.callApi('GET', path);
+        if (request !== this._chartReadingsRequest) return;
+        const groups = Array.isArray(response) ? response : [];
+        const byEntity = new Map();
+        groups.forEach((group, index) => {
+          if (!Array.isArray(group)) return;
+          const first = group.find((item) => item?.entity_id);
+          const entityId = first?.entity_id || entityIds[index];
+          if (entityId) byEntity.set(entityId, group);
+        });
+        const values = {};
+        CHART_READINGS.forEach(({ key, plausible }) => {
+          const entityId = this._entity(key);
+          let latest = null;
+          (byEntity.get(entityId) || []).forEach((item) => {
+            const time = Date.parse(item.last_updated || item.last_changed || '');
+            const value = Number(item.state);
+            if (!Number.isFinite(time) || time > timestamp || !Number.isFinite(value) || value < plausible[0] || value > plausible[1]) return;
+            if (!latest || time > latest.time) latest = { time, value };
+          });
+          values[key] = latest?.value ?? null;
+        });
+        if (this._scrubTime === requestTime) {
+          this._chartReadings = values;
+          this._chartReadingsAt = requestTime;
+        } else {
+          this._chartReadingsQueuedTime = this._scrubTime;
+        }
+      } catch (_error) {
+        if (request === this._chartReadingsRequest && this._scrubTime === requestTime) this._chartReadingsError = true;
+      } finally {
+        if (request === this._chartReadingsRequest) {
+          this._chartReadingsLoading = false;
+          this._chartReadingsRequestTime = null;
+          this._updateChartReadings();
+          const queued = this._chartReadingsQueuedTime;
+          this._chartReadingsQueuedTime = null;
+          if (queued !== null && queued === this._scrubTime && queued !== this._chartReadingsAt) this._queueChartReadings(queued, true);
+        }
+      }
+    }
+
+    _clearChartScrub() {
+      if (this._chartReadingsTimer !== null) window.clearTimeout(this._chartReadingsTimer);
+      this._chartReadingsTimer = null;
+      this._chartReadingsPendingTime = null;
+      this._chartReadingsRequest += 1;
+      this._chartReadingsQueuedTime = null;
+      this._chartReadingsRequestTime = null;
+      this._chartReadingsLoading = false;
+      this._chartReadingsError = false;
+      this._chartReadings = {};
+      this._chartReadingsAt = null;
+      this._scrubTime = null;
+      this._updateChartScrubber();
+      this._updateChartReadings();
     }
 
     _downsample(points, limit) {
@@ -1624,6 +1861,9 @@
       if (plot) plot.innerHTML = this._chartSvg();
       const stats = this.shadowRoot.querySelector('[data-role="chart-stats"]');
       if (stats) stats.innerHTML = this._chartStatsHtml();
+      if (!this._restoreChartScrub()) this._updateChartCurrent();
+      this._updateChartScrubber();
+      this._updateChartReadings();
       if (this._activeTab === 'params') this._updateRange();
     }
 
@@ -2003,7 +2243,7 @@
       const activeContent = this._activeTab === 'home' ? this._home() : this._activeTab === 'params' ? this._params() : this._activeTab === 'energy' ? this._energy() : this._settings();
       this.shadowRoot.innerHTML = `<style>${GridMonitorCard.CSS}</style><main class="shell ${status.stateClass}${readyClass}${homeClass}">
         ${this._activeTab === 'home' ? '' : this._headerHtml()}
-        ${this._tabs('top')}
+        ${this._activeTab === 'home' ? this._tabs('top') : ''}
         <div class="page-layout">
           <div class="view">${activeContent}</div>
         </div>
@@ -2024,11 +2264,12 @@
         this._finishDialog(dialogAction.dataset.dialogAction === 'confirm' || dialogAction.dataset.dialogAction === 'close');
         return;
       }
-      const target = event.target?.closest?.('[data-tab], [data-period], [data-metric], [data-action], [data-number-save], [data-switch]');
+      const target = event.target?.closest?.('[data-tab], [data-period], [data-metric], [data-action], [data-number-save], [data-switch], [data-chart-live]');
       if (!target) return;
       if (target.dataset.tab) {
         if (target.dataset.tab === this._activeTab) return;
         const wasHome = this._activeTab === 'home';
+        if (this._activeTab === 'params' && target.dataset.tab !== 'params') this._clearChartScrub();
         this._activeTab = target.dataset.tab;
         if (wasHome !== (this._activeTab === 'home')) {
           this._render();
@@ -2047,8 +2288,14 @@
         this._ensureHistory();
         return;
       }
+      if (target.dataset.chartLive !== undefined) {
+        this._clearChartScrub();
+        this._updateChartCurrent();
+        return;
+      }
       if (target.dataset.metric) {
         if (this._chartMetric === target.dataset.metric) return;
+        this._clearChartScrub();
         this._historyRequest += 1;
         this._historyLoading = false;
         this._chartMetric = target.dataset.metric;
@@ -2065,6 +2312,7 @@
       }
       if (target.dataset.period) {
         if (this._historyRange === target.dataset.period) return;
+        this._clearChartScrub();
         this._historyRequest += 1;
         this._historyLoading = false;
         this._voltageHistoryRequest += 1;
@@ -2196,15 +2444,23 @@
     _updateChartCurrent() {
       const chart = this.shadowRoot.querySelector('.chart');
       if (!chart) return;
-      const current = this._num('power');
-      const maximum = Math.max(1, Number(chart.dataset.chartMax) || 250);
+      if (this._scrubTime !== null && this._restoreChartScrub()) return;
+      const metricKey = this._chartMetric || 'power';
+      const metric = CHART_METRICS[metricKey];
+      const current = this._num(metricKey);
+      const minimum = Number(chart.dataset.chartMin) || 0;
+      const maximum = Math.max(minimum + 1, Number(chart.dataset.chartMax) || 250);
       const y0 = Number(chart.dataset.chartY0) || 26; const y1 = Number(chart.dataset.chartY1) || 170;
       const x1 = Number(chart.dataset.chartX1) || 980;
       const cross = chart.querySelector('[data-role="chart-cross"]');
       if (cross) cross.setAttribute('visibility', 'hidden');
-      if (current === null) { this._setChartMarker(chart, x1, y1, ''); return; }
-      const y = y1 - (Math.max(0, Math.min(maximum, current)) / maximum) * (y1 - y0);
-      this._setChartMarker(chart, x1, y, `${current.toLocaleString(this._locale(), { maximumFractionDigits: 0 })} ${this._lang() === 'uk' ? 'Вт' : 'W'}`);
+      if (current === null || current < metric.plausible[0] || current > metric.plausible[1]) {
+        this._setChartMarker(chart, x1, y1, '');
+        return;
+      }
+      const value = Math.max(minimum, Math.min(maximum, current));
+      const y = y1 - ((value - minimum) / (maximum - minimum)) * (y1 - y0);
+      this._setChartMarker(chart, x1, y, `${current.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits })} ${metric.unit(this._lang())}`);
     }
 
     _updateHomeStatus() {
@@ -2665,6 +2921,28 @@
           .range-card{padding:14px 14px 12px}
           .detail b{font-size:19px}
         }
+
+        .shell:not(.home-active)>.header>.brand{flex:1 1 auto}.shell:not(.home-active)>.header>.tabs-top{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));flex:0 0 45%;width:45%;min-width:360px;max-width:560px;margin:0 0 0 auto;padding:8px;gap:6px}
+        .shell:not(.home-active)>.header>.tabs-top .tab{padding:15px 8px}
+        .chart-scrubber{display:grid;grid-template-columns:minmax(180px,auto) minmax(0,1fr) auto;align-items:center;gap:12px;margin-top:8px;padding:4px 2px}
+        .chart-scrubber-label{color:#b7c9df;font-size:13px;overflow-wrap:anywhere}
+        .chart-scrubber input[type=range]{width:100%;min-width:0;accent-color:#12aaff;touch-action:pan-x;cursor:ew-resize}
+        .chart-live-button{border:1px solid #278ed0;background:#092645;color:#d7efff;border-radius:10px;padding:7px 13px;font:inherit;cursor:pointer}
+        .chart-live-button:disabled{opacity:.5;cursor:not-allowed}
+        .chart-readings{margin-top:10px;padding-top:12px;border-top:1px solid #29415c}
+        .chart-readings[hidden]{display:none}
+        .chart-readings-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+        .chart-readings-head h3{margin:0;color:#eff7ff;font-size:16px}
+        .chart-readings-head>span{color:#b7c9df;font-size:13px}
+        .chart-readings-head .chart-readings-status{margin-left:auto;color:#9fb5d1}
+        .chart-reading-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+        .chart-reading{min-width:0;padding:11px 12px;border-radius:14px;background:#13243a;border:1px solid #2b4562}
+        .chart-reading span{display:block;color:#9fb5d1;font-size:12px;line-height:1.3}
+        .chart-reading strong{display:block;margin-top:5px;color:#f3f7ff;font-size:clamp(15px,1.7cqw,20px);overflow-wrap:anywhere}
+        @container (max-width:959px){.shell:not(.home-active)>.header{flex-wrap:wrap;gap:11px;padding-bottom:12px}.shell:not(.home-active)>.header>.brand{flex:1 1 auto}.shell:not(.home-active)>.header>.tabs-top{flex:1 0 100%;width:100%;min-width:0;max-width:none;margin:0 0 4px;grid-template-columns:repeat(4,minmax(0,1fr))}}
+        @container (max-width:900px){.chart-reading-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+        @container (max-width:760px){.chart-scrubber{grid-template-columns:minmax(0,1fr) auto;gap:8px}.chart-scrubber-label{grid-column:1/-1}.chart-readings-head .chart-readings-status{margin-left:0}}
+        @container (max-width:520px){.chart-reading-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.chart-reading{padding:10px}.chart-reading strong{font-size:16px}}
 
       `;
     }
