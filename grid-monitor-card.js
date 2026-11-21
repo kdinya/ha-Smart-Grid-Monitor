@@ -151,6 +151,12 @@
       stats_hint: 'Оберіть дату й час: графіки та мінімум/максимум рахуватимуться від цього моменту. Без значення діють добові дані.', stats_shared_hint: 'Для синхронізації між пристроями потрібен helper input_text.grid_monitor_statistics_start.', stats_sync_saved: 'Збережено в Home Assistant; налаштування синхронізується між пристроями.', stats_sync_missing: 'Helper не знайдено: значення діє лише до перезавантаження. Створіть його кнопкою нижче або ввімкніть пакет.',
       stats_create_helper: 'Створити helper', stats_create_helper_confirm: 'Створити input_text.grid_monitor_statistics_start у Home Assistant? Потрібні права адміністратора. Після створення виберіть дату початку й натисніть «Застосувати».', stats_helper_created: 'Helper створено. Тепер виберіть дату початку статистики й натисніть «Застосувати», щоб зберегти її в Home Assistant.', stats_helper_error: 'Не вдалося створити helper. Переконайтеся, що ви ввійшли як адміністратор. Або створіть Text helper вручну в Settings → Devices & services → Helpers.',
       stats_active: 'Графіки та мін/макс рахуються від', stats_apply: 'Застосувати', stats_clear: 'Скинути', chart_date_error_earlier: 'Дата не може бути раніше виставленого початку статистики',
+      history_cleanup_title: 'Історія та статистика Home Assistant', history_cleanup_hint: 'Перед видаленням створіть резервну копію. Кнопки нижче очищують лише сутності, пов’язані з цією карткою, а не всю базу Recorder.',
+      history_purge_button: 'Видалити історію Recorder', history_stats_button: 'Видалити статистику HA',
+      history_purge_confirm: 'Буде видалено всю збережену історію станів Recorder для {count} сутностей цієї картки. Цю дію не можна скасувати без резервної копії. Продовжити?',
+      history_stats_confirm: 'Буде видалено короткострокову й довготривалу статистику Home Assistant для {count} сенсорів цієї картки. Цю дію не можна скасувати без резервної копії. Продовжити?',
+      history_purge_done: 'Запит на очищення історії Recorder для {count} сутностей виконано.', history_stats_done: 'Статистику Home Assistant для {count} сенсорів видалено.',
+      history_delete_error: 'Не вдалося видалити дані. Переконайтеся, що ви ввійшли як адміністратор, Recorder доступний і резервну копію створено.', history_delete_empty: 'Не знайдено сутностей цієї картки, для яких можна видалити дані.',
       stats_error: 'Вкажіть коректні дату й час у минулому.', stats_note: 'Мін/макс від', power_range_period: 'Діапазон потужності за період', max_current_period: 'Максимальний струм за період', peak_power_period: 'Пікова потужність за період', stat_min: 'Мін.', stat_avg: 'Сер.', stat_max: 'Макс.', hour: 'Год', day: 'День', week: 'Тиждень', month: 'Місяць', loading: 'Завантаження історії…', no_history: 'Історія поки недоступна',
       chart_select_time: 'Перетягуйте графік; двома пальцями масштабуйте, повзунком вибирайте час', chart_date_range: 'Вибрати період', chart_from: 'Від', chart_to: 'До', chart_apply: 'Показати', chart_date_error: 'Перевірте дати: кінець має бути пізніше початку й не в майбутньому', chart_zoom_in: 'Збільшити масштаб', chart_zoom_out: 'Зменшити масштаб', chart_readings: 'Дані на вибраний час', chart_readings_loading: 'Завантаження вимірювань…', chart_readings_unavailable: 'Історія вимірювань недоступна', chart_live: 'Зараз', active_power: 'Активна потужність',
       mains: 'Зв’язок з PZEM', has_voltage: 'Дані доступні', no_voltage: 'Дані недоступні', source: 'Живлення ESP', from_mains: 'Мережа (не підтверджено)', from_inverter: 'Джерело невідоме', pzem_link: 'Зв’язок з PZEM', active: 'Онлайн', inactive: 'Офлайн', today_consumption: 'Споживання сьогодні',
@@ -213,6 +219,12 @@
       stats_hint: 'Pick a date and time: charts and min/max will be calculated from that moment. Empty means daily values.', stats_shared_hint: 'To sync this setting across devices, the input_text.grid_monitor_statistics_start helper is required.', stats_sync_saved: 'Saved in Home Assistant; this setting syncs across devices.', stats_sync_missing: 'Helper not found: this setting lasts only until reload. Create it with the button below or enable the package.',
       stats_create_helper: 'Create helper', stats_create_helper_confirm: 'Create input_text.grid_monitor_statistics_start in Home Assistant? Administrator permissions are required. After creation, select the statistics start date and press Apply.', stats_helper_created: 'The helper was created. Select a statistics start date and press Apply to save it in Home Assistant.', stats_helper_error: 'Could not create the helper. Make sure you are signed in as a Home Assistant administrator, or create a Text helper manually under Settings → Devices & services → Helpers.',
       stats_active: 'Charts and min/max are calculated from', stats_apply: 'Apply', stats_clear: 'Reset', chart_date_error_earlier: 'Date cannot be earlier than the statistics start time',
+      history_cleanup_title: 'Home Assistant history and statistics', history_cleanup_hint: 'Create a backup before deleting data. These buttons target only entities referenced by this card, not the entire Recorder database.',
+      history_purge_button: 'Delete Recorder history', history_stats_button: 'Delete HA statistics',
+      history_purge_confirm: 'All saved Recorder state history for {count} entities used by this card will be deleted. This cannot be undone without a backup. Continue?',
+      history_stats_confirm: 'Home Assistant short-term and long-term statistics for {count} sensors used by this card will be deleted. This cannot be undone without a backup. Continue?',
+      history_purge_done: 'Recorder history cleanup was requested for {count} entities.', history_stats_done: 'Home Assistant statistics were deleted for {count} sensors.',
+      history_delete_error: 'Could not delete the data. Make sure you are signed in as an administrator, Recorder is available, and a backup exists.', history_delete_empty: 'No entities used by this card were found to clean up.',
       stats_error: 'Enter a valid date and time in the past.', stats_note: 'Min/max since', power_range_period: 'Power range for the period', max_current_period: 'Peak current for the period', peak_power_period: 'Peak power for the period', stat_min: 'Min', stat_avg: 'Avg', stat_max: 'Max', hour: 'Hour', day: 'Day', week: 'Week', month: 'Month', loading: 'Loading history…', no_history: 'History is not available yet',
       chart_select_time: 'Drag the chart to pan; pinch to zoom, or use the slider to select a time', chart_date_range: 'Select period', chart_from: 'From', chart_to: 'To', chart_apply: 'Show', chart_date_error: 'Check dates: the end must be after the start and not in the future', chart_zoom_in: 'Zoom in', chart_zoom_out: 'Zoom out', chart_readings: 'Readings at selected time', chart_readings_loading: 'Loading readings…', chart_readings_unavailable: 'Measurement history is unavailable', chart_live: 'Now', active_power: 'Active power',
       mains: 'PZEM connection', has_voltage: 'Data available', no_voltage: 'Data unavailable', source: 'ESP power source', from_mains: 'Mains (not confirmed)', from_inverter: 'Source unknown', pzem_link: 'PZEM connection', active: 'Online', inactive: 'Offline', today_consumption: 'Consumption today',
@@ -1824,6 +1836,73 @@
 
     _statsNote() {
       return '';
+    }
+
+    _panelHistoryEntityIds() {
+      const states = this._hass?.states;
+      if (!states) return [];
+      const ids = new Set();
+      for (const key of Object.keys(ALIAS_SUFFIXES)) {
+        const entityId = this._entity(key);
+        const domain = entityId.split('.')[0];
+        if ((domain === 'sensor' || domain === 'binary_sensor') && states[entityId]) ids.add(entityId);
+      }
+      return [...ids].sort();
+    }
+
+    _historyCleanupSetting() {
+      const entityIds = this._panelHistoryEntityIds();
+      const sensorIds = entityIds.filter((entityId) => entityId.startsWith('sensor.'));
+      const disabled = this._historyDeleteInProgress ? 'disabled' : '';
+      return `<h2 class="subheading">${this._escape(this._t('history_cleanup_title'))}</h2><div class="history-cleanup"><p class="history-cleanup-hint">${this._escape(this._t('history_cleanup_hint'))}</p><div class="action-grid history-cleanup-actions"><button class="action-button history-delete-button" type="button" data-history-delete="recorder" aria-label="${this._escape(this._t('history_purge_button'))}" ${!entityIds.length || disabled}>${this._svg('chart')}<span>${this._escape(this._t('history_purge_button'))}</span></button><button class="action-button history-delete-button" type="button" data-history-delete="statistics" aria-label="${this._escape(this._t('history_stats_button'))}" ${!sensorIds.length || disabled}>${this._svg('chart')}<span>${this._escape(this._t('history_stats_button'))}</span></button></div></div>`;
+    }
+
+    _updateHistoryCleanupControls() {
+      const entityIds = this._panelHistoryEntityIds();
+      const sensorIds = entityIds.filter((entityId) => entityId.startsWith('sensor.'));
+      for (const [kind, count] of [['recorder', entityIds.length], ['statistics', sensorIds.length]]) {
+        const button = this.shadowRoot?.querySelector(`[data-history-delete="${kind}"]`);
+        if (button) button.disabled = Boolean(this._historyDeleteInProgress) || count === 0;
+      }
+    }
+
+    async _deletePanelHistory(kind) {
+      if (!['recorder', 'statistics'].includes(kind) || this._historyDeleteInProgress) return false;
+      const entityIds = this._panelHistoryEntityIds();
+      const targets = kind === 'statistics' ? entityIds.filter((entityId) => entityId.startsWith('sensor.')) : entityIds;
+      if (!targets.length) {
+        await this._showDialog({ title: this._t('dialog_error_title'), message: this._t('history_delete_empty') });
+        return false;
+      }
+
+      this._historyDeleteInProgress = kind;
+      this._updateHistoryCleanupControls();
+      try {
+        const isStatistics = kind === 'statistics';
+        const prompt = this._t(isStatistics ? 'history_stats_confirm' : 'history_purge_confirm').replace('{count}', String(targets.length));
+        const confirmed = await this._showDialog({
+          title: this._t('dialog_confirm_title'),
+          message: prompt,
+          confirm: true,
+        });
+        if (!confirmed) return false;
+        if (isStatistics) {
+          if (typeof this._hass?.callWS !== 'function') throw new Error('Home Assistant WebSocket API is unavailable');
+          await this._hass.callWS({ type: 'recorder/clear_statistics', statistic_ids: targets });
+        } else {
+          if (typeof this._hass?.callService !== 'function') throw new Error('Home Assistant service API is unavailable');
+          await this._hass.callService('recorder', 'purge_entities', { entity_id: targets, keep_days: 0 });
+        }
+        const complete = this._t(isStatistics ? 'history_stats_done' : 'history_purge_done').replace('{count}', String(targets.length));
+        await this._showDialog({ title: this._t('history_cleanup_title'), message: complete });
+        return true;
+      } catch (_error) {
+        await this._showDialog({ title: this._t('dialog_error_title'), message: this._t('history_delete_error') });
+        return false;
+      } finally {
+        this._historyDeleteInProgress = false;
+        this._updateHistoryCleanupControls();
+      }
     }
 
     _statsStartSetting() {
@@ -3644,7 +3723,7 @@
         <div class="detail-grid settings-grid">
         ${this._setting('sag_threshold', this._t('sag'))}${this._setting('swell_threshold', this._t('swell'))}${this._setting('nominal_voltage', this._t('nominal'))}${this._setting('tariff_day', this._t('tariff_day'))}${twoZone ? this._setting('tariff_night', this._t('tariff_night')) : ''}
         <div class="detail switch-setting"><span>${this._escape(this._t('two_zone'))}</span><strong data-role="switch-value">${this._escape(twoZone ? this._t('on') : this._t('off'))}</strong><button class="switch-button ${twoZone ? 'on' : ''}" data-switch="two_zone" aria-pressed="${twoZone}">${this._svg('gear')}<span data-role="switch-label">${this._escape(twoZone ? this._t('on') : this._t('off'))}</span></button></div>
-      </div>${this._statsStartSetting()}<h2 class="subheading">${this._escape(this._t('diagnostics'))}</h2><div class="detail-grid">
+      </div>${this._statsStartSetting()}${this._historyCleanupSetting()}<h2 class="subheading">${this._escape(this._t('diagnostics'))}</h2><div class="detail-grid">
         ${this._detail('wifi_signal', this._t('wifi'), 0)}${this._detail('esp_temperature', this._t('temperature'), 1)}${this._detail('uptime', this._t('uptime'), 0)}${this._detail('ip_address', this._t('ip'), 0)}${this._detail('ssid', this._t('ssid'), 0)}${this._detail('inverter_events', this._t('inverter_events'), 0)}
       </div><h2 class="subheading">${this._escape(this._t('actions'))}</h2><div class="action-grid">
         ${this._action('reset_energy', this._t('reset_energy'))}${this._action('reset_events', this._t('reset_events'))}${this._action('reset_cost', this._t('reset_cost'))}${this._action('reset_stats', this._t('reset_stats'))}${this._action('restart', this._t('restart'))}
@@ -3809,7 +3888,7 @@
         return;
       }
       if (!event.target?.closest?.('.chart-date-range')) this._closeChartDateRangePopover();
-      const target = event.target?.closest?.('[data-scroll-top], [data-tab], [data-period], [data-energy-period], [data-energy-metric], [data-energy-bar], [data-metric], [data-action], [data-number-save], [data-switch], [data-chart-live], [data-chart-zoom], [data-chart-date-toggle], [data-chart-date-apply], [data-stats-start-apply], [data-stats-start-clear], [data-stats-helper-create]');
+      const target = event.target?.closest?.('[data-scroll-top], [data-tab], [data-period], [data-energy-period], [data-energy-metric], [data-energy-bar], [data-metric], [data-action], [data-number-save], [data-switch], [data-chart-live], [data-chart-zoom], [data-chart-date-toggle], [data-chart-date-apply], [data-stats-start-apply], [data-stats-start-clear], [data-stats-helper-create], [data-history-delete]');
       if (!target) return;
       if (target.dataset.scrollTop !== undefined) { this._scrollPageToTop(); return; }
       if (target.dataset.energyBar !== undefined) { this._selectEnergyBar(Number(target.dataset.energyBar)); return; }
@@ -3871,6 +3950,7 @@
       if (target.dataset.statsStartApply !== undefined) { this._applyStatsStartInput(); return; }
       if (target.dataset.statsStartClear !== undefined) { this._setStatsStart(null); return; }
       if (target.dataset.statsHelperCreate !== undefined) { this._createStatsStartHelper(); return; }
+      if (target.dataset.historyDelete !== undefined) { this._deletePanelHistory(target.dataset.historyDelete); return; }
       if (target.dataset.metric) {
         if (this._chartMetric === target.dataset.metric) return;
         this._clearChartScrub();
@@ -4546,6 +4626,13 @@
         .action-grid .action-button:nth-child(-n+3) span{color:#ffc54d}
         .action-grid .action-button:nth-child(4){border-color:#ff526d80;background:linear-gradient(145deg,#2c1520,#0d1b2e)}
         .action-grid .action-button:nth-child(4) span{color:#ff8a9a}
+        .history-cleanup{margin:0 0 18px;padding:14px;border:1px solid #ff526d55;border-radius:16px;background:linear-gradient(145deg,#241722,#0d1b2e)}
+        .history-cleanup-hint{margin:0 0 12px;color:#ffd3da;font-size:14px;line-height:1.5}
+        .history-cleanup-actions{margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;background:transparent;padding:0}
+        .history-cleanup-actions .history-delete-button{border-color:#ff526d99!important;background:linear-gradient(145deg,#371825,#151d30)!important;color:#ffe7eb}
+        .history-cleanup-actions .history-delete-button .icon{color:#ff8a9a}
+        .history-cleanup-actions .history-delete-button:disabled{opacity:.48;cursor:not-allowed;transform:none;box-shadow:none}
+        @container (max-width:520px){.history-cleanup{padding:11px}.history-cleanup .history-cleanup-actions{grid-template-columns:1fr}.history-cleanup-hint{font-size:13px}}
 
         @container (max-width:520px){
           .detail-panel{padding:16px 12px}
