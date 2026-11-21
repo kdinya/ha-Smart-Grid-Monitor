@@ -180,6 +180,7 @@
       editor_custom_prefix: 'Вказати інший префікс вручну...',
       actions: 'Дії', reset_energy: 'Скинути енергію PZEM', reset_events: 'Скинути події', reset_cost: 'Скинути облік', reset_stats: 'Скинути мін/макс за день', power_range_title: 'Діапазон потужності сьогодні', restart: 'Перезапустити ESP', confirm: 'Виконати цю дію?', invalid_number: 'Введіть коректне число в допустимому діапазоні.',
       dialog_confirm_title: 'Підтвердьте дію', dialog_error_title: 'Перевірте значення', dialog_confirm: 'Виконати', dialog_cancel: 'Скасувати', dialog_close: 'Зрозуміло',
+      energy_unit_unsupported: 'Одиниця енергії не підтримується. Графік підтримує Wh, kWh і MWh.',
       scroll_to_top: 'На початок сторінки',
     },
     en: {
@@ -231,6 +232,7 @@
       editor_custom_prefix: 'Enter custom prefix manually...',
       actions: 'Actions', reset_energy: 'Reset PZEM energy', reset_events: 'Reset events', reset_cost: 'Reset accounting', reset_stats: 'Reset daily min/max', power_range_title: 'Power range today', restart: 'Restart ESP', confirm: 'Run this action?', invalid_number: 'Enter a valid number within the allowed range.',
       dialog_confirm_title: 'Confirm action', dialog_error_title: 'Check the value', dialog_confirm: 'Continue', dialog_cancel: 'Cancel', dialog_close: 'Got it',
+      energy_unit_unsupported: 'Energy unit is unsupported. The chart supports Wh, kWh, and MWh.',
       scroll_to_top: 'Back to top',
     },
   };
@@ -2112,6 +2114,9 @@
     _chartStatsHtml(metricKey = this._chartMetric || 'power', history = this._history, scope = 'params') {
       const isEnergy = scope === 'energy';
       const metric = CHART_METRICS[metricKey];
+      if (isEnergy && metricKey === 'energy_total' && this._energyHistoryUnitFactor(metricKey) === null) {
+        return `<div class="chart-empty">${this._escape(this._t('energy_unit_unsupported'))}</div>`;
+      }
       const range = isEnergy ? this._energyHistoryRange : this._historyRange;
       const customRange = isEnergy ? this._energyCustomRange : this._historyCustomRange;
       const bounds = isEnergy ? this._energyHistoryBounds() : this._historyBounds();
@@ -2639,6 +2644,28 @@
           cursor = stop;
         }
       }
+      if (!daily) {
+        const counts = new Map();
+        bins.forEach((bin) => counts.set(bin.label, (counts.get(bin.label) || 0) + 1));
+        const offset = (timestamp) => {
+          const minutes = -new Date(timestamp).getTimezoneOffset();
+          const sign = minutes >= 0 ? '+' : '-';
+          const absolute = Math.abs(minutes);
+          const hours = String(Math.floor(absolute / 60)).padStart(2, '0');
+          const remainder = absolute % 60;
+          return `UTC${sign}${hours}${remainder ? `:${String(remainder).padStart(2, '0')}` : ''}`;
+        };
+        const timeWithOffset = (timestamp) => {
+          const date = new Date(timestamp);
+          return `${date.toLocaleTimeString(this._locale(), { hour: '2-digit', minute: '2-digit', hour12: false })} ${offset(timestamp)}`;
+        };
+        bins.forEach((bin) => {
+          if (counts.get(bin.label) > 1) {
+            bin.label = `${bin.label} ${offset(bin.start)}`;
+            bin.fullLabel = `${timeWithOffset(bin.start)}–${timeWithOffset(bin.end)}`;
+          }
+        });
+      }
       const points = history
         .filter((point) => point?.time && Number.isFinite(point.time.getTime()) && Number.isFinite(point.value))
         .slice()
@@ -2683,6 +2710,9 @@
 
     _energyBarSvg(metricKey = this._energyChartMetric || 'energy_total', history = this._energyHistory[metricKey], loading = this._energyHistoryLoading[metricKey]) {
       if (loading && !history?.length) return `<div class="chart-empty">${this._escape(this._t('loading'))}</div>`;
+      if (metricKey === 'energy_total' && this._energyHistoryUnitFactor(metricKey) === null) {
+        return `<div class="chart-empty">${this._escape(this._t('energy_unit_unsupported'))}</div>`;
+      }
       const range = this._energyHistoryRange;
       const bounds = this._energyHistoryBounds();
       const bars = this._energyHistoryBars(history, bounds, range);
@@ -2989,13 +3019,15 @@
       if (metricKey !== 'energy_total') return 1;
       const unit = String(this._state?.(metricKey)?.attributes?.unit_of_measurement || '').trim().toLowerCase();
       if (unit === 'wh') return 0.001;
+      if (unit === 'kwh') return 1;
       if (unit === 'mwh') return 1000;
-      return 1;
+      return null;
     }
 
     _parseCumulativeHistory(response, metricKey, bounds, currentValue) {
       const [minimum, maximum] = CHART_METRICS[metricKey].plausible;
       const unitFactor = this._energyHistoryUnitFactor(metricKey);
+      if (unitFactor === null) return [];
       const raw = (Array.isArray(response?.[0]) ? response[0] : [])
         .map((item) => ({ time: new Date(item.last_changed || item.last_updated), value: Number(item.state) * unitFactor }))
         .filter((item) => Number.isFinite(item.time.getTime()) && Number.isFinite(item.value) && item.value >= minimum && item.value <= maximum)

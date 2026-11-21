@@ -5,6 +5,7 @@ ESPHome firmware and Home Assistant interfaces for an ESP32-C3 + PZEM-004T v3.0 
 The repository now provides two supported interface paths. The recommended path is the HACS-installable `Smart Grid Monitor Card`, a responsive dark-neon frontend card. The dependency-free native Lovelace dashboard remains available as a fallback for installations where custom frontend resources are not desired.
 
 The **Parameters** tab contains the power and voltage history charts. The **Energy** tab contains one bar chart with an **Energy / Cost** selector. It distributes increases from Home Assistant history of the cumulative counters into local-time hourly bars for periods under a day and for the Day view, and into one bar per local date for Week, Month and longer custom periods. It includes the final live increment, accounts for counter resets, and converts a Wh energy entity to the chart's kWh display unit. Its hour/day/week/month/custom period is independent of the Parameters chart and its statistics-start setting.
+Energy normalization accepts Wh, kWh and MWh. A missing or unsupported energy unit is reported explicitly instead of being silently treated as kWh.
 
 The visual editor offers UAH/грн, EUR and USD display labels for cost figures. This is a label-only preference: it does not convert the stored UAH amounts, and tariff inputs remain in UAH/kWh.
 

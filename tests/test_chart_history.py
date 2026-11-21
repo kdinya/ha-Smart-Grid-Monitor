@@ -539,6 +539,7 @@ const context = {
 vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
 const Card = registry.get('grid-monitor-card');
 const card = Object.create(Card.prototype);
+card._state = () => ({ attributes: { unit_of_measurement: 'kWh' } });
 const start = Date.parse('2026-10-01T00:00:00Z');
 const end = Date.parse('2026-10-01T00:50:00Z');
 const response = [[
@@ -568,7 +569,7 @@ const liveResponse = [[
   { state: '100', last_changed: new Date(liveStart - 60e3).toISOString() },
   { state: '102', last_changed: new Date(liveEnd).toISOString() },
 ]];
-card._state = () => ({ last_changed: new Date(liveEnd).toISOString() });
+card._state = () => ({ last_changed: new Date(liveEnd).toISOString(), attributes: { unit_of_measurement: 'kWh' } });
 const live = card._parseCumulativeHistory(liveResponse, 'energy_total', { start: liveStart, end: liveEnd }, 103);
 assert.equal(live.at(-1).time.getTime(), liveEnd);
 assert.equal(live.at(-1).value, 3);
@@ -576,7 +577,7 @@ assert.equal(live.at(-1).value, 3);
 // A recent custom range must not consume a state updated after its end boundary.
 const recentPastEnd = Date.now() - 30e3;
 const recentPastStart = recentPastEnd - 20 * 60e3;
-card._state = () => ({ last_changed: new Date(recentPastEnd + 30e3).toISOString() });
+card._state = () => ({ last_changed: new Date(recentPastEnd + 30e3).toISOString(), attributes: { unit_of_measurement: 'kWh' } });
 const recentPast = card._parseCumulativeHistory([[
   { state: '100', last_changed: new Date(recentPastStart - 60e3).toISOString() },
   { state: '102', last_changed: new Date(recentPastEnd).toISOString() },
@@ -617,7 +618,7 @@ vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
 const Card = registry.get('grid-monitor-card');
 const card = Object.create(Card.prototype);
 card._locale = () => 'en-US';
-card._state = () => null;
+card._state = () => ({ attributes: { unit_of_measurement: 'kWh' } });
 const start = Date.parse('2026-10-01T00:00:00Z');
 const end = Date.parse('2026-10-03T00:00:00Z');
 
@@ -716,7 +717,12 @@ const springEnd = new Date(2026, 2, 30, 0, 0, 0, 0).getTime();
 assert.equal(hours(springStart, springEnd).length, 23, 'spring DST day has 23 local-hour bars');
 const autumnStart = new Date(2026, 9, 25, 0, 0, 0, 0).getTime();
 const autumnEnd = new Date(2026, 9, 26, 0, 0, 0, 0).getTime();
-assert.equal(hours(autumnStart, autumnEnd).length, 25, 'autumn DST day has 25 local-hour bars');
+const autumn = hours(autumnStart, autumnEnd);
+assert.equal(autumn.length, 25, 'autumn DST day has 25 local-hour bars');
+const repeatedHours = autumn.filter(({ label }) => label.startsWith('03'));
+assert.equal(repeatedHours.length, 2, 'the repeated autumn hour has two bars');
+assert.notEqual(repeatedHours[0].label, repeatedHours[1].label, 'the repeated hours have distinct local labels');
+assert.match(repeatedHours[0].fullLabel, /03:00 UTC\+03–03:00 UTC\+02/, 'the first repeated-hour tooltip records both offsets');
 """
         result = subprocess.run(
             ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
@@ -750,6 +756,19 @@ const history = card._parseCumulativeHistory([[
 ]], 'energy_total', { start, end: start + 60e3 }, NaN);
 assert.equal(history.at(-1).value, 3, '3,000 Wh must be represented as 3 kWh on the chart');
 assert.equal(card._energyHistoryUnitFactor('cost_total'), 1, 'cost values remain unchanged');
+card._state = () => ({ attributes: { unit_of_measurement: 'kWh' } });
+assert.equal(card._energyHistoryUnitFactor('energy_total'), 1, 'kWh values stay in kWh');
+card._state = () => ({ attributes: { unit_of_measurement: 'MWh' } });
+assert.equal(card._energyHistoryUnitFactor('energy_total'), 1000, 'MWh values are converted to kWh');
+card._state = () => ({ attributes: { unit_of_measurement: 'MJ' } });
+assert.equal(card._energyHistoryUnitFactor('energy_total'), null, 'unsupported units are rejected');
+assert.equal(JSON.stringify(card._parseCumulativeHistory([], 'energy_total', { start, end: start + 60e3 }, 10)), '[]', 'unsupported units do not produce chart data');
+card._state = () => ({ attributes: {} });
+assert.equal(card._energyHistoryUnitFactor('energy_total'), null, 'a missing unit is not silently assumed to be kWh');
+card._escape = String;
+card._t = (key) => key === 'energy_unit_unsupported' ? 'Unsupported energy unit' : key;
+assert.match(card._energyBarSvg('energy_total', [], false), /Unsupported energy unit/);
+assert.match(card._chartStatsHtml('energy_total', [], 'energy'), /Unsupported energy unit/);
 """
         result = subprocess.run(
             ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
@@ -780,6 +799,7 @@ card._statsStart = Date.parse('2026-10-01T00:00:00Z');
 card._energyHistoryRange = 'day';
 card._energyCustomRange = null;
 card._entity = (key) => `sensor.${key}`;
+card._state = () => ({ attributes: { unit_of_measurement: 'kWh' } });
 card._updateChartDateRangeControls = () => {};
 card._closeChartDateRangePopover = () => {};
 card._clearEnergyHistory = () => {};
@@ -931,6 +951,7 @@ card._chartW = 480;
 card._locale = () => 'en-US';
 card._lang = () => 'en';
 card._currencyCode = () => 'UAH';
+card._state = () => ({ attributes: { unit_of_measurement: 'kWh' } });
 card._t = () => 'Electricity consumption';
 card._escape = (value) => String(value);
 const svg = card._energyBarSvg('energy_total', [
