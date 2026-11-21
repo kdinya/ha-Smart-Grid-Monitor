@@ -132,7 +132,7 @@ class RepositoryContractTests(unittest.TestCase):
 
     def test_voltage_panel_reduces_vertical_padding_and_lowers_caption(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
-        self.assertIn('<text x="250" y="293" text-anchor="middle" class="voltage-label">', card)
+        self.assertIn('<text x="250" y="298" text-anchor="middle" class="voltage-label">', card)
         self.assertIn('viewBox="0 0 500 330"', card)
         self.assertIn('y="322" text-anchor="middle" class="gauge-end"', card)
         self.assertIn(".voltage{padding:5px 12px 4px;justify-content:space-between}", card)
