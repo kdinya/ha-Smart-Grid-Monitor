@@ -180,11 +180,14 @@ sensor:
       name: "Voltage"
       accuracy_decimals: 1
       filters:
-        - timeout: 15s
-        - throttle_average: 10s
-      on_raw_value:
+        - lambda: |-
+            if (!isfinite(x) || x < 0.0f || x > 300.0f) return {};
+            return x;
+        - timeout: 6s
+      on_value:
         then:
           - lambda: |-
+              if (!isfinite(x)) return;
               float v = x;
               id(last_pzem_ms) = millis();
               id(pzem_seen) = true;
@@ -205,37 +208,45 @@ sensor:
       name: "Current"
       accuracy_decimals: 2
       filters:
-        - timeout: 15s
-        - throttle_average: 10s
-      on_raw_value:
+        - lambda: |-
+            if (!isfinite(x) || x < 0.0f || x > 100.0f) return {};
+            return x;
+        - timeout: 6s
+      on_value:
         then:
           - lambda: |-
-              if (x > id(g_i_max)) id(g_i_max) = x;
+              if (isfinite(x) && x > id(g_i_max)) id(g_i_max) = x;
     power:
       id: grid_power
       name: "Power"
       accuracy_decimals: 1
       filters:
-        - timeout: 15s
-        - throttle_average: 10s
-      on_raw_value:
+        - lambda: |-
+            if (!isfinite(x) || x < 0.0f || x > 30000.0f) return {};
+            return x;
+        - timeout: 6s
+      on_value:
         then:
           - lambda: |-
-              if (x > id(g_p_max)) id(g_p_max) = x;
+              if (isfinite(x) && x > id(g_p_max)) id(g_p_max) = x;
     frequency:
       id: grid_freq
       name: "Frequency"
       accuracy_decimals: 2
       filters:
-        - timeout: 15s
-        - throttle_average: 10s
+        - lambda: |-
+            if (!isfinite(x) || x < 0.0f || x > 70.0f) return {};
+            return x;
+        - timeout: 6s
     power_factor:
       id: grid_pf
       name: "Power Factor"
       accuracy_decimals: 2
       filters:
-        - timeout: 15s
-        - throttle_average: 10s
+        - lambda: |-
+            if (!isfinite(x) || x < 0.0f || x > 1.0f) return {};
+            return x;
+        - timeout: 6s
     energy:
       id: grid_energy
       name: "Energy Total"
@@ -244,13 +255,15 @@ sensor:
       state_class: total_increasing
       accuracy_decimals: 3
       filters:
-        - timeout: 15s
+        - lambda: |-
+            if (!isfinite(x) || x < 0.0f || x > 10000000.0f) return {};
+            return x;
+        - timeout: 6s
         - multiply: 0.001
       on_value:
         then:
           - lambda: |-
-              // The timeout filter emits NaN; keep the last valid counter for recovery deltas.
-              if (isnan(x)) return;
+              if (!isfinite(x)) return;
               float e = x;
               float last = id(e_last);
               if (last >= 0 && e >= last && (e - last) < 100.0) {
@@ -276,7 +289,7 @@ sensor:
     device_class: apparent_power
     state_class: measurement
     accuracy_decimals: 1
-    update_interval: 10s
+    update_interval: 2s
     lambda: |-
       if (id(outage_active)) return NAN;
       return id(grid_voltage).state * id(grid_current).state;
@@ -287,7 +300,7 @@ sensor:
     device_class: reactive_power
     state_class: measurement
     accuracy_decimals: 1
-    update_interval: 10s
+    update_interval: 2s
     lambda: |-
       if (id(outage_active)) return NAN;
       float s = id(grid_voltage).state * id(grid_current).state;
@@ -302,7 +315,7 @@ sensor:
     state_class: measurement
     accuracy_decimals: 1
     icon: mdi:angle-acute
-    update_interval: 10s
+    update_interval: 2s
     lambda: |-
       if (id(outage_active)) return NAN;
       float pf = id(grid_pf).state;
@@ -317,7 +330,7 @@ sensor:
     state_class: measurement
     accuracy_decimals: 1
     icon: mdi:plus-minus-variant
-    update_interval: 10s
+    update_interval: 2s
     lambda: |-
       if (id(outage_active)) return NAN;
       float v = id(grid_voltage).state;
@@ -413,7 +426,7 @@ sensor:
     state_class: measurement
     accuracy_decimals: 2
     icon: mdi:cash-fast
-    update_interval: 10s
+    update_interval: 2s
     lambda: |-
       if (id(outage_active)) return NAN;
       float p = id(grid_power).state;
@@ -507,6 +520,7 @@ sensor:
     entity_category: diagnostic
   - platform: uptime
     name: "Uptime"
+    update_interval: 5s
     entity_category: diagnostic
   - platform: internal_temperature
     name: "ESP Temperature"
@@ -522,7 +536,7 @@ binary_sensor:
     name: "PZEM Online"
     device_class: connectivity
     lambda: |-
-      if (!id(pzem_seen) && millis() < 15000) return {};
+      if (!id(pzem_seen) && millis() < 6000) return {};
       return id(comm_ok);
   - platform: template
     id: bin_pzem_offline
@@ -530,14 +544,14 @@ binary_sensor:
     device_class: problem
     icon: mdi:lan-disconnect
     lambda: |-
-      if (!id(pzem_seen) && millis() < 15000) return {};
+      if (!id(pzem_seen) && millis() < 6000) return {};
       return !id(comm_ok);
   - platform: template
     id: bin_v_out_of_range
     name: "Voltage Out Of Range"
     device_class: problem
     lambda: |-
-      if (!id(pzem_seen) && millis() < 15000) return {};
+      if (!id(pzem_seen) && millis() < 6000) return {};
       if (!id(comm_ok)) return {};
       return id(v_state) != 0;
 
@@ -548,18 +562,18 @@ text_sensor:
     update_interval: 2s
     lambda: |-
       if (!id(pzem_seen)) {
-        if (millis() < 15000) return {"waiting_for_pzem"};
+        if (millis() < 6000) return {"waiting_for_pzem"};
         return {"pzem_offline_source_unknown"};
       }
-      if ((millis() - id(last_pzem_ms)) < 15000) return {"pzem_online_source_unconfirmed"};
+      if ((millis() - id(last_pzem_ms)) < 6000) return {"pzem_online_source_unconfirmed"};
       return {"pzem_offline_source_unknown"};
   - platform: template
     name: "Voltage Status"
     icon: mdi:sine-wave
-    update_interval: 5s
+    update_interval: 2s
     lambda: |-
       if (!id(pzem_seen)) {
-        if (millis() < 15000) return {"Waiting for PZEM"};
+        if (millis() < 6000) return {"Waiting for PZEM"};
         return {"PZEM Offline"};
       }
       if (id(outage_active)) return {"PZEM Offline"};
@@ -610,7 +624,7 @@ button:
           id(e_today) = 0; id(e_month) = 0;
 
 # ------------------------------------------------------------
-#  Логіка: PZEM не відповідає 15 с = телеметрія недоступна.
+#  Логіка: PZEM не відповідає 6 с = телеметрія недоступна.
 #  Це НЕ підтверджує роботу інвертора: для цього потрібен незалежний сигнал АВР/інвертора.
 # ------------------------------------------------------------
 interval:
@@ -618,7 +632,7 @@ interval:
     then:
       - lambda: |-
           // PZEM online означає лише свіжу відповідь лічильника, а не джерело живлення ESP.
-          bool ok = id(pzem_seen) && id(last_pzem_ms) != 0 && (millis() - id(last_pzem_ms)) < 15000;
+          bool ok = id(pzem_seen) && id(last_pzem_ms) != 0 && (millis() - id(last_pzem_ms)) < 6000;
           
           if (!ok && id(pzem_seen) && !id(outage_active)) {
             id(outage_active) = true;

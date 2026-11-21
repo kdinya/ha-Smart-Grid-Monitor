@@ -88,5 +88,82 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertEqual(quality_tiles[0].get("entity"), "sensor.grid_monitor_voltage_status")
 
 
+    def test_pzem_values_are_validated_and_live_values_update_quickly(self):
+        firmware = yaml.load(
+            (ROOT / "esphome/grid-monitor.yaml").read_text(encoding="utf-8"),
+            Loader=ESPHomeSafeLoader,
+        )
+        pzem = next(sensor for sensor in firmware["sensor"] if sensor.get("platform") == "pzemac")
+        self.assertEqual(pzem["update_interval"], "2s")
+        limits = {
+            "voltage": "300.0f",
+            "current": "100.0f",
+            "power": "30000.0f",
+            "frequency": "70.0f",
+            "power_factor": "1.0f",
+            "energy": "10000000.0f",
+        }
+        for name, maximum in limits.items():
+            with self.subTest(sensor=name):
+                sensor = pzem[name]
+                self.assertNotIn("throttle_average", str(sensor))
+                self.assertIn("6s", [entry.get("timeout") for entry in sensor["filters"] if isinstance(entry, dict) and "timeout" in entry])
+                filter_source = "\n".join(entry.get("lambda", "") for entry in sensor["filters"] if isinstance(entry, dict))
+                self.assertIn("isfinite(x)", filter_source)
+                self.assertIn(f"x > {maximum}", filter_source)
+        self.assertIn("on_value", pzem["voltage"])
+        self.assertNotIn("on_raw_value", pzem["voltage"])
+        derived = {sensor.get("name"): sensor for sensor in firmware["sensor"] if sensor.get("platform") == "template"}
+        derived.update({sensor.get("name"): sensor for sensor in firmware["text_sensor"] if sensor.get("platform") == "template"})
+        for name in ("Apparent Power", "Reactive Power", "Phase Angle", "Voltage Deviation", "Cost Rate", "Voltage Status"):
+            with self.subTest(derived_sensor=name):
+                self.assertEqual(derived[name]["update_interval"], "2s")
+        uptime = next(sensor for sensor in firmware["sensor"] if sensor.get("platform") == "uptime")
+        self.assertEqual(uptime["update_interval"], "5s")
+
+    def test_card_expires_stale_esp_heartbeat_and_hides_old_measurements(self):
+        import subprocess
+        import textwrap
+
+        script = textwrap.dedent("""
+            const assert = require('node:assert/strict');
+            const fs = require('node:fs');
+            const vm = require('node:vm');
+            let Card;
+            class HTMLElement {}
+            const context = {
+              window: { customCards: [] },
+              customElements: { define: (name, value) => { if (name === 'grid-monitor-card') Card = value; } },
+              HTMLElement,
+              Date,
+              Intl,
+              console,
+              setTimeout,
+              clearTimeout,
+            };
+            vm.runInNewContext(fs.readFileSync('grid-monitor-card.js', 'utf8'), context);
+            const card = Object.create(Card.prototype);
+            card._config = { prefix: 'grid_monitor', entities: {}, language: 'en' };
+            card._entityOverrides = {};
+            card._hass = { language: 'en', states: {
+              'binary_sensor.grid_monitor_esp_status': { state: 'on' },
+              'sensor.grid_monitor_uptime': { state: '123', last_updated: new Date(Date.now() - 1000).toISOString() },
+              'sensor.grid_monitor_voltage': { state: '238.4', attributes: { unit_of_measurement: 'V' } },
+              'sensor.grid_monitor_power_source_status': { state: 'pzem_online_source_unconfirmed' },
+              'binary_sensor.grid_monitor_pzem_online': { state: 'on' },
+              'binary_sensor.grid_monitor_voltage_out_of_range': { state: 'off' },
+            } };
+            assert.equal(card._effectiveEspStatus(), 'on');
+            assert.equal(card._num('voltage'), 238.4);
+            card._hass.states['sensor.grid_monitor_uptime'].last_updated = new Date(Date.now() - 20000).toISOString();
+            assert.equal(card._effectiveEspStatus(), 'off');
+            assert.equal(card._num('voltage'), null);
+            assert.equal(card._formatted('voltage'), 'Unavailable');
+            assert.equal(card._displayStatus().status, 'Offline');
+        """)
+        result = subprocess.run(["node", "-e", script], cwd=ROOT, text=True, capture_output=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()
