@@ -1640,7 +1640,44 @@
       const currentX = points.reduce((sum, point) => sum + point.x, 0) / points.length;
       pan.deltaX = currentX - pan.startX;
       pan.currentDistance = pan.pointerType === 'touch' ? this._chartPointerDistance(points) : 1;
+      this._chartPanPreview(pan);
       event.preventDefault?.();
+    }
+
+    _chartPanTarget(pan) {
+      const minRange = 60e3;
+      const maxRange = 366 * 24 * 3600e3;
+      const scale = pan.pointerType === 'touch' && pan.currentDistance > 0 ? pan.startDistance / pan.currentDistance : 1;
+      const nextRange = Math.max(minRange, Math.min(maxRange, pan.rangeMs * scale));
+      const shift = this._chartPanShiftForDelta(pan.deltaX, pan.rangeMs, pan.plotWidth);
+      const center = (pan.tStart + pan.tEnd) / 2 - shift;
+      let start = center - nextRange / 2;
+      let end = center + nextRange / 2;
+      if (end > Date.now()) { start -= end - Date.now(); end = Date.now(); }
+      return { start, end };
+    }
+
+    // Moves the already drawn curve together with the fingers; the real range is committed on release.
+    _chartPanPreview(pan = this._chartPan) {
+      if (!pan?.plot?.isConnected) return;
+      const chart = pan.plot.querySelector('svg.chart');
+      const group = chart?.querySelector('[data-role="chart-data"]');
+      if (!chart || !group) return;
+      const x0 = Number(chart.dataset.chartX0) || 0;
+      const x1 = Number(chart.dataset.chartX1) || 0;
+      const { start, end } = this._chartPanTarget(pan);
+      const range = end - start;
+      if (!(range > 0) || !(x1 > x0)) return;
+      const k = pan.rangeMs / range;
+      const tx = x0 * (1 - k) + ((pan.tStart - start) / range) * (x1 - x0);
+      group.setAttribute('transform', `matrix(${k.toFixed(5)} 0 0 1 ${tx.toFixed(2)} 0)`);
+      const longRange = this._historyRange === 'week' || this._historyRange === 'month' || range >= 24 * 3600e3;
+      chart.querySelectorAll('[data-time-tick]').forEach((label) => {
+        const time = new Date(start + range * Number(label.dataset.timeTick) / 4);
+        label.textContent = longRange
+          ? time.toLocaleDateString(this._locale(), { day: '2-digit', month: '2-digit' })
+          : time.toLocaleTimeString(this._locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
+      });
     }
 
     _chartPointerEnd(event) {
@@ -1664,16 +1701,8 @@
       if (!pan) return;
       this._chartPan = null;
       pan.plot.classList.remove('is-panning');
-      if (Math.abs(pan.deltaX) < 8 && Math.abs((pan.currentDistance || 1) - (pan.startDistance || 1)) < 8) return;
-      const minRange = 60e3;
-      const maxRange = 366 * 24 * 3600e3;
-      const scale = pan.pointerType === 'touch' && pan.currentDistance > 0 ? pan.startDistance / pan.currentDistance : 1;
-      const nextRange = Math.max(minRange, Math.min(maxRange, pan.rangeMs * scale));
-      const shift = this._chartPanShiftForDelta(pan.deltaX, pan.rangeMs, pan.plotWidth);
-      const center = (pan.tStart + pan.tEnd) / 2 - shift;
-      let start = center - nextRange / 2;
-      let end = center + nextRange / 2;
-      if (end > Date.now()) { start -= end - Date.now(); end = Date.now(); }
+      if (Math.abs(pan.deltaX) < 8 && Math.abs((pan.currentDistance || 1) - (pan.startDistance || 1)) < 8) { this._refreshChart(); return; }
+      const { start, end } = this._chartPanTarget(pan);
       this._setCustomChartRange(start, end);
     }
 
@@ -1825,7 +1854,7 @@
         const time = new Date(tStart + rangeMs * index / 4);
         const label = longRange ? time.toLocaleDateString(this._locale(), { day: '2-digit', month: '2-digit' }) : time.toLocaleTimeString(this._locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
         const show = !narrow || index % 2 === 0;
-        return `<path d="M${x.toFixed(1)} ${y0}V${y1}"/>${show ? `<text x="${x.toFixed(1)}" y="${height - 8}" text-anchor="${index === 0 ? 'start' : index === 4 ? 'end' : 'middle'}">${this._escape(label)}</text>` : ''}`;
+        return `<path d="M${x.toFixed(1)} ${y0}V${y1}"/>${show ? `<text data-time-tick="${index}" x="${x.toFixed(1)}" y="${height - 8}" text-anchor="${index === 0 ? 'start' : index === 4 ? 'end' : 'middle'}">${this._escape(label)}</text>` : ''}`;
       }).join('');
       const last = pts[pts.length - 1];
       const current = this._num(metricKey);
@@ -1834,7 +1863,7 @@
       const latest = hasCurrent ? `${current.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits })} ${unit}` : '';
       const tagX = Math.min(Math.max(last.x - 42, x0 - 8), width - 86);
       const tagY = Math.max(2, last.y - 44);
-      return `<svg class="chart" data-chart-min="${scale.lo}" data-chart-max="${scale.max}" data-chart-start="${tStart}" data-chart-end="${tStart + rangeMs}" data-chart-w="${width}" data-chart-x0="${x0}" data-chart-x1="${x1}" data-chart-y0="${y0}" data-chart-y1="${y1}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${this._escape(this._t('chart_title'))}"><defs><linearGradient id="${this._id('area')}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#0a96ff" stop-opacity=".5"/><stop offset="1" stop-color="#0a96ff" stop-opacity=".02"/></linearGradient><filter id="${this._id('line-glow')}" x="-5%" y="-30%" width="110%" height="160%"><feGaussianBlur stdDeviation="3"/></filter></defs><g class="chart-grid">${horizontal}${vertical}</g><path d="${area}" fill="url(#${this._id('area')})"/><path d="${line}" class="chart-glow" filter="url(#${this._id('line-glow')})"/><path d="${line}" class="chart-line"/><path class="chart-cross" data-role="chart-cross" d="M${last.x.toFixed(1)} ${y0}V${y1}" visibility="hidden"/><circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="6" class="chart-dot" data-role="chart-dot" visibility="${hasCurrent ? 'visible' : 'hidden'}"/><rect x="${tagX.toFixed(1)}" y="${tagY.toFixed(1)}" width="84" height="30" rx="10" class="chart-tag" data-role="chart-tag" visibility="${hasCurrent ? 'visible' : 'hidden'}"/><text x="${(tagX + 42).toFixed(1)}" y="${(tagY + 20).toFixed(1)}" text-anchor="middle" class="chart-tag-text" data-role="chart-tag-text" visibility="${hasCurrent ? 'visible' : 'hidden'}">${this._escape(latest)}</text><text x="${(tagX + 42).toFixed(1)}" y="${(tagY + 37).toFixed(1)}" text-anchor="middle" class="chart-tag-sub" data-role="chart-tag-sub" visibility="hidden"></text></svg>`;
+      return `<svg class="chart" data-chart-min="${scale.lo}" data-chart-max="${scale.max}" data-chart-start="${tStart}" data-chart-end="${tStart + rangeMs}" data-chart-w="${width}" data-chart-x0="${x0}" data-chart-x1="${x1}" data-chart-y0="${y0}" data-chart-y1="${y1}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${this._escape(this._t('chart_title'))}"><defs><linearGradient id="${this._id('area')}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#0a96ff" stop-opacity=".5"/><stop offset="1" stop-color="#0a96ff" stop-opacity=".02"/></linearGradient><filter id="${this._id('line-glow')}" x="-5%" y="-30%" width="110%" height="160%"><feGaussianBlur stdDeviation="3"/></filter><clipPath id="${this._id('plot-clip')}"><rect x="${x0}" y="0" width="${x1 - x0}" height="${height}"/></clipPath></defs><g class="chart-grid">${horizontal}${vertical}</g><g class="chart-data" data-role="chart-data" clip-path="url(#${this._id('plot-clip')})"><path d="${area}" fill="url(#${this._id('area')})"/><path d="${line}" class="chart-glow" filter="url(#${this._id('line-glow')})"/><path d="${line}" class="chart-line"/></g><path class="chart-cross" data-role="chart-cross" d="M${last.x.toFixed(1)} ${y0}V${y1}" visibility="hidden"/><circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="6" class="chart-dot" data-role="chart-dot" visibility="${hasCurrent ? 'visible' : 'hidden'}"/><rect x="${tagX.toFixed(1)}" y="${tagY.toFixed(1)}" width="84" height="30" rx="10" class="chart-tag" data-role="chart-tag" visibility="${hasCurrent ? 'visible' : 'hidden'}"/><text x="${(tagX + 42).toFixed(1)}" y="${(tagY + 20).toFixed(1)}" text-anchor="middle" class="chart-tag-text" data-role="chart-tag-text" visibility="${hasCurrent ? 'visible' : 'hidden'}">${this._escape(latest)}</text><text x="${(tagX + 42).toFixed(1)}" y="${(tagY + 37).toFixed(1)}" text-anchor="middle" class="chart-tag-sub" data-role="chart-tag-sub" visibility="hidden"></text></svg>`;
     }
 
     _setChartMarker(chart, x, y, text, sub = '') {
@@ -2140,6 +2169,7 @@
     _refreshChart() {
       const plot = this.shadowRoot.querySelector('[data-role="chart-plot"]');
       if (plot) plot.innerHTML = this._chartSvg();
+      if (plot && this._chartPan) { this._chartPan.plot = plot; plot.classList.add('is-panning'); this._chartPanPreview(this._chartPan); }
       const stats = this.shadowRoot.querySelector('[data-role="chart-stats"]');
       if (stats) stats.innerHTML = this._chartStatsHtml();
       if (!this._restoreChartScrub()) this._updateChartCurrent();
@@ -3413,6 +3443,8 @@
         .voltage .voltage-brand{margin-top:12px}
         .voltage .voltage-gauge{top:-20px}
         .voltage .state-indicator{top:-8px}
+        .chart-plot.is-panning .chart-dot,.chart-plot.is-panning .chart-tag,.chart-plot.is-panning .chart-tag-text,.chart-plot.is-panning .chart-tag-sub{visibility:hidden}
+        .chart-plot.is-panning .chart-line,.chart-plot.is-panning .chart-glow{vector-effect:non-scaling-stroke}
       `;
     }
   }
