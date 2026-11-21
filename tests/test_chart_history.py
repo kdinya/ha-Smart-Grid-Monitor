@@ -560,6 +560,27 @@ for (const metric of ['energy_total', 'cost_total']) {
 // A live counter must not be appended to a custom range that ended in the past.
 const past = card._parseCumulativeHistory(response, 'energy_total', { start, end }, 5000);
 assert.equal(past.at(-1).value, 10);
+
+// A live delta replaces the endpoint even if history already has a sample at `end`.
+const liveEnd = Date.now();
+const liveStart = liveEnd - 20 * 60e3;
+const liveResponse = [[
+  { state: '100', last_changed: new Date(liveStart - 60e3).toISOString() },
+  { state: '102', last_changed: new Date(liveEnd).toISOString() },
+]];
+const live = card._parseCumulativeHistory(liveResponse, 'energy_total', { start: liveStart, end: liveEnd }, 103);
+assert.equal(live.at(-1).time.getTime(), liveEnd);
+assert.equal(live.at(-1).value, 3);
+
+// Bucketing retains the terminal cumulative value instead of dropping its zero-duration endpoint.
+card._chartW = 280;
+const chartData = card._chartData([
+  { time: new Date(liveStart), value: 0 },
+  { time: new Date(liveStart + 10 * 60e3), value: 2 },
+  { time: new Date(liveEnd), value: 3 },
+], 'energy_total', { bounds: { start: liveStart, end: liveEnd }, range: 'hour', includeCurrent: false });
+assert.equal(chartData.series.at(-1).t, liveEnd);
+assert.equal(chartData.series.at(-1).v, 3);
 """
         result = subprocess.run(
             ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
@@ -606,9 +627,10 @@ assert.equal(card._historyCustomRange, null);
 card._energyHistoryRange = 'day';
 card._energyCustomRange = null;
 const beforeStats = Date.parse('2026-09-30T23:00:00Z');
+const middle = Date.parse('2026-10-01T00:00:00Z');
 const afterStats = Date.parse('2026-10-01T01:00:00Z');
 card._energyHistoryBounds = () => ({ start: beforeStats, end: afterStats });
-card._chartData = () => ({ series: [{ v: 1, t: beforeStats }, { v: 5, t: afterStats }] });
+card._chartData = () => ({ series: [{ v: 1, t: beforeStats }, { v: 5, t: middle }, { v: 5, t: afterStats }] });
 card._locale = () => 'en-US';
 card._lang = () => 'en';
 card._t = (key) => ({ stat_min: 'Min', stat_avg: 'Avg', stat_max: 'Max' })[key] || key;
@@ -616,10 +638,11 @@ card._escape = (value) => String(value);
 card._formatChartStatTimestamp = () => 'time';
 const html = card._chartStatsHtml('energy_total', [
   { time: new Date(beforeStats), value: 1 },
+  { time: new Date(middle), value: 5 },
   { time: new Date(afterStats), value: 5 },
 ], 'energy');
 assert.match(html, /Min<\/span><b>1 kWh<\/b>/);
-assert.match(html, /Avg<\/span><b>3 kWh<\/b>/);
+assert.match(html, /Avg<\/span><b>3 kWh<\/b>/, 'average is time weighted, not sample weighted');
 assert.match(html, /Max<\/span><b>5 kWh<\/b>/);
 """
         result = subprocess.run(
@@ -628,6 +651,87 @@ assert.match(html, /Max<\/span><b>5 kWh<\/b>/);
             text=True,
             check=False,
             env={**os.environ, "TZ": "UTC"},
+        )
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_energy_tab_renders_one_chart_with_energy_cost_toggle(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = {
+  window: { customCards: [] },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+};
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+card._energyChartMetric = 'energy_total';
+card._energyHistoryRange = 'day';
+card._energyHistory = { energy_total: [], cost_total: [] };
+card._energyHistoryLoading = { energy_total: false, cost_total: false };
+card._raw = () => 'off';
+card._t = (key) => key;
+card._escape = String;
+card._formatted = () => '0';
+card._svg = () => '';
+card._energyCoinArt = () => '';
+card._plugArt = () => '';
+card._detail = () => '';
+card._tariffBars = () => '';
+card._chartDateRangeHtml = () => '';
+card._chartStatsHtml = () => '';
+card._chartSvg = () => '';
+const html = card._energy();
+assert.equal((html.match(/class="card chart-card energy-history-card"/g) || []).length, 1);
+assert.equal((html.match(/data-energy-plot="/g) || []).length, 1);
+assert.match(html, /data-energy-metric="energy_total"[^>]*aria-pressed="true"/);
+assert.match(html, /data-energy-metric="cost_total"[^>]*aria-pressed="false"/);
+assert.match(html, /data-energy-plot="energy_total"/);
+
+let selector = '';
+const plot = { dataset: {}, innerHTML: '' };
+const stats = { dataset: {}, innerHTML: '' };
+const title = { textContent: '' };
+const metricButtons = ['energy_total', 'cost_total'].map((metric) => ({
+  dataset: { energyMetric: metric },
+  active: false,
+  attributes: {},
+  classList: { toggle: (_name, active) => { metricButtons.find((button) => button.dataset.energyMetric === metric).active = active; } },
+  setAttribute: (name, value) => { metricButtons.find((button) => button.dataset.energyMetric === metric).attributes[name] = value; },
+}));
+card.shadowRoot = {
+  querySelector: (query) => ({ '[data-energy-plot]': plot, '[data-energy-stats]': stats, '[data-energy-chart-title]': title })[query],
+  querySelectorAll: () => metricButtons,
+};
+card._chartSvg = (metric) => `svg-${metric}`;
+card._chartStatsHtml = (metric) => `stats-${metric}`;
+card._closeChartDateRangePopover = () => {};
+const button = { dataset: { energyMetric: 'cost_total' } };
+card._handleCardClick({ target: { closest: (query) => {
+  if (query === '.chart-date-range' || query === '[data-dialog-action]') return null;
+  selector = query;
+  return button;
+} } });
+assert.match(selector, /\[data-energy-metric\]/);
+assert.equal(card._energyChartMetric, 'cost_total');
+assert.equal(plot.dataset.energyPlot, 'cost_total');
+assert.equal(plot.innerHTML, 'svg-cost_total');
+assert.equal(stats.dataset.energyStats, 'cost_total');
+assert.equal(stats.innerHTML, 'stats-cost_total');
+assert.equal(title.textContent, 'cost_chart_title');
+assert.equal(metricButtons[0].attributes['aria-pressed'], 'false');
+assert.equal(metricButtons[1].attributes['aria-pressed'], 'true');
+assert.equal(metricButtons[0].active, false);
+assert.equal(metricButtons[1].active, true);
+"""
+        result = subprocess.run(
+            ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
+            capture_output=True,
+            text=True,
+            check=False,
         )
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 

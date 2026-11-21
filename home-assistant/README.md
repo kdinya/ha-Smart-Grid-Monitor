@@ -37,7 +37,7 @@ Copy the package into the configured packages directory, run **Settings → Syst
 
 ## Entity coverage
 
-The card's Parameters tab charts power and voltage; the Energy tab charts cumulative energy and cost. The native view covers live voltage, current, power, frequency and power factor; apparent and reactive power, phase angle and voltage deviation; five-minute average, daily min/max and daily peak values; today/month/total energy and cost; current tariff and cost rate; sag and swell counters; PZEM communication outage counters and durations; PZEM, ESP and voltage alarm states; thresholds, nominal voltage, tariffs and two-zone tariff; Wi-Fi, uptime, ESP temperature, IP and SSID diagnostics; and reset/restart actions. The night tariff control appears only while `switch.grid_monitor_two_zone_tariff` is on.
+The card's Parameters tab charts power and voltage; the Energy tab uses one chart with an Energy/Cost selector for cumulative energy and cost. The native view covers live voltage, current, power, frequency and power factor; apparent and reactive power, phase angle and voltage deviation; five-minute average, daily min/max and daily peak values; today/month/total energy and cost; current tariff and cost rate; sag and swell counters; PZEM communication outage counters and durations; PZEM, ESP and voltage alarm states; thresholds, nominal voltage, tariffs and two-zone tariff; Wi-Fi, uptime, ESP temperature, IP and SSID diagnostics; and reset/restart actions. The night tariff control appears only while `switch.grid_monitor_two_zone_tariff` is on.
 
 ## Design notes
 

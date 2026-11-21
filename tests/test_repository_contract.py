@@ -95,16 +95,18 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn(".shell:not(.home-active)>.page-layout{display:block;margin-top:-20px}", card)
         self.assertIn(".shell:not(.home-active)>.page-layout>.tabs-side{display:none}", card)
 
-    def test_energy_tab_has_separate_kwh_and_cost_history_charts(self):
+    def test_energy_tab_has_one_history_chart_with_energy_cost_toggle(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
         params_chart = card.split("    _chart() {", 1)[1].split("    _readStatsStart()", 1)[0]
         self.assertIn("['power', 'voltage'].map", params_chart)
         self.assertNotIn("energy_total", params_chart)
         self.assertNotIn("cost_total", params_chart)
         energy = card.split("    _energy() {", 1)[1].split("    _energyChartControlsHtml()", 1)[0]
-        self.assertIn("${this._energyChart('energy_total')}", energy)
-        self.assertIn("${this._energyChart('cost_total')}", energy)
-        chart = card.split("    _energyChart(metricKey)", 1)[1].split("    _energyCoinArt()", 1)[0]
+        self.assertIn("${this._energyChart()}", energy)
+        self.assertNotIn("${this._energyChart('cost_total')}", energy)
+        chart = card.split("    _energyChartControlsHtml()", 1)[1].split("    _energyCoinArt()", 1)[0]
+        self.assertIn("['energy_total', 'energy_metric_energy'], ['cost_total', 'energy_metric_cost']", chart)
+        self.assertIn("data-energy-metric=\"${key}\"", chart)
         self.assertIn('data-energy-plot="${metricKey}"', chart)
         self.assertIn("this._chartSvg(metricKey, this._energyHistory[metricKey], 'energy'", chart)
         self.assertIn("energy_total: { digits: 3, plausible: [0, 1e7], unit: () => 'kWh' }", card)

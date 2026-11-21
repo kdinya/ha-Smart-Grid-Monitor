@@ -138,7 +138,7 @@
       healthy: 'PZEM онлайн; якість напруги в межах порогів', quality_unknown: 'Якість напруги невідома', alarm_banner: 'Напруга поза заданим діапазоном', offline_banner: 'ESP недоступна',
       pzem_online: 'Дані PZEM доступні', pzem_offline: 'PZEM офлайн', source_unconfirmed: 'Джерело живлення не підтверджене', source_unknown: 'Джерело живлення невідоме', pzem_source_offline: 'PZEM офлайн; джерело живлення невідоме', pzem_offline_banner: 'PZEM не відповідає; джерело живлення невідоме',
       voltage: 'Напруга мережі', sag_state: 'Просідання', swell_state: 'Перенапруга', current: 'Струм', power: 'Потужність', frequency: 'Частота', pf: 'Коеф. потужності', normal: 'Норма', alarm: 'Поза нормою',
-      chart_title: 'Детальний графік', energy_chart_title: 'Споживання електроенергії', cost_chart_title: 'Вартість електроенергії', chart_period: 'Період графіків', since: 'Період', stats_title: 'Статистика', stats_start_label: 'Початок статистики',
+      chart_title: 'Детальний графік', energy_chart_title: 'Споживання електроенергії', cost_chart_title: 'Вартість електроенергії', energy_metric_group: 'Показати', energy_metric_energy: 'Енергія', energy_metric_cost: 'Вартість', chart_period: 'Період графіків', since: 'Період', stats_title: 'Статистика', stats_start_label: 'Початок статистики',
       stats_hint: 'Оберіть дату й час: графіки та мінімум/максимум рахуватимуться від цього моменту. Без значення діють добові дані.', stats_shared_hint: 'Для синхронізації між пристроями ввімкніть пакет Home Assistant із helper input_text.grid_monitor_statistics_start.', stats_sync_saved: 'Збережено в Home Assistant; налаштування синхронізується між пристроями.', stats_sync_missing: 'Helper не знайдено: значення діє лише до перезавантаження. Увімкніть optional package для синхронізації.',
       stats_active: 'Графіки та мін/макс рахуються від', stats_apply: 'Застосувати', stats_clear: 'Скинути', chart_date_error_earlier: 'Дата не може бути раніше виставленого початку статистики',
       stats_error: 'Вкажіть коректні дату й час у минулому.', stats_note: 'Мін/макс від', power_range_period: 'Діапазон потужності за період', max_current_period: 'Максимальний струм за період', peak_power_period: 'Пікова потужність за період', stat_min: 'Мін.', stat_avg: 'Сер.', stat_max: 'Макс.', hour: 'Год', day: 'День', week: 'Тиждень', month: 'Місяць', loading: 'Завантаження історії…', no_history: 'Історія поки недоступна',
@@ -189,7 +189,7 @@
       healthy: 'PZEM online; voltage is within configured thresholds', quality_unknown: 'Voltage quality is unknown', alarm_banner: 'Voltage is outside the configured range', offline_banner: 'ESP is offline',
       pzem_online: 'PZEM data available', pzem_offline: 'PZEM offline', source_unconfirmed: 'Power source is not confirmed', source_unknown: 'Power source unknown', pzem_source_offline: 'PZEM offline; power source unknown', pzem_offline_banner: 'PZEM is not responding; power source is unknown',
       voltage: 'Grid voltage', sag_state: 'Sag', swell_state: 'Swell', current: 'Current', power: 'Power', frequency: 'Frequency', pf: 'Power factor', normal: 'Normal', alarm: 'Out of range',
-      chart_title: 'Detailed chart', energy_chart_title: 'Electricity consumption', cost_chart_title: 'Electricity cost', chart_period: 'Chart period', since: 'Period', stats_title: 'Statistics', stats_start_label: 'Statistics start',
+      chart_title: 'Detailed chart', energy_chart_title: 'Electricity consumption', cost_chart_title: 'Electricity cost', energy_metric_group: 'Show', energy_metric_energy: 'Energy', energy_metric_cost: 'Cost', chart_period: 'Chart period', since: 'Period', stats_title: 'Statistics', stats_start_label: 'Statistics start',
       stats_hint: 'Pick a date and time: charts and min/max will be calculated from that moment. Empty means daily values.', stats_shared_hint: 'To sync this setting across devices, enable the Home Assistant package with the input_text.grid_monitor_statistics_start helper.', stats_sync_saved: 'Saved in Home Assistant; this setting syncs across devices.', stats_sync_missing: 'Helper not found: this setting lasts only until reload. Enable the optional package to sync it.',
       stats_active: 'Charts and min/max are calculated from', stats_apply: 'Apply', stats_clear: 'Reset', chart_date_error_earlier: 'Date cannot be earlier than the statistics start time',
       stats_error: 'Enter a valid date and time in the past.', stats_note: 'Min/max since', power_range_period: 'Power range for the period', max_current_period: 'Peak current for the period', peak_power_period: 'Peak power for the period', stat_min: 'Min', stat_avg: 'Avg', stat_max: 'Max', hour: 'Hour', day: 'Day', week: 'Week', month: 'Month', loading: 'Loading history…', no_history: 'History is not available yet',
@@ -880,6 +880,7 @@
       this._activeTab = 'home';
       this._historyRange = 'hour';
       this._energyHistoryRange = 'day';
+      this._energyChartMetric = 'energy_total';
       this._energyCustomRange = null;
       this._energyReturnRange = 'day';
       this._energyHistory = { energy_total: [], cost_total: [] };
@@ -2116,10 +2117,9 @@
       const data = this._chartData(history, metricKey, { range, customRange, bounds, includeCurrent: !isEnergy });
       const plottedPoints = (data?.series || []).filter((point) => Number.isFinite(point.v) && (isEnergy || !Number.isFinite(this._statsStart) || point.t >= this._statsStart));
       const minimumPoints = metricKey === 'power' ? plottedPoints.filter((point) => point.v > 0) : plottedPoints;
-      const historyValues = (Array.isArray(history) ? history : [])
+      const historyPoints = (Array.isArray(history) ? history : [])
         .filter((item) => isEnergy || !Number.isFinite(this._statsStart) || (item.time && item.time.getTime() >= this._statsStart))
-        .map((item) => item.value)
-        .filter(Number.isFinite);
+        .filter((item) => Number.isFinite(item.value));
       const fmt = (value) => value.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits });
       const formatMinimum = (value) => {
         if (value === null) return '—';
@@ -2134,7 +2134,26 @@
       const maxPoint = plottedPoints.reduce((best, point) => !best || point.v > best.v ? point : best, null);
       const min = minPoint?.v ?? null;
       const max = maxPoint?.v ?? null;
-      const avg = historyValues.length ? historyValues.reduce((sum, value) => sum + value, 0) / historyValues.length : null;
+      let avg = null;
+      if (isEnergy && bounds.end > bounds.start) {
+        let weighted = 0;
+        let duration = 0;
+        for (let index = 0; index < historyPoints.length; index += 1) {
+          const point = historyPoints[index];
+          const pointTime = point.time?.getTime?.();
+          const nextTime = historyPoints[index + 1]?.time?.getTime?.() ?? bounds.end;
+          if (!Number.isFinite(pointTime) || !Number.isFinite(nextTime)) continue;
+          const from = Math.max(bounds.start, pointTime);
+          const to = Math.min(bounds.end, nextTime);
+          if (to <= from) continue;
+          const interval = to - from;
+          weighted += point.value * interval;
+          duration += interval;
+        }
+        if (duration > 0) avg = weighted / duration;
+      } else if (historyPoints.length) {
+        avg = historyPoints.reduce((sum, point) => sum + point.value, 0) / historyPoints.length;
+      }
       const unit = metric.unit(this._lang(), this._currencyCode());
       const cell = (label, value, formatter = fmt, point = null) => {
         const timestamp = Number.isFinite(point?.t) ? `<small>${this._escape(this._formatChartStatTimestamp(point.t, range, customRange))}</small>` : '';
@@ -2434,6 +2453,14 @@
       const rangeMs = tEnd - tStart;
       const series = this._bucketHistory(tStart, tEnd, width < 520 ? 48 : 96, history);
       if (!series.length) return null;
+      if (options.includeCurrent === false) {
+        const terminal = history.at(-1);
+        const terminalTime = terminal?.time?.getTime?.();
+        const last = series.at(-1);
+        if (terminalTime === tEnd && Number.isFinite(terminal.value) && (last?.t !== tEnd || last?.v !== terminal.value)) {
+          series.push({ t: tEnd, v: terminal.value });
+        }
+      }
       const current = Object.hasOwn(options, 'currentValue') ? options.currentValue : options.includeCurrent === false ? null : this._num(metricKey);
       const [minValid, maxValid] = CHART_METRICS[metricKey].plausible;
       if (current !== null && Number.isFinite(current) && current >= minValid && current <= maxValid && (options.includeCurrent === false || tEnd >= Date.now() - 60e3)) series.push({ t: tEnd, v: current });
@@ -2864,6 +2891,7 @@
         else cumulative += currentValue >= previous ? currentValue - previous : currentValue;
       }
       if (lastTime < end) result.push({ time: new Date(end), value: cumulative });
+      else if (lastTime === end) result[result.length - 1] = { time: new Date(end), value: cumulative };
       return result;
     }
 
@@ -2872,7 +2900,7 @@
       const request = ++this._energyHistoryRequests[metricKey];
       const hass = this._hass;
       const bounds = this._energyHistoryBounds();
-      const start = new Date(Math.max(0, bounds.start - 10 * 60e3));
+      const start = new Date(Math.max(0, bounds.start - 24 * 3600e3));
       const end = new Date(bounds.end);
       this._energyHistoryLoading[metricKey] = true;
       this._refreshEnergyCharts();
@@ -2895,12 +2923,24 @@
     }
 
     _refreshEnergyCharts() {
-      for (const metricKey of ['energy_total', 'cost_total']) {
-        const plot = this.shadowRoot.querySelector(`[data-energy-plot="${metricKey}"]`);
-        if (plot) plot.innerHTML = this._chartSvg(metricKey, this._energyHistory[metricKey], 'energy', this._energyHistoryLoading[metricKey]);
-        const stats = this.shadowRoot.querySelector(`[data-energy-stats="${metricKey}"]`);
-        if (stats) stats.innerHTML = this._chartStatsHtml(metricKey, this._energyHistory[metricKey], 'energy');
+      const metricKey = this._energyChartMetric || 'energy_total';
+      const plot = this.shadowRoot.querySelector('[data-energy-plot]');
+      if (plot) {
+        plot.dataset.energyPlot = metricKey;
+        plot.innerHTML = this._chartSvg(metricKey, this._energyHistory[metricKey], 'energy', this._energyHistoryLoading[metricKey]);
       }
+      const stats = this.shadowRoot.querySelector('[data-energy-stats]');
+      if (stats) {
+        stats.dataset.energyStats = metricKey;
+        stats.innerHTML = this._chartStatsHtml(metricKey, this._energyHistory[metricKey], 'energy');
+      }
+      const title = this.shadowRoot.querySelector('[data-energy-chart-title]');
+      if (title) title.textContent = this._t(metricKey === 'energy_total' ? 'energy_chart_title' : 'cost_chart_title');
+      this.shadowRoot.querySelectorAll('[data-energy-metric]').forEach((button) => {
+        const active = button.dataset.energyMetric === metricKey;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+      });
     }
 
     _voltageHistoryCacheKey() { return `${this._historyRange}${this._historyWindowToken()}:${this._entity('voltage')}`; }
@@ -3148,9 +3188,7 @@
           <article class="energy-visual energy-coin"><span class="eyebrow">${this._escape(this._t('today'))}</span><strong class="hero-number" data-value-key="energy_today" data-value-digits="2">${this._escape(this._formatted('energy_today', 2))}</strong><small>${this._escape(this._t('estimated_cost'))} · <span data-value-key="cost_today" data-value-digits="2">${this._escape(this._formatted('cost_today', 2))}</span></small>${this._energyCoinArt()}</article>
           <article class="energy-visual energy-load"><span class="eyebrow">${this._escape(this._t('current_load'))}</span><strong class="hero-number" data-value-key="power" data-value-digits="0">${this._escape(this._formatted('power', 0))}</strong><small>${this._escape(this._t('cost_rate'))} · <span data-value-key="cost_rate" data-value-digits="2">${this._escape(this._formatted('cost_rate', 2))}</span></small>${this._plugArt()}</article>
         </div>
-        ${this._energyChartControlsHtml()}
-        ${this._energyChart('energy_total')}
-        ${this._energyChart('cost_total')}
+        ${this._energyChart()}
         <div class="detail-grid energy-grid">
           ${this._detail('energy_today', this._t('today'), 3)}${this._detail('energy_month', this._t('energy_month'), 2)}${this._detail('energy_total', this._t('energy_total'), 3)}
           ${this._detail('cost_today', this._t('cost_today'), 2)}${this._detail('cost_month', this._t('cost_month'), 2)}${this._detail('cost_total', this._t('cost_total'), 2)}
@@ -3165,13 +3203,16 @@
     }
 
     _energyChartControlsHtml() {
+      const metric = this._energyChartMetric || 'energy_total';
+      const metrics = [['energy_total', 'energy_metric_energy'], ['cost_total', 'energy_metric_cost']]
+        .map(([key, label]) => `<button type="button" class="period-button ${metric === key ? 'active' : ''}" data-energy-metric="${key}" aria-pressed="${metric === key}">${this._escape(this._t(label))}</button>`).join('');
       const periods = ['hour', 'day', 'week', 'month'].map((period) => `<button type="button" class="period-button ${this._energyHistoryRange === period ? 'active' : ''}" data-energy-period="${period}" aria-pressed="${this._energyHistoryRange === period}">${this._escape(this._t(period))}</button>`).join('');
-      return `<div class="energy-chart-controls"><div class="chart-head"><h3>${this._escape(this._t('chart_period'))}</h3><div class="periods" role="group" aria-label="${this._escape(this._t('chart_period'))}">${periods}${this._chartDateRangeHtml('energy')}</div></div></div>`;
+      return `<div class="periods" role="group" aria-label="${this._escape(this._t('energy_metric_group'))}">${metrics}</div><div class="periods" role="group" aria-label="${this._escape(this._t('chart_period'))}">${periods}${this._chartDateRangeHtml('energy')}</div>`;
     }
 
-    _energyChart(metricKey) {
+    _energyChart(metricKey = this._energyChartMetric || 'energy_total') {
       const title = metricKey === 'energy_total' ? 'energy_chart_title' : 'cost_chart_title';
-      return `<section class="card chart-card energy-history-card"><div class="chart-head"><h2><span class="chart-icon">${this._svg('chart')}</span>${this._escape(this._t(title))}</h2></div><div class="chart-stats" data-energy-stats="${metricKey}">${this._chartStatsHtml(metricKey, this._energyHistory[metricKey], 'energy')}</div><div class="chart-plot energy-chart-plot" data-energy-plot="${metricKey}">${this._chartSvg(metricKey, this._energyHistory[metricKey], 'energy', this._energyHistoryLoading[metricKey])}</div></section>`;
+      return `<section class="card chart-card energy-history-card"><div class="chart-head"><h2><span class="chart-icon">${this._svg('chart')}</span><span data-energy-chart-title>${this._escape(this._t(title))}</span></h2>${this._energyChartControlsHtml()}</div><div class="chart-stats" data-energy-stats="${metricKey}">${this._chartStatsHtml(metricKey, this._energyHistory[metricKey], 'energy')}</div><div class="chart-plot energy-chart-plot" data-energy-plot="${metricKey}">${this._chartSvg(metricKey, this._energyHistory[metricKey], 'energy', this._energyHistoryLoading[metricKey])}</div></section>`;
     }
 
     _energyCoinArt() {
@@ -3461,7 +3502,7 @@
         return;
       }
       if (!event.target?.closest?.('.chart-date-range')) this._closeChartDateRangePopover();
-      const target = event.target?.closest?.('[data-scroll-top], [data-tab], [data-period], [data-energy-period], [data-metric], [data-action], [data-number-save], [data-switch], [data-chart-live], [data-chart-zoom], [data-chart-date-toggle], [data-chart-date-apply], [data-stats-start-apply], [data-stats-start-clear]');
+      const target = event.target?.closest?.('[data-scroll-top], [data-tab], [data-period], [data-energy-period], [data-energy-metric], [data-metric], [data-action], [data-number-save], [data-switch], [data-chart-live], [data-chart-zoom], [data-chart-date-toggle], [data-chart-date-apply], [data-stats-start-apply], [data-stats-start-clear]');
       if (!target) return;
       if (target.dataset.scrollTop !== undefined) { this._scrollPageToTop(); return; }
       if (target.dataset.chartDateToggle !== undefined) {
@@ -3536,6 +3577,12 @@
         });
         this._refreshChart();
         this._ensureHistory();
+        return;
+      }
+      if (target.dataset.energyMetric) {
+        if (this._energyChartMetric === target.dataset.energyMetric) return;
+        this._energyChartMetric = target.dataset.energyMetric;
+        this._refreshEnergyCharts();
         return;
       }
       if (target.dataset.energyPeriod) {
