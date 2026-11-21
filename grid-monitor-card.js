@@ -1894,7 +1894,7 @@
       const entityIds = this._panelHistoryEntityIds();
       const sensorIds = entityIds.filter((entityId) => entityId.startsWith('sensor.'));
       const disabled = this._historyDeleteInProgress ? 'disabled' : '';
-      return `<button class="action-button" type="button" data-history-delete="recorder" aria-label="${this._escape(this._t('history_purge_button'))}" ${!entityIds.length || disabled}>${this._svg('chart')}<span>${this._escape(this._t('history_purge_button'))}</span></button><button class="action-button" type="button" data-history-delete="statistics" aria-label="${this._escape(this._t('history_stats_button'))}" ${!sensorIds.length || disabled}>${this._svg('chart')}<span>${this._escape(this._t('history_stats_button'))}</span></button>`;
+      return `<button class="action-button" type="button" data-history-delete="recorder" aria-label="${this._escape(this._t('history_purge_button'))}" ${!entityIds.length || disabled}><span>${this._svg('chart')}</span>${this._escape(this._t('history_purge_button'))}</button><button class="action-button" type="button" data-history-delete="statistics" aria-label="${this._escape(this._t('history_stats_button'))}" ${!sensorIds.length || disabled}><span>${this._svg('chart')}</span>${this._escape(this._t('history_stats_button'))}</button>`;
     }
 
     _updateHistoryCleanupControls() {
