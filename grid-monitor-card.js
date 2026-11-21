@@ -3412,6 +3412,7 @@
         }
         .voltage .voltage-brand{margin-top:12px}
         .voltage .voltage-gauge{top:-20px}
+        .voltage .gauge-end{transform:translateY(10px)}
         .voltage .state-indicator{top:-8px}
       `;
     }
