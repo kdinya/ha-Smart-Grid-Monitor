@@ -1132,7 +1132,7 @@
         <div class="main-grid">
           <div class="card voltage ${status.stateClass}" data-role="voltage-card">
             <div class="voltage-brand"><div class="logo">${this._svg('bolt')}</div><div class="brand"><h1>${this._escape(this._config.name || this._t('title'))}</h1><p>${this._escape(this._t('subtitle'))}</p></div>${this._headRightHtml(status)}</div>
-            <svg class="voltage-gauge" viewBox="0 0 500 330" role="img" aria-label="${this._escape(this._t('voltage'))}">
+            <svg class="voltage-gauge" viewBox="0 0 500 342" role="img" aria-label="${this._escape(this._t('voltage'))}">
               <defs>
                 <linearGradient id="${this._id('arc')}" gradientUnits="userSpaceOnUse" x1="62" y1="0" x2="438" y2="0"><stop class="arc-a" stop-color="#0a84ff"/><stop class="arc-b" offset=".5" stop-color="#12d3e8"/><stop class="arc-c" offset="1" stop-color="#3cf08a"/></linearGradient>
                 <radialGradient id="${this._id('glow')}"><stop stop-color="#0a8cff" stop-opacity=".34"/><stop offset="1" stop-color="#0a8cff" stop-opacity="0"/></radialGradient>
@@ -1152,8 +1152,8 @@
               ${gaugeDot}
               <text x="250" y="266" text-anchor="middle" class="voltage-value${voltage === null ? ' empty' : ''}" data-role="voltage-text"><tspan data-role="voltage-number">${this._escape(voltageNumber)}</tspan> <tspan class="voltage-unit" data-role="voltage-unit">${this._escape(voltageUnit)}</tspan></text>
               <text x="250" y="298" text-anchor="middle" class="voltage-label">${this._escape(this._t('voltage'))}</text>
-              <text x="${gaugePoint(GAUGE.start)[0].toFixed(0)}" y="322" text-anchor="middle" class="gauge-end">${GAUGE.min}</text>
-              <text x="${gaugePoint(GAUGE.start + GAUGE.span)[0].toFixed(0)}" y="322" text-anchor="middle" class="gauge-end">${GAUGE.max}</text>
+              <text x="${gaugePoint(GAUGE.start)[0].toFixed(0)}" y="334" text-anchor="middle" class="gauge-end">${GAUGE.min}</text>
+              <text x="${gaugePoint(GAUGE.start + GAUGE.span)[0].toFixed(0)}" y="334" text-anchor="middle" class="gauge-end">${GAUGE.max}</text>
             </svg>
             <div class="state-indicator ${status.stateClass}" data-role="state-indicator"><span class="check-mark">${this._svg('check')}</span><span data-role="state-label">${this._escape(status.status)}</span></div>
           </div>
@@ -3412,7 +3412,6 @@
         }
         .voltage .voltage-brand{margin-top:12px}
         .voltage .voltage-gauge{top:-20px}
-        .voltage .gauge-end{transform:translateY(10px)}
         .voltage .state-indicator{top:-8px}
       `;
     }
