@@ -80,13 +80,17 @@ class RepositoryContractTests(unittest.TestCase):
         last_gauge_rule = card[card.rfind(".voltage-gauge{"):].split("}", 1)[0]
         self.assertIn("width:min(110%,594px)", last_gauge_rule)
 
-    def test_other_pages_hide_status_and_use_the_right_side_menu_on_desktop(self):
+    def test_other_pages_keep_full_width_content_below_the_top_right_menu(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
         header = card.split("    _headerHtml() {", 1)[1].split("    _home() {", 1)[0]
+        render = card.split("    _render() {", 1)[1].split("    _activeContent()", 1)[0]
         self.assertNotIn("_headRightHtml", header)
-        self.assertIn("${this._activeTab === 'home' ? '' : this._tabs('side')}", card)
-        self.assertIn(".shell:not(.home-active)>.page-layout{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:14px;align-items:start}", card)
-        self.assertIn(".shell:not(.home-active)>.page-layout>.tabs-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:0;align-self:start;width:100%}", card)
+        self.assertIn("${this._tabs('top')}", render)
+        self.assertLess(render.index("${this._tabs('top')}"), render.index('<div class="page-layout">'))
+        self.assertNotIn("${this._activeTab === 'home' ? '' : this._tabs('side')}", render)
+        self.assertIn(".shell:not(.home-active)>.tabs-top{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:45%;min-width:360px;max-width:560px;margin:0 0 14px auto;padding:8px;gap:6px}", card)
+        self.assertIn(".shell:not(.home-active)>.tabs-top .tab{padding:15px 8px}", card)
+        self.assertIn(".shell:not(.home-active)>.page-layout{display:block}", card)
         self.assertIn(".shell:not(.home-active)>.page-layout>.tabs-side{display:none}", card)
 
     def test_daily_voltage_and_power_minima_ignore_invalid_restored_values(self):
@@ -125,10 +129,16 @@ class RepositoryContractTests(unittest.TestCase):
 
     def test_chart_preserves_spikes_and_voltage_minimum_matches_plotted_period(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
-        self.assertIn("first: null, last: null, min: null, max: null", card)
+        self.assertIn("first: null, last: null, min: null, minPositive: null, max: null", card)
         self.assertIn("if (!bucket.min || sample.v < bucket.min.v) bucket.min = sample", card)
+        self.assertIn("if (sample.v > 0 && (!bucket.minPositive || sample.v < bucket.minPositive.v)) bucket.minPositive = sample", card)
         self.assertIn("if (!bucket.max || sample.v > bucket.max.v) bucket.max = sample", card)
-        self.assertIn("[bucket.first, bucket.min, bucket.max, bucket.last]", card)
+        self.assertIn("[bucket.first, bucket.min, bucket.minPositive, bucket.max, bucket.last]", card)
+        self.assertIn("metricKey === 'power' ? plottedValues.filter((value) => value > 0) : plottedValues", card)
+        self.assertIn("this._historyBounds(range)", card)
+        self.assertIn("start.setHours(0, 0, 0, 0)", card)
+        self.assertIn("start.getDay() + 6", card)
+        self.assertIn("start.setDate(1)", card)
         self.assertIn("this._chartData(this._voltageHistory, 'voltage')", card)
         self.assertIn("data-role=\"voltage-min-period\"", card)
         self.assertNotIn('data-value-key=\"voltage_min\"', card)

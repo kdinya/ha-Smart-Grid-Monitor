@@ -192,7 +192,7 @@
     },
   };
 
-  const RANGES = { hour: 1, day: 24, week: 24 * 7, month: 24 * 30 };
+  const RANGES = { hour: 1 };
   const CHART_METRICS = {
     power: { digits: 0, plausible: [0, MAX_PLAUSIBLE_POWER_W], unit: (lang) => (lang === 'uk' ? 'Вт' : 'W') },
     voltage: { digits: 1, plausible: [50, 400], unit: (lang) => (lang === 'uk' ? 'В' : 'V') },
@@ -1278,23 +1278,48 @@
     }
 
     _chartStatsHtml() {
-      const metric = CHART_METRICS[this._chartMetric || 'power'];
+      const metricKey = this._chartMetric || 'power';
+      const metric = CHART_METRICS[metricKey];
       const data = this._chartData();
       const plottedValues = data?.series.map((point) => point.v).filter(Number.isFinite) || [];
+      const minimumValues = metricKey === 'power' ? plottedValues.filter((value) => value > 0) : plottedValues;
       const historyValues = (Array.isArray(this._history) ? this._history : []).map((item) => item.value).filter(Number.isFinite);
-      const fmt = (value) => (value === null ? '—' : value.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits }));
-      const min = plottedValues.length ? Math.min(...plottedValues) : null;
+      const fmt = (value) => value.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits });
+      const formatMinimum = (value) => {
+        if (value === null) return '—';
+        if (metricKey !== 'power') return fmt(value);
+        if (Number(value.toFixed(1)) === 0) {
+          const precisionFloor = (0.1).toLocaleString(this._locale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+          return `<${precisionFloor}`;
+        }
+        return value.toLocaleString(this._locale(), { maximumFractionDigits: 1 });
+      };
+      const min = minimumValues.length ? Math.min(...minimumValues) : null;
       const max = plottedValues.length ? Math.max(...plottedValues) : null;
       const avg = historyValues.length ? historyValues.reduce((sum, value) => sum + value, 0) / historyValues.length : null;
       const unit = metric.unit(this._lang());
-      const cell = (label, value) => `<div><span>${this._escape(label)}</span><b>${this._escape(value === null ? '—' : `${fmt(value)} ${unit}`)}</b></div>`;
-      return cell(this._t('stat_min'), min) + cell(this._t('stat_avg'), avg) + cell(this._t('stat_max'), max);
+      const cell = (label, value, formatter = fmt) => `<div><span>${this._escape(label)}</span><b>${this._escape(value === null ? '—' : `${formatter(value)} ${unit}`)}</b></div>`;
+      return cell(this._t('stat_min'), min, formatMinimum) + cell(this._t('stat_avg'), avg) + cell(this._t('stat_max'), max);
+    }
+
+    _historyBounds(range = this._historyRange, now = Date.now()) {
+      const end = new Date(now);
+      let start;
+      if (range === 'hour') {
+        start = new Date(end.getTime() - RANGES.hour * 3600e3);
+      } else {
+        start = new Date(end);
+        start.setHours(0, 0, 0, 0);
+        if (range === 'week') start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+        else if (range === 'month') start.setDate(1);
+      }
+      return { start: start.getTime(), end: end.getTime() };
     }
 
     _chartData(history = this._history, metricKey = this._chartMetric || 'power') {
       const width = Math.max(280, Math.round(this._chartW || 985));
-      const rangeMs = RANGES[this._historyRange] * 3600e3;
-      const tEnd = Date.now(); const tStart = tEnd - rangeMs;
+      const { start: tStart, end: tEnd } = this._historyBounds(this._historyRange);
+      const rangeMs = tEnd - tStart;
       const series = this._bucketHistory(tStart, tEnd, width < 520 ? 48 : 96, history);
       if (!series.length) return null;
       const current = this._num(metricKey);
@@ -1343,7 +1368,7 @@
     _bucketHistory(start, end, count, sourceHistory = this._history) {
       if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || count < 1) return [];
       const bucketMs = (end - start) / count;
-      const buckets = Array.from({ length: count }, () => ({ weighted: 0, duration: 0, first: null, last: null, min: null, max: null }));
+      const buckets = Array.from({ length: count }, () => ({ weighted: 0, duration: 0, first: null, last: null, min: null, minPositive: null, max: null }));
       const history = Array.isArray(sourceHistory) ? sourceHistory : [];
 
       for (let index = 0; index < history.length; index += 1) {
@@ -1368,6 +1393,7 @@
             if (!bucket.first) bucket.first = sample;
             bucket.last = sample;
             if (!bucket.min || sample.v < bucket.min.v) bucket.min = sample;
+            if (sample.v > 0 && (!bucket.minPositive || sample.v < bucket.minPositive.v)) bucket.minPositive = sample;
             if (!bucket.max || sample.v > bucket.max.v) bucket.max = sample;
           }
           bucketIndex += 1;
@@ -1379,7 +1405,7 @@
         if (!bucket.duration) return [];
         if (bucket.min.v === bucket.max.v) return [{ t: start + (index + 0.5) * bucketMs, v: bucket.weighted / bucket.duration }];
         const seen = new Set();
-        return [bucket.first, bucket.min, bucket.max, bucket.last]
+        return [bucket.first, bucket.min, bucket.minPositive, bucket.max, bucket.last]
           .filter(Boolean)
           .sort((a, b) => a.t - b.t || a.order - b.order)
           .filter((point) => {
@@ -1531,8 +1557,9 @@
       const hass = this._hass;
       const range = this._historyRange;
       const metricKey = this._chartMetric || 'power';
-      const end = new Date();
-      const start = new Date(end.getTime() - RANGES[range] * 60 * 60 * 1000);
+      const bounds = this._historyBounds(range);
+      const start = new Date(bounds.start);
+      const end = new Date(bounds.end);
       this._refreshChart();
       try {
         if (typeof hass.callApi !== 'function') throw new Error('History API unavailable');
@@ -1566,8 +1593,9 @@
       const request = ++this._voltageHistoryRequest;
       const hass = this._hass;
       const range = this._historyRange;
-      const end = new Date();
-      const start = new Date(end.getTime() - RANGES[range] * 60 * 60 * 1000);
+      const bounds = this._historyBounds(range);
+      const start = new Date(bounds.start);
+      const end = new Date(bounds.end);
       try {
         if (typeof hass.callApi !== 'function') throw new Error('History API unavailable');
         const entity = encodeURIComponent(this._entity('voltage'));
@@ -1978,7 +2006,6 @@
         ${this._tabs('top')}
         <div class="page-layout">
           <div class="view">${activeContent}</div>
-          ${this._activeTab === 'home' ? '' : this._tabs('side')}
         </div>
         <footer class="footer"><span>ESPHome · Grid Monitor</span><span data-value-key="ssid" data-value-digits="0">${this._escape(this._formatted('ssid', 0))}</span></footer>
       </main>`;
@@ -2412,7 +2439,7 @@
         .detail-panel{padding:22px;margin-top:2px}.detail-panel h2{margin:0 0 18px;font-size:25px}.detail-panel h2.subheading{margin:24px 0 14px;font-size:19px}.detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.detail{padding:16px;border-radius:16px;background:#13243a;border:1px solid #2b4562;min-width:0}.detail>span,.detail label>span{display:block;color:#9fb5d1;font-size:14px;margin-bottom:7px}.detail b{font-size:22px;overflow-wrap:anywhere}.setting{display:flex;align-items:end;gap:10px}.setting label{flex:1;min-width:0}.setting-input{display:flex;align-items:center;gap:8px}.setting-input input{width:100%;min-width:0;background:#091727;border:1px solid #37526f;border-radius:9px;color:var(--text);padding:10px;font:inherit;font-size:18px}.setting-input small{color:#9fb5d1;white-space:nowrap}.save-button,.switch-button,.action-button{border:1px solid #278ed0;background:#092645;color:#d7efff;border-radius:10px;padding:9px 12px;font:inherit;cursor:pointer}.save-button:hover,.switch-button:hover,.action-button:hover{background:#0c3962}.save-button:disabled,.switch-button:disabled,.action-button:disabled{opacity:.45;cursor:not-allowed}.switch-setting{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.switch-setting>span{color:#9fb5d1;font-size:14px}.switch-setting>strong{font-size:16px}.switch-button{grid-column:1/-1;display:flex;align-items:center;gap:8px;justify-content:center}.switch-button .icon{width:20px;height:20px}.switch-button.on{border-color:#35ed91;color:#35ed91}.action-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.action-button{min-height:68px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;font-size:13px;border-color:#2b8ed0}.action-button span{font-size:22px;color:#45bdff}.action-button .icon{width:25px;height:25px}.footer{display:flex;justify-content:space-between;gap:10px;margin:14px 2px 0;color:#6885a2;font-size:11px}.footer span:last-child{max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
         .chart-head .periods+.periods{margin-left:0}.chart-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:4px 0 10px}.chart-stats>div{background:#13243a;border:1px solid #2b4562;border-radius:14px;padding:9px 12px;min-width:0}.chart-stats span{display:block;color:#9fb5d1;font-size:13px}.chart-stats b{display:block;font-size:19px;margin-top:3px;overflow-wrap:anywhere}
         .voltage-brand{display:flex;align-items:flex-start;gap:10px;align-self:flex-start;width:100%;min-width:0;max-width:100%;margin-bottom:0;flex-wrap:wrap}.voltage-brand .logo{flex:none}.voltage-brand .brand{flex:1 1 auto}.voltage-brand .brand h1{margin:0 0 2px;line-height:1.15;font-size:clamp(20px,2.6cqw,32px)}.voltage-brand .brand p{font-size:clamp(13px,1.5cqw,16px);line-height:1.2}.voltage-brand .home-status{flex:none;align-self:flex-start;gap:8px;margin-left:auto;max-width:100%}.voltage-brand .home-status .connection small{margin-top:2px}.voltage .voltage-gauge{margin:0}.main-right{display:flex;flex-direction:column;gap:10px;min-width:0}.main-right>.metrics{flex:1}
-        @container (min-width:960px){.shell.home-active>.tabs-top{display:none}.shell:not(.home-active)>.tabs-top{display:none}.shell:not(.home-active)>.page-layout{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:14px;align-items:start}.shell:not(.home-active)>.page-layout>.tabs-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:0;align-self:start;width:100%}.home-view .main-grid{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);grid-template-rows:auto;align-items:stretch}.home-view .main-grid>.voltage{grid-column:1;grid-row:1}.home-view .main-grid>.main-right{grid-column:2;grid-row:1}.home-view .main-right>.tabs-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:0;align-self:stretch;width:100%}}
+        @container (min-width:960px){.shell.home-active>.tabs-top{display:none}.shell:not(.home-active)>.tabs-top{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:45%;min-width:360px;max-width:560px;margin:0 0 14px auto;padding:8px;gap:6px}.shell:not(.home-active)>.tabs-top .tab{padding:15px 8px}.shell:not(.home-active)>.page-layout{display:block}.shell:not(.home-active)>.page-layout>.tabs-side{display:none}.home-view .main-grid{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);grid-template-rows:auto;align-items:stretch}.home-view .main-grid>.voltage{grid-column:1;grid-row:1}.home-view .main-grid>.main-right{grid-column:2;grid-row:1}.home-view .main-right>.tabs-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:0;align-self:stretch;width:100%}}
         @container (max-width:959px){.home-view .main-grid{grid-template-columns:minmax(0,1fr);align-items:start}.home-view .main-right{display:contents}.home-view .main-right>.tabs-side{display:none}.home-view .main-right>.metrics{grid-column:1;grid-row:1}.home-view .main-grid>.voltage{grid-column:1;grid-row:2}.shell:not(.home-active)>.tabs-top{display:grid}.shell:not(.home-active)>.page-layout{display:block}.shell:not(.home-active)>.page-layout>.tabs-side{display:none}}
         @container (max-width:760px){.shell{padding:12px}.header{gap:11px;padding:5px 2px 14px}.logo{width:58px;height:58px;border-radius:17px}.logo .icon{width:38px;height:38px}.headright{gap:8px}.connection strong{font-size:14px}.connection small{font-size:10px}.tabs{margin-bottom:12px}.tab{gap:5px;padding:12px 3px;font-size:12px}.tab .tab-icon{font-size:19px}.tab .icon{width:20px;height:20px}.main-grid{grid-template-columns:1fr;gap:10px}.voltage{min-height:300px}.voltage-gauge{width:min(100%,420px)}.metrics{gap:10px}.metric{min-height:135px}.metric-icon .icon{width:38px;height:38px}.metric-label{font-size:15px}.chart-card{padding:13px 11px}.chart-head h2{font-size:19px}.periods{width:100%;margin:0}.period-button{flex:1;padding:8px 4px;font-size:13px}.bottom-status{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.info{min-height:100px;padding:12px 8px}.info .symbol .icon{width:30px;height:30px}.info .small{font-size:13px}.info strong{font-size:16px}.banner{padding:14px;min-height:70px}.banner-check{width:38px;height:38px}.banner-check .icon{width:28px;height:28px}.house-art{width:80px}.detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.detail-panel{padding:16px}.detail-panel h2{font-size:22px}.action-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
         @container (max-width:420px){.connection small{max-width:105px}.tab{font-size:11px}.tab .tab-icon{display:none}.metric{min-height:122px;padding:12px 8px}.metric-value{font-size:clamp(25px,8cqw,34px)}.info{gap:8px}.info .symbol .icon{width:26px;height:26px}.info .small{font-size:12px}.info strong{font-size:14px}.detail-grid{grid-template-columns:1fr}.setting{align-items:stretch}}
