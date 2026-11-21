@@ -176,11 +176,11 @@ sensor:
     address: 1
     update_interval: 2s
     voltage:
-      expire_after: 15s
       id: grid_voltage
       name: "Voltage"
       accuracy_decimals: 1
       filters:
+        - timeout: 15s
         - throttle_average: 10s
       on_raw_value:
         then:
@@ -201,43 +201,42 @@ sensor:
                 id(v_state) = 0;
               }
     current:
-      expire_after: 15s
       id: grid_current
       name: "Current"
       accuracy_decimals: 2
       filters:
+        - timeout: 15s
         - throttle_average: 10s
       on_raw_value:
         then:
           - lambda: |-
               if (x > id(g_i_max)) id(g_i_max) = x;
     power:
-      expire_after: 15s
       id: grid_power
       name: "Power"
       accuracy_decimals: 1
       filters:
+        - timeout: 15s
         - throttle_average: 10s
       on_raw_value:
         then:
           - lambda: |-
               if (x > id(g_p_max)) id(g_p_max) = x;
     frequency:
-      expire_after: 15s
       id: grid_freq
       name: "Frequency"
       accuracy_decimals: 2
       filters:
+        - timeout: 15s
         - throttle_average: 10s
     power_factor:
-      expire_after: 15s
       id: grid_pf
       name: "Power Factor"
       accuracy_decimals: 2
       filters:
+        - timeout: 15s
         - throttle_average: 10s
     energy:
-      expire_after: 15s
       id: grid_energy
       name: "Energy Total"
       unit_of_measurement: kWh
@@ -245,10 +244,13 @@ sensor:
       state_class: total_increasing
       accuracy_decimals: 3
       filters:
+        - timeout: 15s
         - multiply: 0.001
       on_value:
         then:
           - lambda: |-
+              // The timeout filter emits NaN; keep the last valid counter for recovery deltas.
+              if (isnan(x)) return;
               float e = x;
               float last = id(e_last);
               if (last >= 0 && e >= last && (e - last) < 100.0) {
@@ -631,7 +633,7 @@ interval:
           id(comm_ok) = ok;
 
           // Шаблонні стани оновляться зі зміненим comm_ok; до першої відповіді вони лишаються невідомими.
-          // Не надсилаємо штучні нулі: expire_after переводить PZEM-сенсори в unavailable,
+          // Не надсилаємо штучні нулі: timeout-фільтри передають NaN через native API,
           // а статус джерела окремо пояснює, що робота інвертора не підтверджена.
 
 # Скидання добових мін/макс і лічильників опівночі, місячних 1-го числа
