@@ -1199,6 +1199,39 @@
       return d;
     }
 
+    _bucketHistory(start, end, count) {
+      if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || count < 1) return [];
+      const bucketMs = (end - start) / count;
+      const buckets = Array.from({ length: count }, () => ({ weighted: 0, duration: 0 }));
+      const history = Array.isArray(this._history) ? this._history : [];
+
+      for (let index = 0; index < history.length; index += 1) {
+        const point = history[index];
+        const pointTime = point.time?.getTime?.();
+        const nextTime = index + 1 < history.length ? history[index + 1].time?.getTime?.() : end;
+        if (!Number.isFinite(pointTime) || !Number.isFinite(nextTime) || !Number.isFinite(point.value)) continue;
+
+        const intervalStart = Math.max(start, pointTime);
+        const intervalEnd = Math.min(end, nextTime);
+        if (intervalEnd <= intervalStart) continue;
+
+        let bucketIndex = Math.max(0, Math.floor((intervalStart - start) / bucketMs));
+        while (bucketIndex < count && start + bucketIndex * bucketMs < intervalEnd) {
+          const bucketStart = start + bucketIndex * bucketMs;
+          const overlap = Math.max(0, Math.min(intervalEnd, bucketStart + bucketMs) - Math.max(intervalStart, bucketStart));
+          if (overlap > 0) {
+            buckets[bucketIndex].weighted += point.value * overlap;
+            buckets[bucketIndex].duration += overlap;
+          }
+          bucketIndex += 1;
+        }
+      }
+
+      return buckets.flatMap((bucket, index) => bucket.duration > 0
+        ? [{ t: start + (index + 0.5) * bucketMs, v: bucket.weighted / bucket.duration }]
+        : []);
+    }
+
     _chartSvg() {
       if (this._historyLoading && !this._history.length) return `<div class="chart-empty">${this._escape(this._t('loading'))}</div>`;
       const width = Math.max(280, Math.round(this._chartW || 985));
@@ -1208,14 +1241,11 @@
       const rangeMs = RANGES[this._historyRange] * 3600e3;
       const tEnd = Date.now(); const tStart = tEnd - rangeMs;
       const buckets = narrow ? 48 : 96;
-      const sums = new Array(buckets).fill(0); const counts = new Array(buckets).fill(0);
-      this._history.forEach((point) => {
-        const index = Math.min(buckets - 1, Math.max(0, Math.floor((point.time.getTime() - tStart) / rangeMs * buckets)));
-        sums[index] += point.value; counts[index] += 1;
-      });
-      const series = [];
-      for (let i = 0; i < buckets; i += 1) if (counts[i]) series.push({ t: tStart + (i + 0.5) / buckets * rangeMs, v: sums[i] / counts[i] });
-      if (!series.length) return `<div class="chart-empty">${this._escape(this._t('no_history'))}</div>`;
+      const series = this._bucketHistory(tStart, tEnd, buckets);
+      if (!series.length) {
+        this._chartPts = [];
+        return `<div class="chart-empty">${this._escape(this._t('no_history'))}</div>`;
+      }
       const current = this._num('power');
       if (current !== null) series.push({ t: tEnd, v: current });
       const scale = this._niceScale(Math.max(...series.map((point) => point.v), 0));
@@ -1315,8 +1345,11 @@
         const response = await hass.callApi('GET', path);
         if (request !== this._historyRequest) return;
         const series = Array.isArray(response?.[0]) ? response[0] : [];
-        this._history = series.map((item) => ({ time: new Date(item.last_changed || item.last_updated), value: Number(item.state) }))
-          .filter((item) => Number.isFinite(item.time.getTime()) && Number.isFinite(item.value))
+        this._history = series.map((item) => {
+          const value = Number(item.state);
+          return { time: new Date(item.last_changed || item.last_updated), value: Number.isFinite(value) ? value : null };
+        })
+          .filter((item) => Number.isFinite(item.time.getTime()))
           .sort((a, b) => a.time - b.time);
         this._historyKey = key;
         this._historyAt = Date.now();
