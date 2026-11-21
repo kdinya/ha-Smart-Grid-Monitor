@@ -1,8 +1,17 @@
 # Smart Grid Monitor
 
-ESPHome firmware and Home Assistant interfaces for an ESP32-C3 + PZEM-004T v3.0 household grid monitor. The project reports live voltage, current, power, frequency, power factor, energy, cost, grid-quality events, inverter periods, diagnostics, configuration controls and safe reset actions.
+ESPHome firmware and Home Assistant interfaces for an ESP32-C3 + PZEM-004T v3.0 household grid monitor. The project reports live voltage, current, power, frequency, power factor, energy, cost, grid-quality events, PZEM communication outages, diagnostics, configuration controls and safe reset actions.
 
 The repository now provides two supported interface paths. The recommended path is the HACS-installable `Smart Grid Monitor Card`, a responsive dark-neon frontend card. The dependency-free native Lovelace dashboard remains available as a fallback for installations where custom frontend resources are not desired.
+
+## ESPHome setup and secret safety
+
+1. Copy `esphome/secrets.example.yaml` to `esphome/secrets.yaml`.
+2. Replace every `REPLACE_WITH_…` placeholder with your own values before compiling or flashing. Use different passwords for the fallback access point and OTA, each at least 16 characters; do not reuse the template or the Wi-Fi password.
+3. Run `python3 esphome/check_secrets.py` from the repository root. The check reports missing or placeholder keys without printing any secret values.
+4. Compile and flash with ESPHome after the check passes.
+
+After updating the firmware, the communication entities are `binary_sensor.grid_monitor_pzem_online`, `binary_sensor.grid_monitor_pzem_offline`, and `sensor.grid_monitor_power_source_status`. `binary_sensor.grid_monitor_on_inverter` is no longer provided because the project has no independent inverter/ATS input. Update any external automations that relied on the old inferred inverter entity.
 
 ## HACS installation
 
@@ -26,7 +35,7 @@ prefix: grid_monitor
 esp_power_mode: after_avr
 ```
 
-`language` accepts `uk` or `en`. If omitted, the card follows the Home Assistant language when it can detect it. `esp_power_mode` accepts `grid_shared`, `after_avr` or `independent` and defaults to `after_avr`. It describes how the ESP is powered; PZEM readings remain measurements of the mains in every mode, and the card does not infer the ESP supply from grid sensors. The card safely displays missing, unavailable and unknown entities instead of failing the whole dashboard. Reset and restart actions ask for confirmation before calling the corresponding ESPHome button service.
+`language` accepts `uk` or `en`. If omitted, the card follows the Home Assistant language when it can detect it. `esp_power_mode` accepts `grid_shared`, `after_avr` or `independent` and defaults to `after_avr`. It describes how the ESP is powered; PZEM readings remain measurements of the mains in every mode, and the card does not infer the ESP supply from grid sensors. The card safely displays missing, unavailable and unknown entities instead of failing the whole dashboard. Loss of PZEM communication is reported as unavailable telemetry and an unknown power source; it is not treated as proof that the ESP is running from an inverter. The current firmware has no independent ATS/inverter confirmation input. Reset and restart actions ask for confirmation before calling the corresponding ESPHome button service.
 
 Card display options such as the name, ESPHome prefix, language, ESP power arrangement and entity overrides belong to the Lovelace dashboard configuration, not to browser-local storage. Storage-mode dashboards keep that configuration in Home Assistant so the same dashboard uses it on each client; YAML-mode dashboards keep it in the dashboard YAML. ESPHome device settings such as voltage thresholds, tariff values and the two-zone switch are separate device entities and already use ESPHome restore settings, so they persist on the controller across restarts.
 
@@ -36,7 +45,7 @@ Download `grid-monitor-card.js` into `<config>/www/`, add `/local/grid-monitor-c
 
 ## Native dashboard fallback
 
-Copy [`home-assistant/lovelace/grid-monitor-dashboard.yaml`](home-assistant/lovelace/grid-monitor-dashboard.yaml) into a dashboard's raw configuration editor. It uses only built-in Home Assistant cards and has no HACS dependency. Installation details and the optional source-of-power package are in [`home-assistant/README.md`](home-assistant/README.md).
+Copy [`home-assistant/lovelace/grid-monitor-dashboard.yaml`](home-assistant/lovelace/grid-monitor-dashboard.yaml) into a dashboard's raw configuration editor. It uses only built-in Home Assistant cards and has no HACS dependency. Installation details and the optional source-status and health package are in [`home-assistant/README.md`](home-assistant/README.md).
 
 ## Repository layout
 
@@ -56,7 +65,7 @@ hacs.json                  # HACS frontend metadata
 
 ## Coverage
 
-Both interfaces cover the firmware's live electrical values, energy and cost counters, tariff settings, voltage quality and peaks, inverter events and durations, ESP diagnostics, configuration numbers, two-zone tariff switch, reset buttons and restart button. The frontend reads entities exposed by ESPHome; it does not replace firmware outage detection or tariff calculations.
+Both interfaces cover the firmware's live electrical values, energy and cost counters, tariff settings, voltage quality and peaks, PZEM communication outage counts and durations, ESP diagnostics, configuration numbers, two-zone tariff switch, reset buttons and restart button. The frontend reads entities exposed by ESPHome; it does not infer inverter operation from a PZEM timeout.
 
 ## Electrical safety
 

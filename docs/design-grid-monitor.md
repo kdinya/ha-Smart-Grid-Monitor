@@ -2,7 +2,7 @@
 
 ## Direction
 
-**Neon utility console**: a calm dark control surface for a household electrical system. It borrows the supplied visual language without copying decorative artwork: deep navy background, luminous cyan/blue measurement accents, green for healthy operation, amber for inverter operation, and red only for actionable alarms.
+**Neon utility console**: a calm dark control surface for a household electrical system. It borrows the supplied visual language without copying decorative artwork: deep navy background, luminous cyan/blue measurement accents, green for healthy operation, amber for PZEM communication loss and unknown source, and red only for actionable alarms.
 
 ## Sketch
 
@@ -21,9 +21,9 @@
 ├─────────────────────────────────────────────────────────────────────┤
 │ Графік електричних параметрів · 24 години                           │
 ├───────────────────────────────┬─────────────────────────────────────┤
-│ Мережа · Джерело · Зв’язок    │ Енергія · Вартість · Тариф          │
+│ PZEM · Джерело ESP невідоме · Зв’язок    │ Енергія · Вартість · Тариф          │
 ├───────────────────────────────┴─────────────────────────────────────┤
-│ Піки · Якість напруги · Інверторні події                            │
+│ Піки · Якість напруги · Переривання зв’язку з PZEM                            │
 ├─────────────────────────────────────────────────────────────────────┤
 │ Налаштування · Діагностика · Дії                                   │
 └─────────────────────────────────────────────────────────────────────┘
@@ -32,10 +32,10 @@
 ## Interaction rules
 
 - The dashboard opens on live state, not configuration.
-- Inverter mode gets an amber banner and the source tile changes meaningfully.
-- Unavailable entities are not treated as confirmed `off`; the optional source sensor reports an unknown state.
+- A PZEM timeout gets an amber warning; it reports the power source as unknown, never as confirmed inverter operation.
+- Unavailable entities are not treated as healthy or as confirmed `off`; the source-status sensor distinguishes PZEM online, PZEM offline with unknown source, and waiting for PZEM.
 - Destructive actions use Home Assistant confirmation prompts.
-- Entity IDs stay stable; translations are presentation-layer labels in the dashboard.
+- Entity names describe the signal they actually measure; card aliases recognize the previous inferred inverter entities where possible.
 - The dashboard uses native cards so it remains maintainable without a custom frontend bundle.
 
 ## Responsive behavior

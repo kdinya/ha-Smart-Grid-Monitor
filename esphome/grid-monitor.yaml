@@ -2,7 +2,7 @@
 #  Grid Monitor: ESP32-C3 + PZEM-004T v3.0 (100A, CT)
 #  Проводка:  PZEM 5V -> 3V3 ESP (безпечний рівень 3.3V для UART), GND -> GND
 #             PZEM TX -> GPIO20 (RX ESP),  PZEM RX -> GPIO21 (TX ESP)
-#  secrets.yaml: wifi_ssid, wifi_password, api_key, ota_password
+#  secrets.yaml: wifi_ssid, wifi_password, fallback_password, api_key, ota_password
 # ============================================================
 esphome:
   name: grid-monitor
@@ -176,6 +176,7 @@ sensor:
     address: 1
     update_interval: 2s
     voltage:
+      expire_after: 15s
       id: grid_voltage
       name: "Voltage"
       accuracy_decimals: 1
@@ -200,6 +201,7 @@ sensor:
                 id(v_state) = 0;
               }
     current:
+      expire_after: 15s
       id: grid_current
       name: "Current"
       accuracy_decimals: 2
@@ -210,6 +212,7 @@ sensor:
           - lambda: |-
               if (x > id(g_i_max)) id(g_i_max) = x;
     power:
+      expire_after: 15s
       id: grid_power
       name: "Power"
       accuracy_decimals: 1
@@ -220,18 +223,21 @@ sensor:
           - lambda: |-
               if (x > id(g_p_max)) id(g_p_max) = x;
     frequency:
+      expire_after: 15s
       id: grid_freq
       name: "Frequency"
       accuracy_decimals: 2
       filters:
         - throttle_average: 10s
     power_factor:
+      expire_after: 15s
       id: grid_pf
       name: "Power Factor"
       accuracy_decimals: 2
       filters:
         - throttle_average: 10s
     energy:
+      expire_after: 15s
       id: grid_energy
       name: "Energy Total"
       unit_of_measurement: kWh
@@ -325,6 +331,7 @@ sensor:
     accuracy_decimals: 1
     update_interval: 10s
     lambda: |-
+      if (id(outage_active)) return NAN;
       return id(grid_voltage).state;
     filters:
       - sliding_window_moving_average:
@@ -438,7 +445,7 @@ sensor:
     lambda: |-
       return id(cost_total);
 
-  # ---------- Якість мережі та робота від інвертора ----------
+  # ---------- Якість мережі та переривання зв’язку з PZEM ----------
   - platform: template
     name: "Sag Count"
     state_class: total_increasing
@@ -456,7 +463,7 @@ sensor:
     lambda: |-
       return id(swell_count);
   - platform: template
-    name: "Inverter Events"
+    name: "PZEM Offline Events"
     state_class: total_increasing
     accuracy_decimals: 0
     icon: mdi:power-plug-off
@@ -464,7 +471,7 @@ sensor:
     lambda: |-
       return id(outage_count);
   - platform: template
-    name: "Last Inverter Duration"
+    name: "Last PZEM Offline Duration"
     unit_of_measurement: min
     accuracy_decimals: 1
     icon: mdi:timer-sand
@@ -472,7 +479,7 @@ sensor:
     lambda: |-
       return id(last_outage_s) / 60.0f;
   - platform: template
-    name: "Total Inverter Time"
+    name: "Total PZEM Offline Time"
     unit_of_measurement: h
     state_class: total_increasing
     accuracy_decimals: 2
@@ -482,7 +489,7 @@ sensor:
       return id(outage_total_s) / 3600.0f;
 
   - platform: template
-    name: "Inverter Current Duration"
+    name: "Current PZEM Offline Duration"
     unit_of_measurement: min
     accuracy_decimals: 1
     icon: mdi:timer-play
@@ -507,36 +514,53 @@ binary_sensor:
   - platform: status
     name: "ESP Status"
     device_class: connectivity
-  # PZEM відповідає = є мережа (стабілізатор)
+  # Це стан зв’язку з PZEM, а не підтвердження фізичної наявності мережі.
   - platform: template
-    id: bin_mains_present
-    name: "Mains Present"
-    device_class: power
+    id: bin_pzem_online
+    name: "PZEM Online"
+    device_class: connectivity
     lambda: |-
+      if (!id(pzem_seen) && millis() < 15000) return {};
       return id(comm_ok);
-  # ESP жива, PZEM мовчить = працюємо від інвертора
   - platform: template
-    id: bin_on_inverter
-    name: "On Inverter"
-    device_class: running
-    icon: mdi:current-dc
+    id: bin_pzem_offline
+    name: "PZEM Offline"
+    device_class: problem
+    icon: mdi:lan-disconnect
     lambda: |-
-      return id(outage_active);
+      if (!id(pzem_seen) && millis() < 15000) return {};
+      return !id(comm_ok);
   - platform: template
     id: bin_v_out_of_range
     name: "Voltage Out Of Range"
     device_class: problem
     lambda: |-
-      return id(comm_ok) && id(v_state) != 0;
+      if (!id(pzem_seen) && millis() < 15000) return {};
+      if (!id(comm_ok)) return {};
+      return id(v_state) != 0;
 
 text_sensor:
+  - platform: template
+    name: "Power Source Status"
+    icon: mdi:help-circle-outline
+    update_interval: 2s
+    lambda: |-
+      if (!id(pzem_seen)) {
+        if (millis() < 15000) return {"waiting_for_pzem"};
+        return {"pzem_offline_source_unknown"};
+      }
+      if ((millis() - id(last_pzem_ms)) < 15000) return {"pzem_online_source_unconfirmed"};
+      return {"pzem_offline_source_unknown"};
   - platform: template
     name: "Voltage Status"
     icon: mdi:sine-wave
     update_interval: 5s
     lambda: |-
-      if (!id(pzem_seen)) return {"Unknown"};
-      if (id(outage_active)) return {"Inverter"};
+      if (!id(pzem_seen)) {
+        if (millis() < 15000) return {"Waiting for PZEM"};
+        return {"PZEM Offline"};
+      }
+      if (id(outage_active)) return {"PZEM Offline"};
       if (id(v_state) == 1) return {"Sag"};
       if (id(v_state) == 2) return {"Swell"};
       return {"Normal"};
@@ -584,14 +608,14 @@ button:
           id(e_today) = 0; id(e_month) = 0;
 
 # ------------------------------------------------------------
-#  Логіка: ESP жива, а PZEM мовчить 15 с = працюємо від інвертора
-#  (ESP недоступна в HA = напруги нема зовсім або пропав зв'язок з ESP)
+#  Логіка: PZEM не відповідає 15 с = телеметрія недоступна.
+#  Це НЕ підтверджує роботу інвертора: для цього потрібен незалежний сигнал АВР/інвертора.
 # ------------------------------------------------------------
 interval:
   - interval: 2s
     then:
       - lambda: |-
-          // ok тільки якщо PZEM хоча б раз відповів після старту і мовчить менше 15 с
+          // PZEM online означає лише свіжу відповідь лічильника, а не джерело живлення ESP.
           bool ok = id(pzem_seen) && id(last_pzem_ms) != 0 && (millis() - id(last_pzem_ms)) < 15000;
           
           if (!ok && id(pzem_seen) && !id(outage_active)) {
@@ -606,22 +630,9 @@ interval:
           }
           id(comm_ok) = ok;
 
-          // Публікуємо стани лише після першого виявлення PZEM,
-          // щоб при старті під час блекауту сенсори залишалися unavailable/невизначеними в HA
-          if (id(pzem_seen)) {
-            id(bin_mains_present).publish_state(ok);
-            id(bin_on_inverter).publish_state(id(outage_active));
-            id(bin_v_out_of_range).publish_state(ok && id(v_state) != 0);
-          }
-
-          // Якщо активний інвертор — обнуляємо показники, щоб у HA не зависали останні 230V / 500W
-          if (id(outage_active)) {
-            id(grid_voltage).publish_state(0.0f);
-            id(grid_current).publish_state(0.0f);
-            id(grid_power).publish_state(0.0f);
-            id(grid_freq).publish_state(0.0f);
-            id(grid_pf).publish_state(0.0f);
-          }
+          // Шаблонні стани оновляться зі зміненим comm_ok; до першої відповіді вони лишаються невідомими.
+          // Не надсилаємо штучні нулі: expire_after переводить PZEM-сенсори в unavailable,
+          // а статус джерела окремо пояснює, що робота інвертора не підтверджена.
 
 # Скидання добових мін/макс і лічильників опівночі, місячних 1-го числа
 time:
