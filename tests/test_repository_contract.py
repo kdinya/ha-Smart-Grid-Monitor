@@ -60,6 +60,9 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn(".shell.home-active>.tabs-top{display:none}", card)
         self.assertIn(".home-view .main-right>.tabs-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:0;align-self:stretch;width:100%}", card)
         self.assertIn(".home-view .main-grid>.voltage{grid-column:1;grid-row:1}", card)
+        # Status updates must keep home-active, otherwise the top tab bar reappears next to the side tabs.
+        self.assertIn("${this._activeTab === 'home' ? ' home-active' : ''}", card)
+        self.assertIn("grid-template-rows:minmax(580px,auto)", card)
 
     def test_gauge_arc_ticks_and_marker_share_one_geometry(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
