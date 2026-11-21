@@ -3411,7 +3411,7 @@
           .banner-system strong{font-size:14px!important}
         }
         .voltage .voltage-brand{margin-top:12px}
-        .voltage .voltage-gauge{top:-10px}
+        .voltage .voltage-gauge{top:-20px}
         .voltage .state-indicator{top:-8px}
       `;
     }
