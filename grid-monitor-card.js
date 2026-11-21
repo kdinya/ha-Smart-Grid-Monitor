@@ -120,7 +120,7 @@
       pzem_online: 'Дані PZEM доступні', pzem_offline: 'PZEM офлайн', source_unconfirmed: 'Джерело живлення не підтверджене', source_unknown: 'Джерело живлення невідоме', pzem_source_offline: 'PZEM офлайн; джерело живлення невідоме', pzem_offline_banner: 'PZEM не відповідає; джерело живлення невідоме',
       voltage: 'Напруга мережі', sag_state: 'Просідання', swell_state: 'Перенапруга', current: 'Струм', power: 'Потужність', frequency: 'Частота', pf: 'Коеф. потужності', normal: 'Норма', alarm: 'Поза нормою',
       chart_title: 'Детальний графік', stat_min: 'Мін.', stat_avg: 'Сер.', stat_max: 'Макс.', hour: 'Год', day: 'День', week: 'Тиждень', month: 'Місяць', loading: 'Завантаження історії…', no_history: 'Історія поки недоступна',
-      chart_select_time: 'Перетягніть повзунок або графік, щоб вибрати час', chart_readings: 'Дані на вибраний час', chart_readings_loading: 'Завантаження вимірювань…', chart_readings_unavailable: 'Історія вимірювань недоступна', chart_live: 'Зараз', active_power: 'Активна потужність',
+      chart_select_time: 'Перетягуйте графік; двома пальцями масштабуйте, повзунком вибирайте час', chart_date_range: 'Дати', chart_from: 'Від', chart_to: 'До', chart_apply: 'Показати', chart_date_error: 'Перевірте дати: кінець має бути пізніше початку й не в майбутньому', chart_zoom_in: 'Збільшити масштаб', chart_zoom_out: 'Зменшити масштаб', chart_readings: 'Дані на вибраний час', chart_readings_loading: 'Завантаження вимірювань…', chart_readings_unavailable: 'Історія вимірювань недоступна', chart_live: 'Зараз', active_power: 'Активна потужність',
       mains: 'Зв’язок з PZEM', has_voltage: 'Дані доступні', no_voltage: 'Дані недоступні', source: 'Живлення ESP', from_mains: 'Мережа (не підтверджено)', from_inverter: 'Джерело невідоме', pzem_link: 'Зв’язок з PZEM', active: 'Онлайн', inactive: 'Офлайн', today_consumption: 'Споживання сьогодні',
       esp_power_connection: 'Схема живлення ESP', esp_power_shared: 'Від мережі разом із модулем', esp_power_after_avr: 'Після АВР', esp_power_independent: 'Незалежне живлення', esp_power_avr_note: 'ESP може живитися від інвертора', pzem_grid_note: 'PZEM вимірює мережу в усіх режимах',
       params_title: 'Електричні параметри', range_title: 'Діапазон напруги на графіку', range_now: 'Зараз', energy_title: 'Енергія та вартість', settings_title: 'Налаштування та діагностика',
@@ -160,7 +160,7 @@
       pzem_online: 'PZEM data available', pzem_offline: 'PZEM offline', source_unconfirmed: 'Power source is not confirmed', source_unknown: 'Power source unknown', pzem_source_offline: 'PZEM offline; power source unknown', pzem_offline_banner: 'PZEM is not responding; power source is unknown',
       voltage: 'Grid voltage', sag_state: 'Sag', swell_state: 'Swell', current: 'Current', power: 'Power', frequency: 'Frequency', pf: 'Power factor', normal: 'Normal', alarm: 'Out of range',
       chart_title: 'Detailed chart', stat_min: 'Min', stat_avg: 'Avg', stat_max: 'Max', hour: 'Hour', day: 'Day', week: 'Week', month: 'Month', loading: 'Loading history…', no_history: 'History is not available yet',
-      chart_select_time: 'Drag the slider or chart to select a time', chart_readings: 'Readings at selected time', chart_readings_loading: 'Loading readings…', chart_readings_unavailable: 'Measurement history is unavailable', chart_live: 'Now', active_power: 'Active power',
+      chart_select_time: 'Drag the chart to pan; pinch to zoom, or use the slider to select a time', chart_date_range: 'Dates', chart_from: 'From', chart_to: 'To', chart_apply: 'Show', chart_date_error: 'Check dates: the end must be after the start and not in the future', chart_zoom_in: 'Zoom in', chart_zoom_out: 'Zoom out', chart_readings: 'Readings at selected time', chart_readings_loading: 'Loading readings…', chart_readings_unavailable: 'Measurement history is unavailable', chart_live: 'Now', active_power: 'Active power',
       mains: 'PZEM connection', has_voltage: 'Data available', no_voltage: 'Data unavailable', source: 'ESP power source', from_mains: 'Mains (not confirmed)', from_inverter: 'Source unknown', pzem_link: 'PZEM connection', active: 'Online', inactive: 'Offline', today_consumption: 'Consumption today',
       esp_power_connection: 'ESP power arrangement', esp_power_shared: 'Mains shared with the module', esp_power_after_avr: 'After AVR', esp_power_independent: 'Independent power', esp_power_avr_note: 'ESP may be powered by the inverter', pzem_grid_note: 'PZEM measures mains in every mode',
       params_title: 'Electrical parameters', range_title: 'Voltage range on chart', range_now: 'Now', energy_title: 'Energy and cost', settings_title: 'Settings and diagnostics',
@@ -786,6 +786,10 @@
       this._hass = null;
       this._activeTab = 'home';
       this._historyRange = 'hour';
+      this._historyCustomRange = null;
+      this._historyReturnRange = 'hour';
+      this._chartPointers = new Map();
+      this._chartPan = null;
       this._chartMetric = 'power';
       this._history = [];
       this._historyKey = '';
@@ -819,9 +823,13 @@
       this._measureQueued = false;
       this._heartbeatTimer = null;
       this.shadowRoot.addEventListener('click', (event) => this._handleCardClick(event));
+      this.shadowRoot.addEventListener('pointerdown', (event) => this._chartPointerDown(event));
       this.shadowRoot.addEventListener('pointermove', (event) => {
-        if (event.target?.closest?.('[data-role="chart-plot"]')) this._chartHover(event);
+        if (this._chartPan) { this._chartPointerMove(event); return; }
+        if (event.pointerType === 'mouse' && event.target?.closest?.('[data-role="chart-plot"]')) this._chartHover(event);
       });
+      this.shadowRoot.addEventListener('pointerup', (event) => this._chartPointerEnd(event));
+      this.shadowRoot.addEventListener('pointercancel', (event) => this._chartPointerEnd(event));
       this.shadowRoot.addEventListener('input', (event) => {
         const slider = event.target?.closest?.('[data-role="chart-scrubber"]');
         if (slider) this._chartScrubberInput(slider.value);
@@ -1124,7 +1132,7 @@
         <div class="main-grid">
           <div class="card voltage ${status.stateClass}" data-role="voltage-card">
             <div class="voltage-brand"><div class="logo">${this._svg('bolt')}</div><div class="brand"><h1>${this._escape(this._config.name || this._t('title'))}</h1><p>${this._escape(this._t('subtitle'))}</p></div>${this._headRightHtml(status)}</div>
-            <svg class="voltage-gauge" viewBox="0 0 500 312" role="img" aria-label="${this._escape(this._t('voltage'))}">
+            <svg class="voltage-gauge" viewBox="0 0 500 330" role="img" aria-label="${this._escape(this._t('voltage'))}">
               <defs>
                 <linearGradient id="${this._id('arc')}" gradientUnits="userSpaceOnUse" x1="62" y1="0" x2="438" y2="0"><stop class="arc-a" stop-color="#0a84ff"/><stop class="arc-b" offset=".5" stop-color="#12d3e8"/><stop class="arc-c" offset="1" stop-color="#3cf08a"/></linearGradient>
                 <radialGradient id="${this._id('glow')}"><stop stop-color="#0a8cff" stop-opacity=".34"/><stop offset="1" stop-color="#0a8cff" stop-opacity="0"/></radialGradient>
@@ -1138,10 +1146,10 @@
               <path data-role="gauge-progress" visibility="${voltage === null ? 'hidden' : 'visible'}" d="${gaugeArcPath()}" fill="none" stroke="url(#${this._id('arc')})" stroke-width="26" stroke-linecap="round" stroke-dasharray="${progress} 100" pathLength="100"/>
               ${this._towerArtwork()}
               ${gaugeDot}
-              <text x="250" y="254" text-anchor="middle" class="voltage-value${voltage === null ? ' empty' : ''}" data-role="voltage-text"><tspan data-role="voltage-number">${this._escape(voltageNumber)}</tspan> <tspan class="voltage-unit" data-role="voltage-unit">${this._escape(voltageUnit)}</tspan></text>
-              <text x="250" y="281" text-anchor="middle" class="voltage-label">${this._escape(this._t('voltage'))}</text>
-              <text x="${gaugePoint(GAUGE.start)[0].toFixed(0)}" y="306" text-anchor="middle" class="gauge-end">${GAUGE.min}</text>
-              <text x="${gaugePoint(GAUGE.start + GAUGE.span)[0].toFixed(0)}" y="306" text-anchor="middle" class="gauge-end">${GAUGE.max}</text>
+              <text x="250" y="258" text-anchor="middle" class="voltage-value${voltage === null ? ' empty' : ''}" data-role="voltage-text"><tspan data-role="voltage-number">${this._escape(voltageNumber)}</tspan> <tspan class="voltage-unit" data-role="voltage-unit">${this._escape(voltageUnit)}</tspan></text>
+              <text x="250" y="286" text-anchor="middle" class="voltage-label">${this._escape(this._t('voltage'))}</text>
+              <text x="${gaugePoint(GAUGE.start)[0].toFixed(0)}" y="322" text-anchor="middle" class="gauge-end">${GAUGE.min}</text>
+              <text x="${gaugePoint(GAUGE.start + GAUGE.span)[0].toFixed(0)}" y="322" text-anchor="middle" class="gauge-end">${GAUGE.max}</text>
             </svg>
             <div class="state-indicator ${status.stateClass}" data-role="state-indicator"><span class="check-mark">${this._svg('check')}</span><span data-role="state-label">${this._escape(status.status)}</span></div>
           </div>
@@ -1156,15 +1164,12 @@
           </div>
         </div>
         <div class="bottom-status">
-          <div class="card info info-system"><span class="symbol green">${this._svg('plug')}</span><div class="info-system-copy">
-            <div class="info-system-section"><div class="small">${this._escape(this._t('pzem_link'))}</div><strong data-role="home-mains" class="${status.pzemOnline ? 'good' : ''}">${this._escape(mainsText)}</strong></div>
-            <div class="info-system-section"><div class="small">${this._escape(this._t('esp_power_connection'))}</div><strong data-role="esp-power-label">${this._escape(espPower.label)}</strong><div class="small info-system-note" data-role="esp-power-note">${this._escape(espPower.note)}</div></div>
-          </div></div>
+          <div class="card info info-system"><span class="symbol green">${this._svg('plug')}</span><div><div class="small">${this._escape(this._t('pzem_link'))}</div><strong data-role="home-mains" class="${status.pzemOnline ? 'good' : ''}">${this._escape(mainsText)}</strong></div></div>
           <div class="card info"><span class="symbol blue">${this._svg('plug')}</span><div><div class="small">${this._escape(this._t('source'))}</div><strong data-role="home-source">${this._escape(sourceText)}</strong></div></div>
           <div class="card info"><span class="symbol green">${this._svg('shield')}</span><div><div class="small">${this._escape(this._t('voltage_state'))}</div><strong data-role="home-voltage-quality" class="${status.pzemOnline && !status.alarm && !status.qualityUnknown ? 'good' : status.alarm ? 'alarm' : ''}">${this._escape(voltageQuality)}</strong></div></div>
           <div class="card info"><span class="symbol amber">${this._svg('coin')}</span><div><div class="small">${this._escape(this._t('today_consumption'))}</div><strong data-value-key="energy_today" data-value-digits="2">${this._escape(energy)}</strong><div class="small cost-line">≈ <span data-value-key="cost_today" data-value-digits="2">${this._escape(cost)}</span></div></div></div>
         </div>
-        <div class="card banner ${status.stateClass}" data-role="home-banner"><span class="banner-check">${this._svg('check')}</span><strong data-role="home-banner-label">${this._escape(status.banner)}</strong><span class="house-art" aria-hidden="true">${this._houseArt()}</span></div>
+        <div class="card banner ${status.stateClass}" data-role="home-banner"><span class="banner-check">${this._svg('check')}</span><div class="banner-main"><strong data-role="home-banner-label">${this._escape(status.banner)}</strong></div><div class="banner-system"><span class="banner-system-label">${this._escape(this._t('esp_power_connection'))}</span><strong data-role="esp-power-label">${this._escape(espPower.label)}</strong><span class="banner-system-note" data-role="esp-power-note">${this._escape(espPower.note)}</span></div><span class="house-art" aria-hidden="true">${this._houseArt()}</span></div>
       </section>`;
     }
 
@@ -1304,13 +1309,74 @@
       const labels = ['hour', 'day', 'week', 'month'];
       const buttons = labels.map((period) => `<button class="period-button ${this._historyRange === period ? 'active' : ''}" data-period="${period}" aria-pressed="${this._historyRange === period}">${this._escape(this._t(period))}</button>`).join('');
       const metricButtons = Object.keys(CHART_METRICS).map((metric) => `<button class="period-button ${this._chartMetric === metric ? 'active' : ''}" data-metric="${metric}" aria-pressed="${this._chartMetric === metric}">${this._escape(this._t(metric))}</button>`).join('');
-      return `<section class="card chart-card detailed-chart"><div class="chart-head"><h2><span class="chart-icon">${this._svg('chart')}</span>${this._escape(this._t('chart_title'))}</h2><div class="periods" role="group" aria-label="${this._escape(this._t('chart_title'))}">${metricButtons}</div><div class="periods" role="group" aria-label="${this._escape(this._t('hour'))}">${buttons}</div></div><div class="chart-stats" data-role="chart-stats">${this._chartStatsHtml()}</div><div class="chart-plot" data-role="chart-plot">${this._chartSvg()}</div>${this._chartScrubberHtml()}${this._chartReadingsHtml()}</section>`;
+      return `<section class="card chart-card detailed-chart"><div class="chart-head"><h2><span class="chart-icon">${this._svg('chart')}</span>${this._escape(this._t('chart_title'))}</h2><div class="periods" role="group" aria-label="${this._escape(this._t('chart_title'))}">${metricButtons}</div><div class="periods" role="group" aria-label="${this._escape(this._t('hour'))}">${buttons}</div><div class="chart-tools"><button class="chart-zoom-button" type="button" data-chart-zoom="out" aria-label="${this._escape(this._t('chart_zoom_out'))}" title="${this._escape(this._t('chart_zoom_out'))}">−</button><button class="chart-zoom-button" type="button" data-chart-zoom="in" aria-label="${this._escape(this._t('chart_zoom_in'))}" title="${this._escape(this._t('chart_zoom_in'))}">+</button>${this._chartDateRangeHtml()}</div></div><div class="chart-stats" data-role="chart-stats">${this._chartStatsHtml()}</div><div class="chart-plot" data-role="chart-plot">${this._chartSvg()}</div>${this._chartScrubberHtml()}${this._chartReadingsHtml()}</section>`;
+    }
+
+    _formatDateTimeInput(timestamp) {
+      if (!Number.isFinite(timestamp)) return '';
+      const when = new Date(timestamp);
+      return new Date(timestamp - when.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    }
+
+    _chartDateRangeHtml() {
+      const { start, end } = this._historyBounds();
+      return `<details class="chart-date-range"><summary>${this._escape(this._t('chart_date_range'))}</summary><div class="chart-date-range-panel"><label>${this._escape(this._t('chart_from'))}<input type="datetime-local" data-chart-date-start value="${this._formatDateTimeInput(start)}"></label><label>${this._escape(this._t('chart_to'))}<input type="datetime-local" data-chart-date-end value="${this._formatDateTimeInput(end)}"></label><button type="button" class="chart-date-apply" data-chart-date-apply>${this._escape(this._t('chart_apply'))}</button><small data-role="chart-date-error" aria-live="polite"></small></div></details>`;
+    }
+
+    _updateChartDateRangeControls() {
+      const bounds = this._historyBounds();
+      const start = this.shadowRoot.querySelector('[data-chart-date-start]');
+      const end = this.shadowRoot.querySelector('[data-chart-date-end]');
+      if (start) start.value = this._formatDateTimeInput(bounds.start);
+      if (end) end.value = this._formatDateTimeInput(bounds.end);
+      const error = this.shadowRoot.querySelector('[data-role="chart-date-error"]');
+      if (error) error.textContent = '';
+    }
+
+    _applyChartDateRange() {
+      const startValue = this.shadowRoot.querySelector('[data-chart-date-start]')?.value;
+      const endValue = this.shadowRoot.querySelector('[data-chart-date-end]')?.value;
+      const start = startValue ? new Date(startValue).getTime() : NaN;
+      const end = endValue ? new Date(endValue).getTime() : NaN;
+      const error = this.shadowRoot.querySelector('[data-role="chart-date-error"]');
+      if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || end > Date.now()) {
+        if (error) error.textContent = this._t('chart_date_error');
+        return;
+      }
+      if (error) error.textContent = '';
+      this._setCustomChartRange(start, end);
+    }
+
+    _setCustomChartRange(start, end) {
+      if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return;
+      if (this._historyRange !== 'custom') this._historyReturnRange = this._historyRange;
+      this._historyCustomRange = { start, end };
+      this._historyRange = 'custom';
+      this._clearChartScrub();
+      this._updateChartDateRangeControls();
+      const picker = this.shadowRoot.querySelector('.chart-date-range');
+      if (picker) picker.open = false;
+      this._reloadChartHistory();
+    }
+
+    _zoomChart(direction) {
+      const bounds = this._chartTimeBounds();
+      if (!bounds || !Number.isFinite(bounds.tStart) || !Number.isFinite(bounds.tEnd) || bounds.rangeMs <= 0) return;
+      const minRange = 60e3;
+      const maxRange = 366 * 24 * 3600e3;
+      const nextRange = Math.max(minRange, Math.min(maxRange, bounds.rangeMs * (direction === 'in' ? 0.5 : 2)));
+      const center = (bounds.tStart + bounds.tEnd) / 2;
+      let start = center - nextRange / 2;
+      let end = center + nextRange / 2;
+      if (end > Date.now()) { start -= end - Date.now(); end = Date.now(); }
+      this._setCustomChartRange(start, end);
     }
 
     _chartScrubberHtml() {
       const selected = this._scrubTime !== null;
       const label = selected ? this._formatChartTimestamp(this._scrubTime) : this._t('chart_select_time');
-      return `<div class="chart-scrubber"><span class="chart-scrubber-label" data-role="chart-selected-time">${this._escape(label)}</span><input type="range" min="0" max="1000" step="1" value="${this._chartScrubPosition()}" data-role="chart-scrubber" aria-label="${this._escape(this._t('chart_select_time'))}" ${this._chartPts.length ? '' : 'disabled'}><button class="chart-live-button" type="button" data-chart-live ${selected ? '' : 'disabled'}>${this._escape(this._t('chart_live'))}</button></div>`;
+      const canReturnToLive = selected || this._historyRange === 'custom';
+      return `<div class="chart-scrubber"><span class="chart-scrubber-label" data-role="chart-selected-time">${this._escape(label)}</span><input type="range" min="0" max="1000" step="1" value="${this._chartScrubPosition()}" data-role="chart-scrubber" aria-label="${this._escape(this._t('chart_select_time'))}" ${this._chartPts.length ? '' : 'disabled'}><button class="chart-live-button" type="button" data-chart-live ${canReturnToLive ? '' : 'disabled'}>${this._escape(this._t('chart_live'))}</button></div>`;
     }
 
     _chartReadingsHtml() {
@@ -1372,12 +1438,24 @@
         : this._chartReadingsError || !hasValue ? this._t('chart_readings_unavailable') : '';
     }
 
+    _formatChartStatTimestamp(timestamp) {
+      if (!Number.isFinite(timestamp)) return '';
+      const when = new Date(timestamp);
+      if (this._historyRange === 'week' || this._historyRange === 'month') {
+        return when.toLocaleDateString(this._locale(), { day: '2-digit', month: '2-digit', year: 'numeric' });
+      }
+      if (this._historyRange === 'custom' && this._historyCustomRange?.end - this._historyCustomRange?.start >= 24 * 3600e3) {
+        return when.toLocaleString(this._locale(), { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
+      }
+      return when.toLocaleTimeString(this._locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
+    }
+
     _chartStatsHtml() {
       const metricKey = this._chartMetric || 'power';
       const metric = CHART_METRICS[metricKey];
       const data = this._chartData();
-      const plottedValues = data?.series.map((point) => point.v).filter(Number.isFinite) || [];
-      const minimumValues = metricKey === 'power' ? plottedValues.filter((value) => value > 0) : plottedValues;
+      const plottedPoints = data?.series.filter((point) => Number.isFinite(point.v)) || [];
+      const minimumPoints = metricKey === 'power' ? plottedPoints.filter((point) => point.v > 0) : plottedPoints;
       const historyValues = (Array.isArray(this._history) ? this._history : []).map((item) => item.value).filter(Number.isFinite);
       const fmt = (value) => value.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits });
       const formatMinimum = (value) => {
@@ -1389,15 +1467,23 @@
         }
         return value.toLocaleString(this._locale(), { maximumFractionDigits: 1 });
       };
-      const min = minimumValues.length ? Math.min(...minimumValues) : null;
-      const max = plottedValues.length ? Math.max(...plottedValues) : null;
+      const minPoint = minimumPoints.reduce((best, point) => !best || point.v < best.v ? point : best, null);
+      const maxPoint = plottedPoints.reduce((best, point) => !best || point.v > best.v ? point : best, null);
+      const min = minPoint?.v ?? null;
+      const max = maxPoint?.v ?? null;
       const avg = historyValues.length ? historyValues.reduce((sum, value) => sum + value, 0) / historyValues.length : null;
       const unit = metric.unit(this._lang());
-      const cell = (label, value, formatter = fmt) => `<div><span>${this._escape(label)}</span><b>${this._escape(value === null ? '—' : `${formatter(value)} ${unit}`)}</b></div>`;
-      return cell(this._t('stat_min'), min, formatMinimum) + cell(this._t('stat_avg'), avg) + cell(this._t('stat_max'), max);
+      const cell = (label, value, formatter = fmt, point = null) => {
+        const timestamp = Number.isFinite(point?.t) ? `<small>${this._escape(this._formatChartStatTimestamp(point.t))}</small>` : '';
+        return `<div><span>${this._escape(label)}</span><b>${this._escape(value === null ? '—' : `${formatter(value)} ${unit}`)}</b>${timestamp}</div>`;
+      };
+      return cell(this._t('stat_min'), min, formatMinimum, minPoint) + cell(this._t('stat_avg'), avg) + cell(this._t('stat_max'), max, fmt, maxPoint);
     }
 
     _historyBounds(range = this._historyRange, now = Date.now()) {
+      if (range === 'custom' && this._historyCustomRange) {
+        return { start: this._historyCustomRange.start, end: this._historyCustomRange.end };
+      }
       const end = new Date(now);
       let start;
       if (range === 'hour') {
@@ -1411,6 +1497,123 @@
       return { start: start.getTime(), end: end.getTime() };
     }
 
+    _historyWindowToken() {
+      if (this._historyRange !== 'custom' || !this._historyCustomRange) return '';
+      return `:custom:${Math.round(this._historyCustomRange.start)}:${Math.round(this._historyCustomRange.end)}`;
+    }
+
+    _chartPanShiftForDelta(deltaX, rangeMs, plotWidth) {
+      if (![deltaX, rangeMs, plotWidth].every(Number.isFinite) || rangeMs <= 0 || plotWidth <= 0) return 0;
+      return Math.round((deltaX * rangeMs) / plotWidth);
+    }
+
+    _chartPointerDistance(points) {
+      if (!points || points.length < 2) return 1;
+      const dx = points[1].x - points[0].x;
+      const dy = points[1].y - points[0].y;
+      return Math.max(1, Math.hypot(dx, dy));
+    }
+
+    _chartPointerDown(event) {
+      const plot = event.target?.closest?.('[data-role="chart-plot"]');
+      if (!plot || !this._chartPts.length) return;
+      const pointerId = event.pointerId;
+      const point = { x: event.clientX, y: event.clientY };
+      if (event.pointerType === 'touch') {
+        if (this._chartPointers.size >= 2) return;
+        this._chartPointers.set(pointerId, point);
+        try { plot.setPointerCapture(pointerId); } catch (_error) {}
+        if (this._chartPointers.size === 2) this._beginChartPan(plot, 'touch', [...this._chartPointers.keys()]);
+        return;
+      }
+      if (event.button !== 0) return;
+      this._chartPointers.clear();
+      this._chartPointers.set(pointerId, point);
+      this._beginChartPan(plot, event.pointerType || 'mouse', [pointerId]);
+      try { plot.setPointerCapture(pointerId); } catch (_error) {}
+      event.preventDefault?.();
+    }
+
+    _beginChartPan(plot, pointerType, pointerIds) {
+      const chart = plot.querySelector('svg.chart');
+      const bounds = this._chartTimeBounds();
+      if (!chart || !bounds?.rangeMs || !pointerIds.length) return;
+      const rect = chart.getBoundingClientRect();
+      const chartWidth = Number(chart.dataset.chartW) || rect.width;
+      const x0 = Number(chart.dataset.chartX0) || 0;
+      const x1 = Number(chart.dataset.chartX1) || chartWidth;
+      const plotWidth = rect.width * (x1 - x0) / chartWidth;
+      const points = pointerIds.map((id) => this._chartPointers.get(id)).filter(Boolean);
+      if (!rect.width || !plotWidth || points.length !== pointerIds.length) return;
+      const startX = points.reduce((sum, current) => sum + current.x, 0) / points.length;
+      this._chartPan = {
+        plot, pointerType, pointerIds, startX, deltaX: 0,
+        rangeMs: bounds.rangeMs, plotWidth, startDistance: pointerType === 'touch' ? this._chartPointerDistance(points) : 1,
+        currentDistance: pointerType === 'touch' ? this._chartPointerDistance(points) : 1,
+        tStart: bounds.tStart, tEnd: bounds.tEnd,
+      };
+      plot.classList.add('is-panning');
+    }
+
+    _chartPointerMove(event) {
+      const pan = this._chartPan;
+      if (!pan || !pan.pointerIds.includes(event.pointerId)) return;
+      this._chartPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      const points = pan.pointerIds.map((id) => this._chartPointers.get(id)).filter(Boolean);
+      if (points.length !== pan.pointerIds.length) return;
+      const currentX = points.reduce((sum, point) => sum + point.x, 0) / points.length;
+      pan.deltaX = currentX - pan.startX;
+      pan.currentDistance = pan.pointerType === 'touch' ? this._chartPointerDistance(points) : 1;
+      event.preventDefault?.();
+    }
+
+    _chartPointerEnd(event) {
+      const pan = this._chartPan;
+      if (!this._chartPointers.has(event.pointerId)) return;
+      if (pan?.pointerIds.includes(event.pointerId)) {
+        this._chartPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        const points = pan.pointerIds.map((id) => this._chartPointers.get(id)).filter(Boolean);
+        if (points.length === pan.pointerIds.length) {
+          const currentX = points.reduce((sum, point) => sum + point.x, 0) / points.length;
+          pan.deltaX = currentX - pan.startX;
+          pan.currentDistance = pan.pointerType === 'touch' ? this._chartPointerDistance(points) : 1;
+        }
+        this._finishChartPan();
+      }
+      this._chartPointers.delete(event.pointerId);
+    }
+
+    _finishChartPan() {
+      const pan = this._chartPan;
+      if (!pan) return;
+      this._chartPan = null;
+      pan.plot.classList.remove('is-panning');
+      if (Math.abs(pan.deltaX) < 8 && Math.abs((pan.currentDistance || 1) - (pan.startDistance || 1)) < 8) return;
+      const minRange = 60e3;
+      const maxRange = 366 * 24 * 3600e3;
+      const scale = pan.pointerType === 'touch' && pan.currentDistance > 0 ? pan.startDistance / pan.currentDistance : 1;
+      const nextRange = Math.max(minRange, Math.min(maxRange, pan.rangeMs * scale));
+      const shift = this._chartPanShiftForDelta(pan.deltaX, pan.rangeMs, pan.plotWidth);
+      const center = (pan.tStart + pan.tEnd) / 2 - shift;
+      let start = center - nextRange / 2;
+      let end = center + nextRange / 2;
+      if (end > Date.now()) { start -= end - Date.now(); end = Date.now(); }
+      this._setCustomChartRange(start, end);
+    }
+
+    _reloadChartHistory() {
+      this._historyRequest += 1;
+      this._historyLoading = false;
+      this._historyKey = '';
+      this._history = [];
+      this._voltageHistoryRequest += 1;
+      this._voltageHistoryLoading = false;
+      this._voltageHistoryKey = '';
+      this._voltageHistory = [];
+      this._refreshChart();
+      this._ensureHistory();
+    }
+
     _chartData(history = this._history, metricKey = this._chartMetric || 'power') {
       const width = Math.max(280, Math.round(this._chartW || 985));
       const { start: tStart, end: tEnd } = this._historyBounds(this._historyRange);
@@ -1419,7 +1622,7 @@
       if (!series.length) return null;
       const current = this._num(metricKey);
       const [minValid, maxValid] = CHART_METRICS[metricKey].plausible;
-      if (current !== null && current >= minValid && current <= maxValid) series.push({ t: tEnd, v: current });
+      if (current !== null && current >= minValid && current <= maxValid && tEnd >= Date.now() - 60e3) series.push({ t: tEnd, v: current });
       return { series, tStart, tEnd, rangeMs };
     }
 
@@ -1540,7 +1743,7 @@
         const y = Y(tickValue);
         return `<path d="M${x0} ${y.toFixed(1)}H${x1}"/><text x="${x0 - 10}" y="${(y + 4).toFixed(1)}" text-anchor="end">${this._escape(tickValue.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits }))}${index === scale.count ? ` ${unit}` : ''}</text>`;
       }).join('');
-      const longRange = this._historyRange === 'week' || this._historyRange === 'month';
+      const longRange = this._historyRange === 'week' || this._historyRange === 'month' || this._historyRange === 'custom' && rangeMs >= 24 * 3600e3;
       const vertical = [0, 1, 2, 3, 4].map((index) => {
         const x = x0 + index * ((x1 - x0) / 4);
         const time = new Date(tStart + rangeMs * index / 4);
@@ -1604,7 +1807,7 @@
       const label = this.shadowRoot.querySelector('[data-role="chart-selected-time"]');
       if (label) label.textContent = this._scrubTime === null ? this._t('chart_select_time') : this._formatChartTimestamp(this._scrubTime);
       const live = this.shadowRoot.querySelector('[data-chart-live]');
-      if (live) live.disabled = this._scrubTime === null;
+      if (live) live.disabled = this._scrubTime === null && this._historyRange !== 'custom';
     }
 
     _selectChartPoint(point) {
@@ -1751,16 +1954,16 @@
     _ensureHistory() {
       if (!this._hass || !this._config || this._activeTab !== 'params') return;
       const metricKey = this._chartMetric || 'power';
-      const key = `${this._historyRange}:${metricKey}:${this._entity(metricKey)}`;
+      const key = `${this._historyRange}${this._historyWindowToken()}:${metricKey}:${this._entity(metricKey)}`;
       if (key !== this._historyKey || Date.now() - this._historyAt >= 60000) this._loadHistory(key);
       if (metricKey === 'voltage') this._syncVoltageHistoryFromChart();
       else this._ensureVoltageHistory();
     }
 
-    _voltageHistoryCacheKey() { return `${this._historyRange}:${this._entity('voltage')}`; }
+    _voltageHistoryCacheKey() { return `${this._historyRange}${this._historyWindowToken()}:${this._entity('voltage')}`; }
 
     _syncVoltageHistoryFromChart() {
-      const chartKey = `${this._historyRange}:voltage:${this._entity('voltage')}`;
+      const chartKey = `${this._historyRange}${this._historyWindowToken()}:voltage:${this._entity('voltage')}`;
       if (this._historyKey !== chartKey) return false;
       this._voltageHistory = this._history;
       this._voltageHistoryKey = this._voltageHistoryCacheKey();
@@ -1788,7 +1991,7 @@
         .sort((a, b) => a.time - b.time);
     }
 
-    async _loadHistory(key = `${this._historyRange}:${this._chartMetric || 'power'}:${this._entity(this._chartMetric || 'power')}`) {
+    async _loadHistory(key = `${this._historyRange}${this._historyWindowToken()}:${this._chartMetric || 'power'}:${this._entity(this._chartMetric || 'power')}`) {
       if (!this._hass || this._historyLoading) return;
       this._historyLoading = true;
       this._historyError = false;
@@ -2220,6 +2423,8 @@
           <circle cx="106" cy="114" r="5" fill="url(#ledGlowBlue)"/>
           <circle cx="106" cy="114" r="1.8" fill="#12b5ff"/>
         </svg>
+
+
       `;
     }
 
@@ -2266,7 +2471,7 @@
         this._finishDialog(dialogAction.dataset.dialogAction === 'confirm' || dialogAction.dataset.dialogAction === 'close');
         return;
       }
-      const target = event.target?.closest?.('[data-tab], [data-period], [data-metric], [data-action], [data-number-save], [data-switch], [data-chart-live]');
+      const target = event.target?.closest?.('[data-tab], [data-period], [data-metric], [data-action], [data-number-save], [data-switch], [data-chart-live], [data-chart-zoom], [data-chart-date-apply]');
       if (!target) return;
       if (target.dataset.tab) {
         if (target.dataset.tab === this._activeTab) return;
@@ -2291,10 +2496,28 @@
         return;
       }
       if (target.dataset.chartLive !== undefined) {
+        const wasCustom = this._historyRange === 'custom';
+        if (wasCustom) {
+          this._historyRange = this._historyReturnRange || 'hour';
+          this._historyCustomRange = null;
+          this._historyKey = '';
+          this._history = [];
+          this._voltageHistoryKey = '';
+          this._voltageHistory = [];
+          this.shadowRoot.querySelectorAll('[data-period]').forEach((button) => {
+            const active = button.dataset.period === this._historyRange;
+            button.classList.toggle('active', active);
+            button.setAttribute('aria-pressed', String(active));
+          });
+          this._updateChartDateRangeControls();
+        }
         this._clearChartScrub();
-        this._updateChartCurrent();
+        if (wasCustom) this._reloadChartHistory();
+        else this._updateChartCurrent();
         return;
       }
+      if (target.dataset.chartZoom) { this._zoomChart(target.dataset.chartZoom); return; }
+      if (target.dataset.chartDateApply !== undefined) { this._applyChartDateRange(); return; }
       if (target.dataset.metric) {
         if (this._chartMetric === target.dataset.metric) return;
         this._clearChartScrub();
@@ -2320,6 +2543,7 @@
         this._voltageHistoryRequest += 1;
         this._voltageHistoryLoading = false;
         this._historyRange = target.dataset.period;
+        this._historyCustomRange = null;
         this._historyKey = '';
         this._history = [];
         this._voltageHistoryKey = '';
@@ -2329,6 +2553,7 @@
           button.classList.toggle('active', active);
           button.setAttribute('aria-pressed', String(active));
         });
+        this._updateChartDateRangeControls();
         this._refreshChart();
         this._ensureHistory();
         return;
@@ -2695,7 +2920,7 @@
         .bottom-status{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:13px;margin-top:14px}.info{padding:17px 12px;min-height:128px;display:flex;align-items:center;justify-content:center;gap:12px;min-width:0}.info .symbol{font-size:38px;flex:none;color:var(--green);filter:drop-shadow(0 0 10px #35ed9166)}.info .symbol .icon{width:42px;height:42px}.info .symbol.blue{color:#91b8e9}.info .symbol.amber{color:var(--amber)}.info .small{color:#b6c9e2;font-size:16px}.info strong{display:block;font-size:20px;margin-top:5px;overflow-wrap:anywhere}.info .good{color:var(--green)}.info .cost-line{margin-top:3px}
         .banner{margin-top:14px;padding:18px 24px;min-height:88px;display:flex;align-items:center;gap:18px;border:1px solid #39d77e;background:linear-gradient(90deg,#0c302a,#0c2631 68%,#102b42);box-shadow:0 0 24px #28d87920}.banner.inverter{border-color:#ffb51b;background:linear-gradient(90deg,#382711,#18283a 80%);box-shadow:0 0 24px #ffb51b20}.banner.pzem-offline{border-color:#ffb51b;background:linear-gradient(90deg,#382711,#18283a 80%);box-shadow:0 0 24px #ffb51b20}.banner.alarm,.banner.offline{border-color:#ff526d;background:linear-gradient(90deg,#3a1420,#18283a 80%);box-shadow:0 0 24px #ff526d20}.banner.unknown{border-color:#53677e;background:linear-gradient(90deg,#1a2939,#101e30)}.banner-check{width:48px;height:48px;border-radius:50%;background:var(--green);color:#052116;display:grid;place-items:center;flex:none;box-shadow:0 0 18px #35ed9166}.banner-check .icon{width:36px;height:36px}.banner.inverter .banner-check{background:var(--amber);color:#392400}.banner.pzem-offline .banner-check{background:var(--amber);color:#392400}.banner.alarm .banner-check,.banner.offline .banner-check{background:var(--red);color:#390711}.banner.unknown .banner-check{background:#53677e;color:#d6e5f6}.banner strong{color:#4df29a;font-size:clamp(17px,2cqw,24px)}.banner.inverter strong{color:#ffd078}.banner.pzem-offline strong{color:#ffd078}.banner.alarm strong,.banner.offline strong{color:#ff8a9a}.banner.unknown strong{color:#b4c7df}.house-art{margin-left:auto;width:130px;max-width:22%;flex:none;filter:drop-shadow(0 0 11px #1b8fff)}.house-art svg{display:block;width:100%;height:auto}
         .detail-panel{padding:22px;margin-top:2px}.detail-panel h2{margin:0 0 18px;font-size:25px}.detail-panel h2.subheading{margin:24px 0 14px;font-size:19px}.detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.detail{padding:16px;border-radius:16px;background:#13243a;border:1px solid #2b4562;min-width:0}.detail>span,.detail label>span{display:block;color:#9fb5d1;font-size:14px;margin-bottom:7px}.detail b{font-size:22px;overflow-wrap:anywhere}.setting{display:flex;align-items:end;gap:10px}.setting label{flex:1;min-width:0}.setting-input{display:flex;align-items:center;gap:8px}.setting-input input{width:100%;min-width:0;background:#091727;border:1px solid #37526f;border-radius:9px;color:var(--text);padding:10px;font:inherit;font-size:18px}.setting-input small{color:#9fb5d1;white-space:nowrap}.save-button,.switch-button,.action-button{border:1px solid #278ed0;background:#092645;color:#d7efff;border-radius:10px;padding:9px 12px;font:inherit;cursor:pointer}.save-button:hover,.switch-button:hover,.action-button:hover{background:#0c3962}.save-button:disabled,.switch-button:disabled,.action-button:disabled{opacity:.45;cursor:not-allowed}.switch-setting{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.switch-setting>span{color:#9fb5d1;font-size:14px}.switch-setting>strong{font-size:16px}.switch-button{grid-column:1/-1;display:flex;align-items:center;gap:8px;justify-content:center}.switch-button .icon{width:20px;height:20px}.switch-button.on{border-color:#35ed91;color:#35ed91}.action-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.action-button{min-height:68px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;font-size:13px;border-color:#2b8ed0}.action-button span{font-size:22px;color:#45bdff}.action-button .icon{width:25px;height:25px}.footer{display:flex;justify-content:space-between;gap:10px;margin:14px 2px 0;color:#6885a2;font-size:11px}.footer span:last-child{max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-        .chart-head .periods+.periods{margin-left:0}.chart-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:4px 0 10px}.chart-stats>div{background:#13243a;border:1px solid #2b4562;border-radius:14px;padding:9px 12px;min-width:0}.chart-stats span{display:block;color:#9fb5d1;font-size:13px}.chart-stats b{display:block;font-size:19px;margin-top:3px;overflow-wrap:anywhere}
+        .chart-head .periods+.periods{margin-left:0}.chart-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:4px 0 10px}.chart-stats>div{background:#13243a;border:1px solid #2b4562;border-radius:14px;padding:9px 12px;min-width:0}.chart-stats span{display:block;color:#9fb5d1;font-size:13px}.chart-stats b{display:block;font-size:19px;margin-top:3px;overflow-wrap:anywhere}.chart-stats small{display:block;margin-top:3px;color:#86a1c1;font-size:12px;line-height:1.25}
         .voltage-brand{display:flex;align-items:flex-start;gap:10px;align-self:flex-start;width:100%;min-width:0;max-width:100%;margin-bottom:0;flex-wrap:wrap}.voltage-brand .logo{flex:none}.voltage-brand .brand{flex:1 1 auto}.voltage-brand .brand h1{margin:0 0 2px;line-height:1.15;font-size:clamp(20px,2.6cqw,32px)}.voltage-brand .brand p{font-size:clamp(13px,1.5cqw,16px);line-height:1.2}.voltage-brand .home-status{flex:none;align-self:flex-start;gap:8px;margin-left:auto;max-width:100%}.voltage-brand .home-status .connection small{margin-top:2px}.voltage .voltage-gauge{margin:0}.main-right{display:flex;flex-direction:column;gap:10px;min-width:0}.main-right>.metrics{flex:1}
         @container (min-width:960px){.shell.home-active>.tabs-top{display:none}.shell:not(.home-active)>.tabs-top{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:45%;min-width:360px;max-width:560px;margin:0 0 14px auto;padding:8px;gap:6px}.shell:not(.home-active)>.tabs-top .tab{padding:15px 8px}.shell:not(.home-active)>.page-layout{display:block}.shell:not(.home-active)>.page-layout>.tabs-side{display:none}.home-view .main-grid{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);grid-template-rows:auto;align-items:stretch}.home-view .main-grid>.voltage{grid-column:1;grid-row:1}.home-view .main-grid>.main-right{grid-column:2;grid-row:1}.home-view .main-right>.tabs-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:0;align-self:stretch;width:100%}}
         @container (max-width:959px){.home-view .main-grid{grid-template-columns:minmax(0,1fr);align-items:start}.home-view .main-right{display:contents}.home-view .main-right>.tabs-side{display:none}.home-view .main-grid>.voltage{grid-column:1;grid-row:1}.home-view .main-right>.metrics{grid-column:1;grid-row:2}.shell:not(.home-active)>.tabs-top{display:grid}.shell:not(.home-active)>.page-layout{display:block}.shell:not(.home-active)>.page-layout>.tabs-side{display:none}}
@@ -2779,7 +3004,7 @@
         .chart-head h2{font-size:22px;font-weight:750}
         .periods{background:#0c1a2b;border:1px solid #ffffff12;box-shadow:inset 0 2px 5px #0006}
         .period-button{font-weight:600}
-        .chart-plot{touch-action:pan-y;position:relative}
+        .chart-plot{touch-action:none;position:relative;cursor:grab;user-select:none}.chart-plot.is-panning{cursor:grabbing}
         .chart{overflow:visible}
         .chart-grid{stroke:#7fb2e133}
         .chart-grid text{fill:#8fa9c9;font-size:12.5px;letter-spacing:.2px}
@@ -2939,8 +3164,8 @@
         @container (max-width:520px){.chart-reading-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.chart-reading{padding:10px}.chart-reading strong{font-size:16px}}
 
         .voltage{padding:5px 12px 4px;justify-content:space-between}
-        .shell:not(.home-active)>.header{align-items:flex-start;padding-bottom:2px}
-        @container (max-width:959px){.shell:not(.home-active)>.header{padding-bottom:2px}.shell:not(.home-active)>.header>.tabs-top{margin-bottom:0}}
+        .shell:not(.home-active)>.header{align-items:flex-start;padding-bottom:1px}
+        @container (max-width:959px){.shell:not(.home-active)>.header{padding-bottom:1px}.shell:not(.home-active)>.header>.tabs-top{margin-bottom:0}}
         @container (max-width:760px){.voltage{padding:5px 10px 4px}}
         .voltage-brand,.voltage-gauge,.state-indicator{transform:translateY(-4px)}
         .action-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
@@ -2951,7 +3176,7 @@
           .shell{padding:10px;border-radius:22px}
           .header{gap:9px;padding:4px 2px 10px}
           .shell.home-active>.tabs-top{margin:0 0 10px}
-          .shell:not(.home-active)>.header>.tabs-top{margin:0 0 8px}
+          .shell:not(.home-active)>.header>.tabs-top{margin:0 0 4px}
           .tabs{gap:4px;padding:4px;margin-bottom:10px;border-radius:17px}
           .tab{min-height:44px;gap:4px;padding:8px 3px;font-size:12px;border-radius:13px}
           .home-view .main-grid{grid-template-columns:minmax(0,1fr);gap:10px}
@@ -2983,12 +3208,6 @@
           .info .symbol .icon{width:21px;height:21px}
           .info .small{font-size:11px;line-height:1.25}
           .info strong{font-size:14px;line-height:1.25}
-          .info-system{grid-column:1/-1;min-height:0;align-items:flex-start}
-          .info-system .symbol{width:38px;height:38px}
-          .info-system-copy{flex:1;min-width:0}
-          .info-system-section+.info-system-section{margin-top:9px;padding-top:8px;border-top:1px solid #ffffff14}
-          .info-system-section strong{margin-top:3px}
-          .info-system-section .info-system-note{margin-top:3px;font-size:11px;line-height:1.3}
           .banner{margin-top:12px;padding:12px 14px;min-height:68px;gap:10px}
           .banner-check{width:34px;height:34px}
           .banner-check .icon{width:25px;height:25px}
@@ -3063,7 +3282,6 @@
           .info .symbol{width:32px;height:32px}
           .info .symbol .icon{width:19px;height:19px}
           .info strong{font-size:13px}
-          .info-system{padding:11px}
           .detail-panel{padding:16px 11px}
           .detail-grid{gap:8px}
           .detail{padding:11px 9px 11px 13px}
@@ -3079,13 +3297,48 @@
         }
         @container (max-width:360px){
           .bottom-status{grid-template-columns:1fr}
-          .info-system{grid-column:auto}
           .detail-grid:not(.settings-grid){grid-template-columns:1fr}
           .banner .house-art{display:none}
           .tabs{gap:2px;padding:3px}
           .tab{padding:8px 1px;font-size:10px}
         }
 
+        .chart-tools{display:flex;align-items:center;gap:6px;margin-left:auto}
+        .chart-zoom-button,.chart-date-apply{min-width:38px;min-height:36px;border:1px solid #278ed0;border-radius:10px;background:#092645;color:#d7efff;font:inherit;font-weight:700;cursor:pointer}
+        .chart-zoom-button:hover,.chart-date-apply:hover{background:#0c3962}
+        .chart-date-range{position:relative;color:#d7e6f6}
+        .chart-date-range summary{list-style:none;min-height:36px;display:flex;align-items:center;padding:0 12px;border:1px solid #37526f;border-radius:10px;background:#13243a;cursor:pointer;font-size:13px}
+        .chart-date-range summary::-webkit-details-marker{display:none}
+        .chart-date-range-panel{display:flex;align-items:end;flex-wrap:wrap;gap:9px;padding:12px;margin-top:8px;border:1px solid #37526f;border-radius:14px;background:#0b192a}
+        .chart-date-range-panel label{display:grid;gap:4px;color:#9fb5d1;font-size:12px}
+        .chart-date-range-panel input{min-width:190px;min-height:36px;padding:6px 8px;border:1px solid #37526f;border-radius:9px;background:#091727;color:#eef6ff;font:inherit;color-scheme:dark}
+        .chart-date-range-panel small{flex-basis:100%;color:#ff9ba8;font-size:12px}
+        .chart-date-apply{padding:0 14px}
+        .banner-main{flex:1 1 38%;min-width:0}
+        .banner-main strong{display:block;max-width:none}
+        .banner-system{flex:1 1 35%;min-width:0;display:grid;gap:3px;padding-left:16px;border-left:1px solid #ffffff2c}
+        .banner-system-label{color:#b7d8d0;font-size:12px;letter-spacing:.15px}
+        .banner-system strong{display:block;color:#e7fff3!important;font-size:clamp(14px,1.4cqw,18px)!important;line-height:1.25;text-shadow:none!important}
+        .banner-system-note{color:#b6cec9;font-size:12px;line-height:1.3}
+        .banner.inverter .banner-system strong,.banner.pzem-offline .banner-system strong{color:#fff1d0!important}
+        .banner.alarm .banner-system strong,.banner.offline .banner-system strong{color:#ffe0e5!important}
+        .chart-plot{touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab}
+        .chart-plot.is-panning{cursor:grabbing}
+        @container (max-width:760px){
+          .chart-tools{width:100%;margin-left:0;justify-content:flex-end}
+          .chart-date-range{margin-left:auto}
+          .chart-date-range[open]{flex:1 0 100%;margin-left:0}
+          .chart-date-range-panel{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+          .chart-date-range-panel input{min-width:0;width:100%;box-sizing:border-box;font-size:12px}
+          .chart-date-apply{grid-column:1/-1}
+          .banner{display:grid;grid-template-columns:38px minmax(0,1fr) 58px;align-items:center;gap:10px}
+          .banner-check{grid-column:1;grid-row:1}
+          .banner-main{grid-column:2;grid-row:1}
+          .banner-system{grid-column:1/-1;grid-row:2;padding:10px 0 0;margin:0;border-left:0;border-top:1px solid #ffffff2c}
+          .house-art{grid-column:3;grid-row:1;width:58px;max-width:100%;margin:0}
+          .banner strong{font-size:clamp(14px,4cqw,17px);line-height:1.3}
+          .banner-system strong{font-size:14px!important}
+        }
       `;
     }
   }
