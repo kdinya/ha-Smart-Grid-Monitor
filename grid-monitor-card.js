@@ -168,6 +168,8 @@
       editor_power_grid_shared: 'Від мережі разом із модулем',
       editor_power_after_avr: 'Після АВР',
       editor_power_independent: 'Незалежне живлення',
+      editor_performance: 'Режим економії',
+      editor_performance_hint: 'Для слабких планшетів: вимикає постійні анімації, розмиття фону та ефекти світіння. Менше навантаження на процесор і батарею.',
       editor_entities_detected: 'сенсорів знайдено',
       editor_custom_entities: 'Точне налаштування окремих сенсорів',
       editor_custom_prefix: 'Вказати інший префікс вручну...',
@@ -211,6 +213,8 @@
       editor_power_grid_shared: 'Mains shared with the module',
       editor_power_after_avr: 'After AVR',
       editor_power_independent: 'Independent power',
+      editor_performance: 'Power-saving mode',
+      editor_performance_hint: 'For low-end tablets: turns off continuous animations, background blur and glow effects to reduce CPU and battery use.',
       editor_entities_detected: 'sensors detected',
       editor_custom_entities: 'Fine-tune Individual Entities',
       editor_custom_prefix: 'Enter custom prefix manually...',
@@ -322,6 +326,8 @@
       setValue('#sel_device', this._config.prefix || 'grid_monitor');
       setValue('#sel_lang', this._config.language || '');
       setValue('#sel_power_mode', this._config.esp_power_mode || 'after_avr');
+      const performance = this.shadowRoot.querySelector('#chk_performance');
+      if (performance && performance !== active) performance.checked = this._config.performance === true;
       this.shadowRoot.querySelectorAll('input[data-entity-key]').forEach((input) => {
         const key = input.getAttribute('data-entity-key');
         if (input !== active) input.value = this._config.entities?.[key] || '';
@@ -559,6 +565,22 @@
             border-color: #12b5ff;
             box-shadow: 0 0 0 2px rgba(18, 181, 255, 0.2);
           }
+          .field label.check {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0;
+            color: #e6f1ff;
+            cursor: pointer;
+          }
+          .field .check input {
+            width: 18px;
+            height: 18px;
+            padding: 0;
+            margin: 0;
+            flex: none;
+            accent-color: #12b5ff;
+          }
           .hint {
             font-size: 0.75rem;
             color: #6c8db5;
@@ -688,6 +710,11 @@
           <div class="hint">${this._t('editor_power_mode_hint')}</div>
         </div>
 
+        <div class="field">
+          <label class="check"><input type="checkbox" id="chk_performance" ${this._config.performance === true ? 'checked' : ''}><span>${this._t('editor_performance')}</span></label>
+          <div class="hint">${this._t('editor_performance_hint')}</div>
+        </div>
+
         <details>
           <summary>${this._t('editor_custom_entities')}</summary>
           <div class="custom-grid">
@@ -750,6 +777,12 @@
         this._fireChanged();
       });
 
+      root.getElementById('chk_performance').addEventListener('change', (e) => {
+        if (e.target.checked) this._config.performance = true;
+        else delete this._config.performance;
+        this._fireChanged();
+      });
+
       root.querySelectorAll('input[data-entity-key]').forEach((input) => {
         input.addEventListener('change', (e) => {
           const key = e.target.getAttribute('data-entity-key');
@@ -768,6 +801,9 @@
 
   customElements.define('grid-monitor-card-editor', GridMonitorCardEditor);
 
+
+  const DEFAULT_KEYS = Object.keys(DEFAULTS);
+  const STATS_REFRESH_OVERLAP_MS = 120e3;
 
   let CARD_SEQUENCE = 0;
 
@@ -819,6 +855,13 @@
       this._statsExtremesLoading = false;
       this._statsExtremesToken = '';
       this._statsExtremesRequest = 0;
+      this._statsExtremesCursor = NaN;
+      this._inView = true;
+      this._intersectionObserver = null;
+      this._visibilityHandler = null;
+      this._hassDirty = false;
+      this._appliedHass = null;
+      this._entityPlanCache = null;
       this._historyCustomRange = null;
       this._historyReturnRange = 'hour';
       this._chartPointers = new Map();
@@ -889,14 +932,42 @@
         this._resizeObserver = new ResizeObserver(() => this._queueChartMeasure());
         this._resizeObserver.observe(this);
       }
+      this._inView = true;
+      if (typeof IntersectionObserver === 'function' && !this._intersectionObserver) {
+        this._intersectionObserver = new IntersectionObserver((entries) => {
+          const entry = entries[entries.length - 1];
+          if (!entry || entry.isIntersecting === this._inView) return;
+          this._inView = entry.isIntersecting;
+          if (this._inView) this._resumeUpdates();
+        });
+        this._intersectionObserver.observe(this);
+      }
+      if (typeof document !== 'undefined' && !this._visibilityHandler) {
+        this._visibilityHandler = () => { if (this._isActive()) this._resumeUpdates(); };
+        document.addEventListener('visibilitychange', this._visibilityHandler);
+      }
       this._scheduleHeartbeatExpiry();
     }
 
     disconnectedCallback() {
       this._resizeObserver?.disconnect();
       this._resizeObserver = null;
+      this._intersectionObserver?.disconnect();
+      this._intersectionObserver = null;
+      if (this._visibilityHandler && typeof document !== 'undefined') document.removeEventListener('visibilitychange', this._visibilityHandler);
+      this._visibilityHandler = null;
       if (this._heartbeatTimer !== null) window.clearTimeout(this._heartbeatTimer);
       this._heartbeatTimer = null;
+    }
+
+    // False while the page is in the background or the card is scrolled/collapsed out of view.
+    _isActive() {
+      if (typeof document !== 'undefined' && document.hidden) return false;
+      return this._inView !== false;
+    }
+
+    _resumeUpdates() {
+      if (this._config && this._hass) this._applyHass();
     }
 
     _queueChartMeasure() {
@@ -937,9 +1008,22 @@
     }
 
     set hass(value) {
-      const wasEspOnline = this._config && this._effectiveEspStatus() === 'on';
       this._hass = value;
-      const nextSnapshot = this._captureStateSnapshot();
+      if (this._config && this._hasRendered && !this._isActive()) {
+        this._hassDirty = true;
+        return;
+      }
+      this._applyHass();
+    }
+
+    _applyHass() {
+      this._hassDirty = false;
+      const nextHass = this._hass;
+      this._hass = this._appliedHass;
+      const wasEspOnline = Boolean(this._config) && this._effectiveEspStatus() === 'on';
+      this._hass = nextHass;
+      this._appliedHass = nextHass;
+      const nextSnapshot = this._captureStateSnapshot(this._stateSnapshot);
       if (!this._config || !this._hasRendered || this._renderedLanguage !== this._lang()) {
         this._stateSnapshot = nextSnapshot;
         this._render();
@@ -955,28 +1039,44 @@
       this._ensureStatsExtremes();
     }
 
-    _captureStateSnapshot() {
+    // Home Assistant replaces a state object whenever the entity changes, so an unchanged
+    // reference means the entry is still valid and nothing needs to be re-read or compared.
+    _captureStateSnapshot(previous = null) {
+      const states = this._hass?.states;
       const snapshot = {};
-      for (const key of Object.keys(DEFAULTS)) {
+      for (const key of DEFAULT_KEYS) {
         const entityId = this._entity(key);
-        const state = this._hass?.states?.[entityId] || null;
+        const state = states?.[entityId] || null;
+        const known = previous?.[key];
+        if (known && known.id === entityId && known.ref === state) {
+          snapshot[key] = known;
+          continue;
+        }
         const attributes = state?.attributes || {};
-        snapshot[key] = JSON.stringify([
-          entityId,
-          Boolean(state),
-          state?.state ?? null,
-          attributes.unit_of_measurement ?? null,
-          SETTING_ENTITY_KEYS.has(key) ? [attributes.min ?? null, attributes.max ?? null, attributes.step ?? null] : null,
-          TIMESTAMP_ENTITY_KEYS.has(key) ? state?.last_updated ?? null : null,
-        ]);
+        snapshot[key] = {
+          id: entityId,
+          ref: state,
+          exists: Boolean(state),
+          state: state?.state ?? null,
+          unit: attributes.unit_of_measurement ?? null,
+          limits: SETTING_ENTITY_KEYS.has(key) ? `${attributes.min ?? ''}|${attributes.max ?? ''}|${attributes.step ?? ''}` : null,
+          updated: TIMESTAMP_ENTITY_KEYS.has(key) ? state?.last_updated ?? null : null,
+        };
       }
       return snapshot;
+    }
+
+    _snapshotEntryChanged(previous, next) {
+      if (previous === next) return false;
+      if (!previous || !next) return true;
+      return previous.id !== next.id || previous.exists !== next.exists || previous.state !== next.state
+        || previous.unit !== next.unit || previous.limits !== next.limits || previous.updated !== next.updated;
     }
 
     _diffStateSnapshots(previous, next) {
       const changed = new Set();
       for (const key of Object.keys(next)) {
-        if (!previous || previous[key] !== next[key]) changed.add(key);
+        if (!previous || this._snapshotEntryChanged(previous[key], next[key])) changed.add(key);
       }
       return changed;
     }
@@ -1002,33 +1102,56 @@
       return String(locale).toLowerCase().startsWith('uk') ? 'uk' : 'en';
     }
 
+    _ecoClass() { return this._config?.performance === true ? ' eco' : ''; }
+
     _t(key) { return TEXT[this._lang()][key] || key; }
     _locale() { return this._lang() === 'uk' ? 'uk-UA' : 'en-US'; }
-    _entity(key) {
-      const prefix = this._config?.prefix || 'grid_monitor';
+    _entityPlan(key) {
+      const config = this._config;
+      const overrides = this._entityOverrides;
+      let cache = this._entityPlanCache;
+      if (!cache || cache.config !== config || cache.overrides !== overrides) {
+        cache = { config, overrides, plans: new Map() };
+        this._entityPlanCache = cache;
+      }
+      if (cache.plans.has(key)) return cache.plans.get(key);
+      let plan = null;
       const defId = DEFAULTS[key];
-      if (!defId) return '';
-      const domain = defId.split('.')[0];
-      const suffix = defId.split('.').slice(1).join('.').replace(/^grid_monitor_/, '');
-      const candidate = `${domain}.${prefix}_${suffix}`;
-      const requested = this._entityOverrides?.[key];
+      if (defId) {
+        const prefix = config?.prefix || 'grid_monitor';
+        const domain = defId.split('.')[0];
+        const suffix = defId.split('.').slice(1).join('.').replace(/^grid_monitor_/, '');
+        const aliases = ALIAS_SUFFIXES[key] || [];
+        const requested = overrides?.[key];
+        const requestedParts = requested?.split('.') || [];
+        const requestedSuffix = requestedParts[1]?.startsWith(`${prefix}_`) ? requestedParts[1].slice(prefix.length + 1) : '';
+        const isKnownDefault = requestedParts[0] === domain && [suffix, ...aliases].includes(requestedSuffix);
+        plan = {
+          requested,
+          forced: Boolean(requested) && !isKnownDefault,
+          candidate: `${domain}.${prefix}_${suffix}`,
+          aliasIds: aliases.map((alias) => `${domain}.${prefix}_${alias}`),
+        };
+      }
+      cache.plans.set(key, plan);
+      return plan;
+    }
+
+    _entity(key) {
+      const plan = this._entityPlan(key);
+      if (!plan) return '';
+      if (plan.forced) return plan.requested;
       const states = this._hass?.states;
-      const aliases = ALIAS_SUFFIXES[key] || [];
-      const requestedParts = requested?.split('.') || [];
-      const requestedSuffix = requestedParts[1]?.startsWith(`${prefix}_`) ? requestedParts[1].slice(prefix.length + 1) : '';
-      const isKnownDefault = requestedParts[0] === domain && [suffix, ...aliases].includes(requestedSuffix);
       const usable = (entityId) => {
         const state = states?.[entityId]?.state;
         return state !== undefined && state !== 'unknown' && state !== 'unavailable';
       };
-      if (requested && !isKnownDefault) return requested;
-      if (usable(candidate)) return candidate;
-      for (const alias of aliases) {
-        const aliasId = `${domain}.${prefix}_${alias}`;
+      if (usable(plan.candidate)) return plan.candidate;
+      for (const aliasId of plan.aliasIds) {
         if (usable(aliasId)) return aliasId;
       }
-      if (requested && states?.[requested]) return requested;
-      return requested || candidate;
+      if (plan.requested && states?.[plan.requested]) return plan.requested;
+      return plan.requested || plan.candidate;
     }
     _state(key) { return this._hass?.states?.[this._entity(key)] || null; }
     _raw(key) { return this._state(key)?.state ?? null; }
@@ -1328,7 +1451,7 @@
           <rect x="90" y="50" width="320" height="156" fill="url(#${id('sky')})"/>
           <g fill="#dff6ff">${stars}</g>
           <ellipse cx="250" cy="200" rx="150" ry="70" fill="url(#${id('horizon')})"/>
-          <g fill="#9fd3e6" opacity=".16" filter="url(#${id('haze')})"><ellipse cx="170" cy="132" rx="52" ry="5"/><ellipse cx="338" cy="112" rx="46" ry="4"/><ellipse cx="300" cy="150" rx="64" ry="5"/></g>
+          <g class="tower-haze" fill="#9fd3e6" opacity=".16" filter="url(#${id('haze')})"><ellipse cx="170" cy="132" rx="52" ry="5"/><ellipse cx="338" cy="112" rx="46" ry="4"/><ellipse cx="300" cy="150" rx="64" ry="5"/></g>
           <path d="M98 205V186C122 178 148 183 172 178S214 172 240 177S290 186 316 179S372 174 402 184V205Z" fill="#164a6c" opacity=".9"/>
           <path d="${forestFar}" fill="#123d5c"/>
           <g transform="translate(${farX[0]} ${farBase}) scale(${farScale})">${towerFar}</g>
@@ -1516,6 +1639,7 @@
       this._statsExtremesKey = '';
       this._statsExtremesAt = 0;
       this._statsExtremesToken = '';
+      this._statsExtremesCursor = NaN;
       this._statsExtremesRequest += 1;
       this._statsExtremesLoading = false;
       this._clearChartScrub();
@@ -1548,7 +1672,7 @@
     }
 
     _ensureStatsExtremes() {
-      if (!this._hass || !this._config || !Number.isFinite(this._statsStart)) return;
+      if (!this._hass || !this._config || !Number.isFinite(this._statsStart) || !this._isActive()) return;
       const token = this._statsExtremesCacheToken();
       if (this._statsExtremesLoading && this._statsExtremesToken === token) return;
       if (token === this._statsExtremesKey && Date.now() - this._statsExtremesAt < 60000) return;
@@ -1587,24 +1711,44 @@
       return result;
     }
 
+    _mergeStatsExtremes(previous, fresh) {
+      const merged = { ...(previous || {}) };
+      Object.entries(fresh || {}).forEach(([key, next]) => {
+        const known = merged[key];
+        if (!known) { merged[key] = next; return; }
+        const lower = (a, b) => (a === null ? b : b === null ? a : Math.min(a, b));
+        const upper = (a, b) => (a === null ? b : b === null ? a : Math.max(a, b));
+        merged[key] = { min: lower(known.min, next.min), max: upper(known.max, next.max) };
+      });
+      return merged;
+    }
+
+    // The first load reads everything since the statistics start. Later refreshes read only what
+    // is new (with a small overlap for late recorder writes) and merge it into the known extremes.
     async _loadStatsExtremes(token) {
       if (!this._hass || !Number.isFinite(this._statsStart)) return;
       const hass = this._hass;
       const request = ++this._statsExtremesRequest;
       this._statsExtremesLoading = true;
       this._statsExtremesToken = token;
-      const start = new Date(this._statsStart);
       const end = new Date();
+      const incremental = token === this._statsExtremesKey && Boolean(this._statsExtremes) && Number.isFinite(this._statsExtremesCursor);
+      const start = new Date(incremental ? Math.max(this._statsStart, this._statsExtremesCursor - STATS_REFRESH_OVERLAP_MS) : this._statsStart);
       try {
         if (typeof hass.callApi !== 'function') throw new Error('History API unavailable');
         const ids = STATS_METRIC_KEYS.map((key) => encodeURIComponent(this._entity(key))).join(',');
         const path = `history/period/${encodeURIComponent(start.toISOString())}?filter_entity_id=${ids}&end_time=${encodeURIComponent(end.toISOString())}&minimal_response&no_attributes`;
         const response = await hass.callApi('GET', path);
         if (request !== this._statsExtremesRequest) return;
-        this._statsExtremes = this._computeStatsExtremes(response);
+        const fresh = this._computeStatsExtremes(response);
+        this._statsExtremes = incremental ? this._mergeStatsExtremes(this._statsExtremes, fresh) : fresh;
+        this._statsExtremesCursor = end.getTime();
       } catch (_error) {
         if (request !== this._statsExtremesRequest) return;
-        this._statsExtremes = {};
+        if (!incremental) {
+          this._statsExtremes = {};
+          this._statsExtremesCursor = NaN;
+        }
       } finally {
         if (request === this._statsExtremesRequest) {
           this._statsExtremesKey = token;
@@ -2443,7 +2587,7 @@
     }
 
     _ensureHistory() {
-      if (!this._hass || !this._config || this._activeTab !== 'params' || this._chartPan) return;
+      if (!this._hass || !this._config || this._activeTab !== 'params' || this._chartPan || !this._isActive()) return;
       const metricKey = this._chartMetric || 'power';
       const key = `${this._historyRange}${this._historyWindowToken()}:${metricKey}:${this._entity(metricKey)}`;
       if (key !== this._historyKey || Date.now() - this._historyAt >= 60000) this._loadHistory(key);
@@ -2463,7 +2607,7 @@
     }
 
     _ensureVoltageHistory() {
-      if (!this._hass || !this._config || this._activeTab !== 'params') return;
+      if (!this._hass || !this._config || this._activeTab !== 'params' || !this._isActive()) return;
       if ((this._chartMetric || 'power') === 'voltage') { this._syncVoltageHistoryFromChart(); return; }
       const key = this._voltageHistoryCacheKey();
       if (key === this._voltageHistoryKey && Date.now() - this._voltageHistoryAt < 60000) return;
@@ -2965,7 +3109,7 @@
       const readyClass = this._hasRendered ? ' render-ready' : '';
       const homeClass = this._activeTab === 'home' ? ' home-active' : '';
       const activeContent = this._activeTab === 'home' ? this._home() : this._activeTab === 'params' ? this._params() : this._activeTab === 'energy' ? this._energy() : this._settings();
-      this.shadowRoot.innerHTML = `<style>${GridMonitorCard.CSS}</style><main class="shell ${status.stateClass}${readyClass}${homeClass}">
+      this.shadowRoot.innerHTML = `<style>${GridMonitorCard.CSS}</style><main class="shell ${status.stateClass}${readyClass}${homeClass}${this._ecoClass()}">
         ${this._activeTab === 'home' ? '' : this._headerHtml()}
         ${this._activeTab === 'home' ? this._tabs('top') : ''}
         <div class="page-layout">
@@ -3156,7 +3300,7 @@
       const voltage = this.shadowRoot.querySelector('[data-role="voltage-card"]');
       const indicator = this.shadowRoot.querySelector('[data-role="state-indicator"]');
       const banner = this.shadowRoot.querySelector('[data-role="home-banner"]');
-      if (shell) shell.className = `shell ${status.stateClass}${this._hasRendered ? ' render-ready' : ''}${this._activeTab === 'home' ? ' home-active' : ''}`;
+      if (shell) shell.className = `shell ${status.stateClass}${this._hasRendered ? ' render-ready' : ''}${this._activeTab === 'home' ? ' home-active' : ''}${this._ecoClass()}`;
       if (voltage) voltage.className = `card voltage ${status.stateClass}`;
       if (indicator) indicator.className = `state-indicator ${status.stateClass}`;
       const indicatorLabel = indicator?.querySelector('[data-role="state-label"]');
@@ -3896,6 +4040,9 @@
         .stats-start-error:empty{display:none}
         .stats-note{margin:10px 4px 0;padding:6px 12px;border-radius:99px;border:1px solid #2f9bff40;background:#0a2038;color:#9fd2ff;font-size:12.5px;text-align:center}
         .period-button.since{white-space:nowrap}
+        .shell.eco *,.shell.eco *::before,.shell.eco *::after{animation:none!important;filter:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+        .shell.eco .gauge-fill-glow,.shell.eco .tower-halo,.shell.eco .tower-haze,.shell.eco .chart-glow{display:none}
+        @media(prefers-reduced-motion:reduce){.card{backdrop-filter:none;-webkit-backdrop-filter:none}.tower-beacon{animation:none}}
 
       `;
     }

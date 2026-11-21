@@ -57,6 +57,17 @@ esp_power_mode: after_avr
 
 `language` accepts `uk` or `en`. If omitted, the card follows the Home Assistant language when it can detect it. `esp_power_mode` accepts `grid_shared`, `after_avr` or `independent` and defaults to `after_avr`. It describes how the ESP is powered; PZEM readings remain measurements of the mains in every mode, and the card does not infer the ESP supply from grid sensors. The card safely displays missing, unavailable and unknown entities instead of failing the whole dashboard. Loss of PZEM communication is reported as unavailable telemetry and an unknown power source; it is not treated as proof that the ESP is running from an inverter. The current firmware has no independent ATS/inverter confirmation input. Reset and restart actions ask for confirmation before calling the corresponding ESPHome button service.
 
+### Power-saving mode
+
+On low-end tablets the continuous glow animations and background blur can keep the CPU, GPU and battery busy. Set `performance: true` (or use the *Power-saving mode* switch in the visual editor) to turn off continuous animations, background blur and glow effects; the layout, colours and data are unchanged:
+
+```yaml
+type: custom:grid-monitor-card
+performance: true
+```
+
+The option is off by default. Independently of it, the card follows the system `prefers-reduced-motion` setting. While the page is in the background or the card is out of view, the card pauses its history and statistics requests and resumes them when it becomes visible again. The *statistics start* min/max values are loaded in full once and then refreshed with only the new history.
+
 Card display options such as the name, ESPHome prefix, language, ESP power arrangement and entity overrides belong to the Lovelace dashboard configuration, not to browser-local storage. Storage-mode dashboards keep that configuration in Home Assistant so the same dashboard uses it on each client; YAML-mode dashboards keep it in the dashboard YAML. ESPHome device settings such as voltage thresholds, tariff values and the two-zone switch are separate device entities and already use ESPHome restore settings, so they persist on the controller across restarts.
 
 ## Manual card installation
