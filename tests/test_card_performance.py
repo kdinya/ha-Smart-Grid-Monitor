@@ -346,6 +346,17 @@ card._showDialog = async (options) => { dialogs.push(options); return true; };
 """)
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
+    def test_existing_statistics_helper_is_not_offered_again_while_unknown_or_unavailable(self):
+        result = run_node(r"""
+for (const value of ['unknown', 'unavailable']) {
+  const card = makeCard({ 'input_text.grid_monitor_statistics_start': state(value) }, { prefix: 'grid_monitor', language: 'en' });
+  assert.equal(card._hasStatsStartHelper(), true, `${value} is still a registered helper state`);
+  assert.equal(card._canCreateStatsStartHelper(), false, `${value} must not trigger duplicate creation`);
+  assert.doesNotMatch(card._statsStartSetting(), /data-stats-helper-create/);
+}
+""")
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
     def test_statistics_helper_creation_reports_admin_permission_errors(self):
         result = run_node(r"""
 const card = makeCard({}, { prefix: 'grid_monitor', language: 'en' });

@@ -1821,7 +1821,7 @@
 
     _hasStatsStartHelper() {
       const helper = this._state('stats_start');
-      return Boolean(helper && !['unknown', 'unavailable'].includes(helper.state));
+      return Boolean(helper);
     }
 
     _canCreateStatsStartHelper() {
@@ -4716,7 +4716,7 @@
         @container (max-width:520px){.chart-reading-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.chart-reading{padding:10px}.chart-reading strong{font-size:16px}}
 
         .voltage{padding:5px 12px 4px;justify-content:space-between}
-        .shell:not(.home-active)>.header{align-items:flex-start;padding-bottom:1px}
+        .shell:not(.home-active)>.header{align-items:flex-start;padding-bottom:1px;z-index:2}
         @container (max-width:959px){.shell:not(.home-active)>.header{padding-bottom:1px}.shell:not(.home-active)>.header>.tabs-top{margin-bottom:0}}
         @container (max-width:760px){.voltage{padding:5px 10px 4px}}
         .voltage-brand,.voltage-gauge,.state-indicator{transform:translateY(-4px)}
