@@ -58,7 +58,8 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertLess(home.index(side_tabs), home.index('<div class="metrics">'))
         self.assertIn("@container (min-width:960px)", card)
         self.assertIn(".shell.home-active>.tabs-top{display:none}", card)
-        self.assertIn(".home-view .main-grid>.tabs-side{display:grid;grid-column:2;grid-row:1;", card)
+        self.assertIn(".home-view .main-right>.tabs-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:0;align-self:stretch;width:100%}", card)
+        self.assertIn(".home-view .main-grid>.voltage{grid-column:1;grid-row:1}", card)
 
     def test_gauge_arc_ticks_and_marker_share_one_geometry(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
