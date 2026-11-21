@@ -91,7 +91,7 @@
       title: 'Мережева напруга', subtitle: 'PZEM-004T v3.0 · Grid Monitor', online: 'Онлайн', offline: 'Офлайн', updated: 'Оновлено',
       home: 'Головна', params_tab: 'Параметри', energy_tab: 'Енергія', settings_tab: 'Налаштування',
       network: 'PZEM онлайн', inverter: 'Джерело невідоме', no_power: 'PZEM не відповідає', detecting: 'Очікування PZEM', unknown: 'Невідомо', unavailable: 'Недоступно',
-      healthy: 'PZEM онлайн; якість напруги в межах порогів', alarm_banner: 'Напруга поза заданим діапазоном', offline_banner: 'ESP недоступна',
+      healthy: 'PZEM онлайн; якість напруги в межах порогів', quality_unknown: 'Якість напруги невідома', alarm_banner: 'Напруга поза заданим діапазоном', offline_banner: 'ESP недоступна',
       pzem_online: 'Дані PZEM доступні', pzem_offline: 'PZEM офлайн', source_unconfirmed: 'Джерело живлення не підтверджене', source_unknown: 'Джерело живлення невідоме', pzem_source_offline: 'PZEM офлайн; джерело живлення невідоме', pzem_offline_banner: 'PZEM не відповідає; джерело живлення невідоме',
       voltage: 'Напруга мережі', sag_state: 'Просідання', swell_state: 'Перенапруга', current: 'Струм', power: 'Потужність', frequency: 'Частота', pf: 'Коеф. потужності', normal: 'Норма', alarm: 'Поза нормою',
       chart_title: 'Графік потужності', hour: 'Год', day: 'День', week: 'Тиждень', month: 'Місяць', loading: 'Завантаження історії…', no_history: 'Історія потужності поки недоступна',
@@ -130,7 +130,7 @@
       title: 'Grid voltage', subtitle: 'PZEM-004T v3.0 · Grid Monitor', online: 'Online', offline: 'Offline', updated: 'Updated',
       home: 'Home', params_tab: 'Parameters', energy_tab: 'Energy', settings_tab: 'Settings',
       network: 'PZEM online', inverter: 'Source unknown', no_power: 'PZEM is not responding', detecting: 'Waiting for PZEM', unknown: 'Unknown', unavailable: 'Unavailable',
-      healthy: 'PZEM online; voltage is within configured thresholds', alarm_banner: 'Voltage is outside the configured range', offline_banner: 'ESP is offline',
+      healthy: 'PZEM online; voltage is within configured thresholds', quality_unknown: 'Voltage quality is unknown', alarm_banner: 'Voltage is outside the configured range', offline_banner: 'ESP is offline',
       pzem_online: 'PZEM data available', pzem_offline: 'PZEM offline', source_unconfirmed: 'Power source is not confirmed', source_unknown: 'Power source unknown', pzem_source_offline: 'PZEM offline; power source unknown', pzem_offline_banner: 'PZEM is not responding; power source is unknown',
       voltage: 'Grid voltage', sag_state: 'Sag', swell_state: 'Swell', current: 'Current', power: 'Power', frequency: 'Frequency', pf: 'Power factor', normal: 'Normal', alarm: 'Out of range',
       chart_title: 'Power history', hour: 'Hour', day: 'Day', week: 'Week', month: 'Month', loading: 'Loading history…', no_history: 'Power history is not available yet',
@@ -919,12 +919,15 @@
       // The legacy on_inverter entity was inferred from PZEM silence, not an independent inverter signal.
       const pzemOffline = sourceStatus === 'pzem_offline_source_unknown' || (legacyFirmware && this._raw('inverter') === 'on');
       const waitingForPzem = sourceStatus === 'waiting_for_pzem';
-      const alarm = pzemOnline && this._raw('voltage_alarm') === 'on';
-      const stateClass = alarm ? 'alarm' : esp === 'off' ? 'offline' : pzemOffline ? 'pzem-offline' : esp === 'on' && pzemOnline ? 'healthy' : 'unknown';
+      const voltageAlarm = this._raw('voltage_alarm');
+      const alarm = pzemOnline && voltageAlarm === 'on';
+      const qualityUnknown = pzemOnline && voltageAlarm !== 'on' && voltageAlarm !== 'off';
+      const healthy = esp === 'on' && pzemOnline && voltageAlarm === 'off';
+      const stateClass = alarm ? 'alarm' : esp === 'off' ? 'offline' : pzemOffline ? 'pzem-offline' : healthy ? 'healthy' : 'unknown';
       const source = pzemOffline ? this._t('pzem_source_offline') : pzemOnline ? this._t('source_unconfirmed') : waitingForPzem ? this._t('detecting') : this._t('source_unknown');
-      const banner = pzemOffline ? this._t('pzem_offline_banner') : alarm ? this._t('alarm_banner') : esp === 'off' ? this._t('offline_banner') : stateClass === 'healthy' ? this._t('healthy') : waitingForPzem ? this._t('detecting') : this._t('source_unknown');
-      const status = pzemOffline ? this._t('pzem_offline') : alarm ? this._t('alarm') : stateClass === 'healthy' ? this._t('normal') : esp === 'off' ? this._t('offline') : waitingForPzem ? this._t('detecting') : this._t('unknown');
-      return { mains, pzemOnline, pzemOffline, esp, alarm, stateClass, source, banner, status };
+      const banner = pzemOffline ? this._t('pzem_offline_banner') : alarm ? this._t('alarm_banner') : esp === 'off' ? this._t('offline_banner') : qualityUnknown ? this._t('quality_unknown') : healthy ? this._t('healthy') : waitingForPzem ? this._t('detecting') : this._t('source_unknown');
+      const status = pzemOffline ? this._t('pzem_offline') : alarm ? this._t('alarm') : healthy ? this._t('normal') : esp === 'off' ? this._t('offline') : waitingForPzem ? this._t('detecting') : this._t('unknown');
+      return { mains, pzemOnline, pzemOffline, esp, alarm, qualityUnknown, stateClass, source, banner, status };
     }
 
     _home() {
@@ -978,7 +981,7 @@
           <div class="card info"><span class="symbol green">${this._svg('home')}</span><div><div class="small">${this._escape(this._t('pzem_link'))}</div><strong data-role="home-mains" class="${status.pzemOnline ? 'good' : ''}">${this._escape(mainsText)}</strong></div></div>
           <div class="card info"><span class="symbol blue">${this._svg('plug')}</span><div><div class="small">${this._escape(this._t('source'))}</div><strong data-role="home-source">${this._escape(sourceText)}</strong></div></div>
           <div class="card info"><span class="symbol blue">${this._svg('plug')}</span><div><div class="small">${this._escape(this._t('esp_power_connection'))}</div><strong data-role="esp-power-label">${this._escape(espPower.label)}</strong><div class="small" data-role="esp-power-note">${this._escape(espPower.note)}</div></div></div>
-          <div class="card info"><span class="symbol green">${this._svg('shield')}</span><div><div class="small">${this._escape(this._t('voltage_state'))}</div><strong data-role="home-voltage-quality" class="${status.pzemOnline && !status.alarm ? 'good' : status.alarm ? 'alarm' : ''}">${this._escape(voltageQuality)}</strong></div></div>
+          <div class="card info"><span class="symbol green">${this._svg('shield')}</span><div><div class="small">${this._escape(this._t('voltage_state'))}</div><strong data-role="home-voltage-quality" class="${status.pzemOnline && !status.alarm && !status.qualityUnknown ? 'good' : status.alarm ? 'alarm' : ''}">${this._escape(voltageQuality)}</strong></div></div>
           <div class="card info"><span class="symbol amber">${this._svg('coin')}</span><div><div class="small">${this._escape(this._t('today_consumption'))}</div><strong data-value-key="energy_today" data-value-digits="2">${this._escape(energy)}</strong><div class="small cost-line">≈ <span data-value-key="cost_today" data-value-digits="2">${this._escape(cost)}</span></div></div></div>
         </div>
         <div class="card banner ${status.stateClass}" data-role="home-banner"><span class="banner-check">${this._svg('check')}</span><strong data-role="home-banner-label">${this._escape(status.banner)}</strong><span class="house-art" aria-hidden="true">${this._houseArt()}</span></div>
@@ -1669,7 +1672,7 @@
       if (source) source.textContent = sourceText;
       if (quality) {
         quality.textContent = voltageQuality;
-        quality.classList.toggle('good', status.pzemOnline && !status.alarm);
+        quality.classList.toggle('good', status.pzemOnline && !status.alarm && !status.qualityUnknown);
         quality.classList.toggle('alarm', status.alarm);
       }
     }
