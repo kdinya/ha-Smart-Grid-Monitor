@@ -6,6 +6,11 @@
 # Entity IDs assume the default ESPHome slug: grid_monitor.
 # Adjust them if Home Assistant generated different IDs.
 
+input_text:
+  grid_monitor_statistics_start:
+    name: "Grid Monitor Statistics Start"
+    max: 32
+
 template:
   - sensor:
       - name: "Grid Monitor Power Source"

@@ -4,7 +4,9 @@ ESPHome firmware and Home Assistant interfaces for an ESP32-C3 + PZEM-004T v3.0 
 
 The repository now provides two supported interface paths. The recommended path is the HACS-installable `Smart Grid Monitor Card`, a responsive dark-neon frontend card. The dependency-free native Lovelace dashboard remains available as a fallback for installations where custom frontend resources are not desired.
 
-The card's **Energy** tab includes separate history charts for electricity consumption in kWh and accumulated cost in грн. They calculate period increases from Home Assistant history of the cumulative energy and cost counters, including counter resets. Their hour/day/week/month/custom period is independent of the Parameters chart and its statistics-start setting.
+The **Parameters** tab contains the power and voltage history charts. The **Energy** tab has separate history charts for electricity consumption in kWh and accumulated cost in грн. They calculate period increases from Home Assistant history of the cumulative energy and cost counters, including counter resets. Their hour/day/week/month/custom period is independent of the Parameters chart and its statistics-start setting.
+
+The visual editor offers UAH/грн, EUR and USD display labels for cost figures. This is a label-only preference: it does not convert the stored UAH amounts, and tariff inputs remain in UAH/kWh.
 
 ## Preview
 
@@ -57,7 +59,7 @@ prefix: grid_monitor
 esp_power_mode: after_avr
 ```
 
-`language` accepts `uk` or `en`. If omitted, the card follows the Home Assistant language when it can detect it. `esp_power_mode` accepts `grid_shared`, `after_avr` or `independent` and defaults to `after_avr`. It describes how the ESP is powered; PZEM readings remain measurements of the mains in every mode, and the card does not infer the ESP supply from grid sensors. The card safely displays missing, unavailable and unknown entities instead of failing the whole dashboard. Loss of PZEM communication is reported as unavailable telemetry and an unknown power source; it is not treated as proof that the ESP is running from an inverter. The current firmware has no independent ATS/inverter confirmation input. Reset and restart actions ask for confirmation before calling the corresponding ESPHome button service.
+`language` accepts `uk` or `en`. If omitted, the card follows the Home Assistant language when it can detect it. `currency` accepts `UAH`, `EUR` or `USD`, defaults to `UAH`, and changes the displayed label only; it does not convert values. `esp_power_mode` accepts `grid_shared`, `after_avr` or `independent` and defaults to `after_avr`. It describes how the ESP is powered; PZEM readings remain measurements of the mains in every mode, and the card does not infer the ESP supply from grid sensors. The card safely displays missing, unavailable and unknown entities instead of failing the whole dashboard. Loss of PZEM communication is reported as unavailable telemetry and an unknown power source; it is not treated as proof that the ESP is running from an inverter. The current firmware has no independent ATS/inverter confirmation input. Reset and restart actions ask for confirmation before calling the corresponding ESPHome button service.
 
 ### Power-saving mode
 
@@ -70,7 +72,7 @@ performance: true
 
 The option is off by default. Independently of it, the card follows the system `prefers-reduced-motion` setting. While the page is in the background or the card is out of view, the card pauses its history and statistics requests and resumes them when it becomes visible again. The *statistics start* min/max values are loaded in full once and then refreshed with only the new history.
 
-Card display options such as the name, ESPHome prefix, language, ESP power arrangement and entity overrides belong to the Lovelace dashboard configuration, not to browser-local storage. Storage-mode dashboards keep that configuration in Home Assistant so the same dashboard uses it on each client; YAML-mode dashboards keep it in the dashboard YAML. ESPHome device settings such as voltage thresholds, tariff values and the two-zone switch are separate device entities and already use ESPHome restore settings, so they persist on the controller across restarts.
+Card display options such as the name, ESPHome prefix, language, ESP power arrangement and entity overrides belong to the Lovelace dashboard configuration, not to browser-local storage. Storage-mode dashboards keep that configuration in Home Assistant so the same dashboard uses it on each client; YAML-mode dashboards keep it in the dashboard YAML. ESPHome device settings such as voltage thresholds, tariff values and the two-zone switch are separate device entities and already use ESPHome restore settings, so they persist on the controller across restarts. The statistics-start selection is stored by Home Assistant in `input_text.grid_monitor_statistics_start` when the optional package is enabled; see the package instructions below.
 
 ## Manual card installation
 
@@ -78,7 +80,7 @@ Download `grid-monitor-card.js` into `<config>/www/`, add `/local/grid-monitor-c
 
 ## Native dashboard fallback
 
-Copy [`home-assistant/lovelace/grid-monitor-dashboard.yaml`](home-assistant/lovelace/grid-monitor-dashboard.yaml) into a dashboard's raw configuration editor. It uses only built-in Home Assistant cards and has no HACS dependency. Installation details and the optional source-status and health package are in [`home-assistant/README.md`](home-assistant/README.md).
+Copy [`home-assistant/lovelace/grid-monitor-dashboard.yaml`](home-assistant/lovelace/grid-monitor-dashboard.yaml) into a dashboard's raw configuration editor. It uses only built-in Home Assistant cards and has no HACS dependency. Installation details and the optional source-status, health and cross-device statistics helper package are in [`home-assistant/README.md`](home-assistant/README.md).
 
 ## Repository layout
 
@@ -88,7 +90,7 @@ esphome/
   secrets.example.yaml    # safe secret names and placeholders
 home-assistant/
   lovelace/                # native dependency-free dashboard
-  packages/                # optional derived source/health sensors
+  packages/                # optional source/health sensors and statistics helper
 grid-monitor-card.js       # HACS Lovelace card
 docs/
   design-grid-monitor.md   # visual sketch and interaction decisions
@@ -102,7 +104,7 @@ Both interfaces cover the firmware's live electrical values, energy and cost cou
 
 ## Statistics start
 
-In the card's **Settings** tab, the **Statistics** section lets you pick a date and time. After applying it, the Parameters chart gets a «From HH:MM» period, and the minimum, maximum and peak values on the tiles and range cards are calculated from Home Assistant history since that moment. Clearing the field returns to the firmware's daily values. The setting is stored per browser and does not change the Energy tab's history period.
+In the card's **Settings** tab, the **Statistics** section lets you pick a date and time. After applying it, the Parameters chart gets a «From HH:MM» period, and the minimum, maximum and peak values on the tiles and range cards are calculated from Home Assistant history since that moment. Clearing the field returns to the firmware's daily values. With the optional package enabled, Home Assistant stores the ISO timestamp in `input_text.grid_monitor_statistics_start`, so it follows the dashboard across devices and browser sessions. Without the helper, the selection is session-only. This setting does not change the Energy tab's history period.
 
 ## Electrical safety
 

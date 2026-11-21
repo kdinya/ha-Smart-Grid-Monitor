@@ -75,6 +75,33 @@ assert.equal(off._ecoClass(), ' eco');
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
 
+class CurrencyDisplayTests(unittest.TestCase):
+    def test_currency_choice_changes_labels_without_numeric_conversion(self):
+        result = run_node(r"""
+const cost = state('123.45', { attributes: { unit_of_measurement: 'UAH' } });
+const dayTariff = state('0.22', { attributes: { unit_of_measurement: 'UAH/kWh', min: 0, max: 10, step: 0.01 } });
+const states = {
+  'sensor.grid_monitor_cost_today': cost,
+  'number.grid_monitor_tariff_day': dayTariff,
+};
+const card = makeCard(states, { prefix: 'grid_monitor', language: 'uk', currency: 'EUR' });
+const eur = card._formatted('cost_today', 2);
+assert.equal(card._unit('cost_today'), 'EUR');
+assert.equal(card._unit('cost_rate'), 'EUR/год');
+assert.equal(card._unit('tariff'), 'EUR/кВт·год');
+assert.equal(card._formatted('cost_today', 2), '123,45 EUR');
+assert.equal(card._formatted('tariff_day', 2), '0,22 EUR/кВт·год');
+assert.match(card._setting('tariff_day', 'Day tariff'), /грн\/кВт·год/);
+card._config.currency = 'USD';
+const usd = card._formatted('cost_today', 2);
+assert.equal(usd, '123,45 USD');
+assert.equal(eur.replace(' EUR', ''), usd.replace(' USD', ''));
+card._config.currency = 'UAH';
+assert.equal(card._formatted('cost_today', 2), '123,45 грн');
+""")
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+
 class StateSnapshotTests(unittest.TestCase):
     def test_snapshot_reuses_unchanged_entries_and_reports_only_real_changes(self):
         result = run_node(r"""
@@ -195,6 +222,24 @@ assert.equal(stats, 1);
 
 
 class IncrementalStatisticsTests(unittest.TestCase):
+    def test_statistics_start_round_trips_through_home_assistant_input_text(self):
+        result = run_node(r"""
+const card = makeCard({ 'input_text.grid_monitor_statistics_start': state('2026-11-21T13:15:00.000Z') });
+assert.equal(card._readStatsStart(), Date.parse('2026-11-21T13:15:00.000Z'));
+let saved = null;
+card._hass.callService = async (domain, service, data) => { saved = { domain, service, data }; };
+(async () => {
+  assert.equal(await card._writeStatsStart(Date.parse('2026-11-21T14:20:00.000Z')), true);
+  assert.equal(saved.domain, 'input_text');
+  assert.equal(saved.service, 'set_value');
+  assert.equal(saved.data.entity_id, 'input_text.grid_monitor_statistics_start');
+  assert.equal(saved.data.value, '2026-11-21T14:20:00.000Z');
+  assert.equal(await card._writeStatsStart(null), true);
+  assert.equal(saved.data.value, '');
+})();
+""")
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
     def test_statistics_start_refresh_reads_only_new_history_and_merges_extremes(self):
         result = run_node(r"""
 const statsStart = Date.parse('2026-11-01T00:00:00Z');
