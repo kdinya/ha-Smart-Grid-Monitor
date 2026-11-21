@@ -67,6 +67,46 @@ assert.equal(JSON.stringify(positiveMinimum), JSON.stringify([
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
 
+    def test_stats_start_overrides_min_max_from_history(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = {
+  window: { customCards: [] },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+};
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+card._config = {};
+card._statsStart = Date.UTC(2026, 10, 21, 13, 0);
+const ids = {};
+card._entity = (key) => ids[key] || `sensor.${key}`;
+const series = [
+  [{ entity_id: 'sensor.voltage', state: '230' }, { state: 'unavailable' }, { state: '241.5' }, { state: '9999' }, { state: '218' }],
+  [{ entity_id: 'sensor.current', state: '0' }, { state: '3' }, { state: '1.5' }],
+  [{ entity_id: 'sensor.power', state: '0' }, { state: '700' }, { state: '120' }],
+  [{ entity_id: 'sensor.frequency', state: '49.9' }, { state: '50.2' }],
+  [{ entity_id: 'sensor.power_factor', state: '0.9' }, { state: '0.99' }],
+];
+const result = card._computeStatsExtremes(series);
+assert.deepEqual({ ...result.voltage }, { min: 218, max: 241.5 });
+assert.deepEqual({ ...result.current }, { min: 1.5, max: 3 });
+assert.deepEqual({ ...result.power }, { min: 120, max: 700 });
+assert.deepEqual({ ...result.frequency }, { min: 49.9, max: 50.2 });
+assert.deepEqual({ ...result.power_factor }, { min: 0.9, max: 0.99 });
+assert.equal(JSON.stringify(card._historyBounds('since', 5)).includes(String(card._statsStart)), true);
+"""
+        result = subprocess.run(
+            ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
     def test_calendar_history_ranges_start_at_local_boundaries(self):
         script = r"""

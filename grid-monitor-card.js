@@ -111,6 +111,25 @@
     power_factor: { min: 'pf_min', max: 'pf_max', digits: 2 },
   };
 
+  // Початок статистики зберігається в браузері: від цього моменту рахуються графік та мін/макс.
+  const STATS_START_STORAGE_KEY = 'grid-monitor-card:stats-start';
+  // «Мін/макс за добу» з прошивки, які від вибраного моменту рахуються з історії Home Assistant.
+  const STATS_OVERRIDES = {
+    voltage_min: ['voltage', 'min'], voltage_max: ['voltage', 'max'],
+    current_min: ['current', 'min'], current_max: ['current', 'max'],
+    power_min: ['power', 'min'], power_peak: ['power', 'max'],
+    frequency_min: ['frequency', 'min'], frequency_max: ['frequency', 'max'],
+    pf_min: ['power_factor', 'min'], pf_max: ['power_factor', 'max'],
+  };
+  const STATS_METRICS = {
+    voltage: { plausible: [50, 400] },
+    current: { plausible: [0, 100], positiveMin: true },
+    power: { plausible: [0, MAX_PLAUSIBLE_POWER_W], positiveMin: true },
+    frequency: { plausible: [40, 70] },
+    power_factor: { plausible: [0, 1], positiveMin: true },
+  };
+  const STATS_METRIC_KEYS = Object.keys(STATS_METRICS);
+
   const TEXT = {
     uk: {
       title: 'Мережева напруга', subtitle: 'PZEM-004T v3.0 · Grid Monitor', online: 'Онлайн', offline: 'Офлайн', updated: 'Оновлено',
@@ -119,7 +138,10 @@
       healthy: 'PZEM онлайн; якість напруги в межах порогів', quality_unknown: 'Якість напруги невідома', alarm_banner: 'Напруга поза заданим діапазоном', offline_banner: 'ESP недоступна',
       pzem_online: 'Дані PZEM доступні', pzem_offline: 'PZEM офлайн', source_unconfirmed: 'Джерело живлення не підтверджене', source_unknown: 'Джерело живлення невідоме', pzem_source_offline: 'PZEM офлайн; джерело живлення невідоме', pzem_offline_banner: 'PZEM не відповідає; джерело живлення невідоме',
       voltage: 'Напруга мережі', sag_state: 'Просідання', swell_state: 'Перенапруга', current: 'Струм', power: 'Потужність', frequency: 'Частота', pf: 'Коеф. потужності', normal: 'Норма', alarm: 'Поза нормою',
-      chart_title: 'Детальний графік', stat_min: 'Мін.', stat_avg: 'Сер.', stat_max: 'Макс.', hour: 'Год', day: 'День', week: 'Тиждень', month: 'Місяць', loading: 'Завантаження історії…', no_history: 'Історія поки недоступна',
+      chart_title: 'Детальний графік', since: 'З', stats_title: 'Статистика', stats_start_label: 'Початок статистики',
+      stats_hint: 'Оберіть дату й час: графіки та мінімум/максимум рахуватимуться від цього моменту. Без значення діють добові дані.',
+      stats_active: 'Графіки та мін/макс рахуються від', stats_apply: 'Застосувати', stats_clear: 'Скинути',
+      stats_error: 'Вкажіть коректні дату й час у минулому.', stats_note: 'Мін/макс від', power_range_period: 'Діапазон потужності за період', max_current_period: 'Максимальний струм за період', peak_power_period: 'Пікова потужність за період', stat_min: 'Мін.', stat_avg: 'Сер.', stat_max: 'Макс.', hour: 'Год', day: 'День', week: 'Тиждень', month: 'Місяць', loading: 'Завантаження історії…', no_history: 'Історія поки недоступна',
       chart_select_time: 'Перетягуйте графік; двома пальцями масштабуйте, повзунком вибирайте час', chart_date_range: 'Дати', chart_from: 'Від', chart_to: 'До', chart_apply: 'Показати', chart_date_error: 'Перевірте дати: кінець має бути пізніше початку й не в майбутньому', chart_zoom_in: 'Збільшити масштаб', chart_zoom_out: 'Зменшити масштаб', chart_readings: 'Дані на вибраний час', chart_readings_loading: 'Завантаження вимірювань…', chart_readings_unavailable: 'Історія вимірювань недоступна', chart_live: 'Зараз', active_power: 'Активна потужність',
       mains: 'Зв’язок з PZEM', has_voltage: 'Дані доступні', no_voltage: 'Дані недоступні', source: 'Живлення ESP', from_mains: 'Мережа (не підтверджено)', from_inverter: 'Джерело невідоме', pzem_link: 'Зв’язок з PZEM', active: 'Онлайн', inactive: 'Офлайн', today_consumption: 'Споживання сьогодні',
       esp_power_connection: 'Схема живлення ESP', esp_power_shared: 'Від мережі разом із модулем', esp_power_after_avr: 'Після АВР', esp_power_independent: 'Незалежне живлення', esp_power_avr_note: 'ESP може живитися від інвертора', pzem_grid_note: 'PZEM вимірює мережу в усіх режимах',
@@ -159,7 +181,10 @@
       healthy: 'PZEM online; voltage is within configured thresholds', quality_unknown: 'Voltage quality is unknown', alarm_banner: 'Voltage is outside the configured range', offline_banner: 'ESP is offline',
       pzem_online: 'PZEM data available', pzem_offline: 'PZEM offline', source_unconfirmed: 'Power source is not confirmed', source_unknown: 'Power source unknown', pzem_source_offline: 'PZEM offline; power source unknown', pzem_offline_banner: 'PZEM is not responding; power source is unknown',
       voltage: 'Grid voltage', sag_state: 'Sag', swell_state: 'Swell', current: 'Current', power: 'Power', frequency: 'Frequency', pf: 'Power factor', normal: 'Normal', alarm: 'Out of range',
-      chart_title: 'Detailed chart', stat_min: 'Min', stat_avg: 'Avg', stat_max: 'Max', hour: 'Hour', day: 'Day', week: 'Week', month: 'Month', loading: 'Loading history…', no_history: 'History is not available yet',
+      chart_title: 'Detailed chart', since: 'Since', stats_title: 'Statistics', stats_start_label: 'Statistics start',
+      stats_hint: 'Pick a date and time: charts and min/max will be calculated from that moment. Empty means daily values.',
+      stats_active: 'Charts and min/max are calculated from', stats_apply: 'Apply', stats_clear: 'Reset',
+      stats_error: 'Enter a valid date and time in the past.', stats_note: 'Min/max since', power_range_period: 'Power range for the period', max_current_period: 'Peak current for the period', peak_power_period: 'Peak power for the period', stat_min: 'Min', stat_avg: 'Avg', stat_max: 'Max', hour: 'Hour', day: 'Day', week: 'Week', month: 'Month', loading: 'Loading history…', no_history: 'History is not available yet',
       chart_select_time: 'Drag the chart to pan; pinch to zoom, or use the slider to select a time', chart_date_range: 'Dates', chart_from: 'From', chart_to: 'To', chart_apply: 'Show', chart_date_error: 'Check dates: the end must be after the start and not in the future', chart_zoom_in: 'Zoom in', chart_zoom_out: 'Zoom out', chart_readings: 'Readings at selected time', chart_readings_loading: 'Loading readings…', chart_readings_unavailable: 'Measurement history is unavailable', chart_live: 'Now', active_power: 'Active power',
       mains: 'PZEM connection', has_voltage: 'Data available', no_voltage: 'Data unavailable', source: 'ESP power source', from_mains: 'Mains (not confirmed)', from_inverter: 'Source unknown', pzem_link: 'PZEM connection', active: 'Online', inactive: 'Offline', today_consumption: 'Consumption today',
       esp_power_connection: 'ESP power arrangement', esp_power_shared: 'Mains shared with the module', esp_power_after_avr: 'After AVR', esp_power_independent: 'Independent power', esp_power_avr_note: 'ESP may be powered by the inverter', pzem_grid_note: 'PZEM measures mains in every mode',
@@ -786,6 +811,14 @@
       this._hass = null;
       this._activeTab = 'home';
       this._historyRange = 'hour';
+      this._statsStart = null;
+      this._statsStartApplied = false;
+      this._statsExtremes = null;
+      this._statsExtremesKey = '';
+      this._statsExtremesAt = 0;
+      this._statsExtremesLoading = false;
+      this._statsExtremesToken = '';
+      this._statsExtremesRequest = 0;
       this._historyCustomRange = null;
       this._historyReturnRange = 'hour';
       this._chartPointers = new Map();
@@ -885,6 +918,12 @@
       const powerMode = ['grid_shared', 'after_avr', 'independent'].includes(config.esp_power_mode) ? config.esp_power_mode : 'after_avr';
       this._entityOverrides = { ...(config.entities || {}) };
       this._config = { ...config, entities, name: config.name || null, esp_power_mode: powerMode };
+      this._statsStart = this._readStatsStart();
+      if (this._statsStart !== null && !this._statsStartApplied) {
+        this._historyRange = 'since';
+        this._historyReturnRange = 'since';
+      }
+      this._statsStartApplied = true;
       this._stateSnapshot = this._captureStateSnapshot();
       this._render();
       this._scheduleHeartbeatExpiry();
@@ -906,6 +945,7 @@
       }
       this._scheduleHeartbeatExpiry();
       this._ensureHistory();
+      this._ensureStatsExtremes();
     }
 
     _captureStateSnapshot() {
@@ -1023,6 +1063,11 @@
     }
     _num(key) {
       if (LIVE_MEASUREMENT_KEYS.has(key) && this._effectiveEspStatus() === 'off') return null;
+      if (this._statsStart !== null && STATS_OVERRIDES[key]) {
+        const [metric, bound] = STATS_OVERRIDES[key];
+        const value = this._statsExtremes?.[metric]?.[bound];
+        return Number.isFinite(value) ? value : null;
+      }
       const raw = this._raw(key);
       if (raw === null || raw === 'unknown' || raw === 'unavailable') return null;
       const n = Number(raw);
@@ -1039,6 +1084,7 @@
     _formatted(key, digits = 1) {
       if (LIVE_DISPLAY_KEYS.has(key) && this._effectiveEspStatus() === 'off') return this._t('unavailable');
       const n = this._num(key);
+      if (n === null && this._statsStart !== null && STATS_OVERRIDES[key]) return '—';
       if (n === null) {
         const raw = this._raw(key);
         if (raw === 'unavailable') return this._t('unavailable');
@@ -1058,7 +1104,8 @@
         return days ? `${days} ${u.d} ${hours} ${u.h}` : hours ? `${hours} ${u.h} ${minutes} ${u.m}` : `${minutes} ${u.m}`;
       }
       const value = n.toLocaleString(this._locale(), { maximumFractionDigits: digits });
-      return `${value}${this._unit(key) ? ` ${this._unit(key)}` : ''}`;
+      const unit = this._unit(key) || (this._statsStart !== null && STATS_OVERRIDES[key] ? this._unit(STATS_OVERRIDES[key][0]) : '');
+      return `${value}${unit ? ` ${unit}` : ''}`;
     }
     _svg(name, extra = '') { return `<svg class="icon ${extra}" viewBox="0 0 48 48" aria-hidden="true">${ICONS[name] || ''}</svg>`; }
     _detail(key, label, digits = 1) { return `<div class="detail"><span>${this._escape(label)}</span><b data-value-key="${key}" data-value-digits="${digits}">${this._escape(this._formatted(key, digits))}</b></div>`; }
@@ -1164,7 +1211,7 @@
               ${this._heroMetric('current', 'current', 2)}
               ${this._heroMetric('frequency', 'frequency', 1)}
               ${this._heroMetric('power_factor', 'pf', 2)}
-            </div>
+            </div>${this._statsNote()}
           </div>
         </div>
         <div class="bottom-status">
@@ -1383,9 +1430,178 @@
 
     _chart() {
       const labels = ['hour', 'day', 'week', 'month'];
-      const buttons = labels.map((period) => `<button class="period-button ${this._historyRange === period ? 'active' : ''}" data-period="${period}" aria-pressed="${this._historyRange === period}">${this._escape(this._t(period))}</button>`).join('');
+      const sinceButton = this._statsStart === null ? '' : `<button class="period-button since ${this._historyRange === 'since' ? 'active' : ''}" data-period="since" aria-pressed="${this._historyRange === 'since'}">${this._escape(`${this._t('since')} ${this._statsStartLabel()}`)}</button>`;
+      const buttons = labels.map((period) => `<button class="period-button ${this._historyRange === period ? 'active' : ''}" data-period="${period}" aria-pressed="${this._historyRange === period}">${this._escape(this._t(period))}</button>`).join('') + sinceButton;
       const metricButtons = Object.keys(CHART_METRICS).map((metric) => `<button class="period-button ${this._chartMetric === metric ? 'active' : ''}" data-metric="${metric}" aria-pressed="${this._chartMetric === metric}">${this._escape(this._t(metric))}</button>`).join('');
       return `<section class="card chart-card detailed-chart"><div class="chart-head"><h2><span class="chart-icon">${this._svg('chart')}</span>${this._escape(this._t('chart_title'))}</h2><div class="periods" role="group" aria-label="${this._escape(this._t('chart_title'))}">${metricButtons}</div><div class="periods" role="group" aria-label="${this._escape(this._t('hour'))}">${buttons}</div><div class="chart-tools"><button class="chart-zoom-button" type="button" data-chart-zoom="out" aria-label="${this._escape(this._t('chart_zoom_out'))}" title="${this._escape(this._t('chart_zoom_out'))}">−</button><button class="chart-zoom-button" type="button" data-chart-zoom="in" aria-label="${this._escape(this._t('chart_zoom_in'))}" title="${this._escape(this._t('chart_zoom_in'))}">+</button>${this._chartDateRangeHtml()}</div></div><div class="chart-stats" data-role="chart-stats">${this._chartStatsHtml()}</div><div class="chart-plot" data-role="chart-plot">${this._chartSvg()}</div>${this._chartScrubberHtml()}${this._chartReadingsHtml()}</section>`;
+    }
+
+    _statsStorageKey() { return `${STATS_START_STORAGE_KEY}:${this._config?.prefix || 'grid_monitor'}`; }
+
+    _readStatsStart() {
+      try {
+        const raw = window.localStorage?.getItem(this._statsStorageKey());
+        const value = Number(raw);
+        return raw && Number.isFinite(value) && value > 0 && value < Date.now() ? value : null;
+      } catch (_error) {
+        return null;
+      }
+    }
+
+    _writeStatsStart(value) {
+      try {
+        if (value === null) window.localStorage?.removeItem(this._statsStorageKey());
+        else window.localStorage?.setItem(this._statsStorageKey(), String(value));
+      } catch (_error) {
+        // Сховище браузера може бути недоступним; значення тоді діє до перезавантаження сторінки.
+      }
+    }
+
+    _statsStartLabel() {
+      if (this._statsStart === null) return '';
+      const when = new Date(this._statsStart);
+      const time = when.toLocaleTimeString(this._locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
+      if (when.toDateString() === new Date().toDateString()) return time;
+      return `${when.toLocaleDateString(this._locale(), { day: '2-digit', month: '2-digit' })} ${time}`;
+    }
+
+    _statsStartFullLabel() {
+      if (this._statsStart === null) return '';
+      return new Date(this._statsStart).toLocaleString(this._locale(), { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
+    }
+
+    _statsNote() {
+      if (this._statsStart === null) return '';
+      return `<div class="stats-note" data-role="stats-note">${this._escape(`${this._t('stats_note')} ${this._statsStartFullLabel()}`)}</div>`;
+    }
+
+    _statsStartSetting() {
+      const active = this._statsStart !== null;
+      const hint = active ? `${this._t('stats_active')} ${this._statsStartFullLabel()}` : this._t('stats_hint');
+      return `<h2 class="subheading">${this._escape(this._t('stats_title'))}</h2><div class="detail stats-start" data-role="stats-start"><label><span>${this._escape(this._t('stats_start_label'))}</span><div class="stats-start-controls"><input type="datetime-local" data-stats-start-input max="${this._formatDateTimeInput(Date.now())}" value="${active ? this._formatDateTimeInput(this._statsStart) : ''}"><button class="save-button" type="button" data-stats-start-apply>${this._escape(this._t('stats_apply'))}</button><button class="save-button ghost" type="button" data-stats-start-clear data-role="stats-start-clear" ${active ? '' : 'disabled'}>${this._escape(this._t('stats_clear'))}</button></div></label><p class="stats-start-hint" data-role="stats-start-hint">${this._escape(hint)}</p><p class="stats-start-error" role="alert" data-role="stats-start-error"></p></div>`;
+    }
+
+    _updateStatsControls() {
+      const active = this._statsStart !== null;
+      const input = this.shadowRoot.querySelector('[data-stats-start-input]');
+      if (input) input.value = active ? this._formatDateTimeInput(this._statsStart) : '';
+      const clear = this.shadowRoot.querySelector('[data-role="stats-start-clear"]');
+      if (clear) clear.disabled = !active;
+      const hint = this.shadowRoot.querySelector('[data-role="stats-start-hint"]');
+      if (hint) hint.textContent = active ? `${this._t('stats_active')} ${this._statsStartFullLabel()}` : this._t('stats_hint');
+      const error = this.shadowRoot.querySelector('[data-role="stats-start-error"]');
+      if (error) error.textContent = '';
+    }
+
+    _applyStatsStartInput() {
+      const input = this.shadowRoot.querySelector('[data-stats-start-input]');
+      const value = input?.value ? new Date(input.value).getTime() : NaN;
+      const error = this.shadowRoot.querySelector('[data-role="stats-start-error"]');
+      if (!Number.isFinite(value) || value >= Date.now()) {
+        if (error) error.textContent = this._t('stats_error');
+        return;
+      }
+      this._setStatsStart(value);
+    }
+
+    _setStatsStart(value) {
+      this._statsStart = value;
+      this._writeStatsStart(value);
+      this._statsExtremes = null;
+      this._statsExtremesKey = '';
+      this._statsExtremesAt = 0;
+      this._statsExtremesToken = '';
+      this._statsExtremesRequest += 1;
+      this._statsExtremesLoading = false;
+      this._clearChartScrub();
+      this._historyRequest += 1;
+      this._historyLoading = false;
+      this._voltageHistoryRequest += 1;
+      this._voltageHistoryLoading = false;
+      this._historyKey = '';
+      this._history = [];
+      this._voltageHistoryKey = '';
+      this._voltageHistory = [];
+      if (value !== null) {
+        this._historyCustomRange = null;
+        this._historyRange = 'since';
+        this._historyReturnRange = 'since';
+      } else {
+        if (this._historyRange === 'since') this._historyRange = 'hour';
+        if (this._historyReturnRange === 'since') this._historyReturnRange = 'hour';
+      }
+      this._updateStatsControls();
+      this._applyStatsExtremes();
+      this._ensureStatsExtremes();
+      this._ensureHistory();
+    }
+
+    _statsExtremesCacheToken() {
+      return this._statsStart === null ? '' : `${Math.round(this._statsStart)}:${STATS_METRIC_KEYS.map((key) => this._entity(key)).join(',')}`;
+    }
+
+    _ensureStatsExtremes() {
+      if (!this._hass || !this._config || this._statsStart === null) return;
+      const token = this._statsExtremesCacheToken();
+      if (this._statsExtremesLoading && this._statsExtremesToken === token) return;
+      if (token === this._statsExtremesKey && Date.now() - this._statsExtremesAt < 60000) return;
+      this._loadStatsExtremes(token);
+    }
+
+    _computeStatsExtremes(response) {
+      const result = {};
+      const series = Array.isArray(response) ? response : [];
+      const byEntity = new Map(STATS_METRIC_KEYS.map((key) => [this._entity(key), key]));
+      const ordered = series.length === STATS_METRIC_KEYS.length;
+      series.forEach((items, index) => {
+        if (!Array.isArray(items) || !items.length) return;
+        const key = byEntity.get(items[0]?.entity_id) ?? (ordered ? STATS_METRIC_KEYS[index] : undefined);
+        if (!key) return;
+        const { plausible: [lowest, highest], positiveMin } = STATS_METRICS[key];
+        let min = null;
+        let max = null;
+        items.forEach((item) => {
+          const value = item?.state === '' || item?.state === null || item?.state === undefined ? NaN : Number(item.state);
+          if (!Number.isFinite(value) || value < lowest || value > highest) return;
+          if (max === null || value > max) max = value;
+          if ((!positiveMin || value > 0) && (min === null || value < min)) min = value;
+        });
+        result[key] = { min, max };
+      });
+      return result;
+    }
+
+    async _loadStatsExtremes(token) {
+      if (!this._hass || this._statsStart === null) return;
+      const hass = this._hass;
+      const request = ++this._statsExtremesRequest;
+      this._statsExtremesLoading = true;
+      this._statsExtremesToken = token;
+      const start = new Date(this._statsStart);
+      const end = new Date();
+      try {
+        if (typeof hass.callApi !== 'function') throw new Error('History API unavailable');
+        const ids = STATS_METRIC_KEYS.map((key) => encodeURIComponent(this._entity(key))).join(',');
+        const path = `history/period/${encodeURIComponent(start.toISOString())}?filter_entity_id=${ids}&end_time=${encodeURIComponent(end.toISOString())}&minimal_response&no_attributes`;
+        const response = await hass.callApi('GET', path);
+        if (request !== this._statsExtremesRequest) return;
+        this._statsExtremes = this._computeStatsExtremes(response);
+      } catch (_error) {
+        if (request !== this._statsExtremesRequest) return;
+        this._statsExtremes = {};
+      } finally {
+        if (request === this._statsExtremesRequest) {
+          this._statsExtremesKey = token;
+          this._statsExtremesAt = Date.now();
+          this._statsExtremesLoading = false;
+          this._applyStatsExtremes();
+        }
+      }
+    }
+
+    _applyStatsExtremes() {
+      this._updateValueBindings(new Set(Object.keys(STATS_OVERRIDES)));
+      if (this._activeTab === 'params') this._updateRange();
     }
 
     _formatDateTimeInput(timestamp) {
@@ -1520,7 +1736,7 @@
       if (this._historyRange === 'week' || this._historyRange === 'month') {
         return when.toLocaleDateString(this._locale(), { day: '2-digit', month: '2-digit', year: 'numeric' });
       }
-      if (this._historyRange === 'custom' && this._historyCustomRange?.end - this._historyCustomRange?.start >= 24 * 3600e3) {
+      if ((this._historyRange === 'custom' && this._historyCustomRange?.end - this._historyCustomRange?.start >= 24 * 3600e3) || (this._historyRange === 'since' && this._statsStart !== null && Date.now() - this._statsStart >= 24 * 3600e3)) {
         return when.toLocaleString(this._locale(), { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
       }
       return when.toLocaleTimeString(this._locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -1557,6 +1773,7 @@
     }
 
     _historyBounds(range = this._historyRange, now = Date.now()) {
+      if (range === 'since' && this._statsStart !== null) return { start: this._statsStart, end: now };
       if (range === 'custom' && this._historyCustomRange) {
         return { start: this._historyCustomRange.start, end: this._historyCustomRange.end };
       }
@@ -1574,6 +1791,7 @@
     }
 
     _historyWindowToken() {
+      if (this._historyRange === 'since' && this._statsStart !== null) return `:since:${Math.round(this._statsStart)}`;
       if (this._historyRange !== 'custom' || !this._historyCustomRange) return '';
       return `:custom:${Math.round(this._historyCustomRange.start)}:${Math.round(this._historyCustomRange.end)}`;
     }
@@ -1935,7 +2153,7 @@
         const y = Y(tickValue);
         return `<path d="M${x0} ${y.toFixed(1)}H${x1}"/><text x="${x0 - 10}" y="${(y + 4).toFixed(1)}" text-anchor="end">${this._escape(tickValue.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits }))}${index === scale.count ? ` ${unit}` : ''}</text>`;
       }).join('');
-      const longRange = this._historyRange === 'week' || this._historyRange === 'month' || this._historyRange === 'custom' && rangeMs >= 24 * 3600e3;
+      const longRange = this._historyRange === 'week' || this._historyRange === 'month' || (this._historyRange === 'custom' || this._historyRange === 'since') && rangeMs >= 24 * 3600e3;
       const vertical = [0, 1, 2, 3, 4].map((index) => {
         const x = x0 + index * ((x1 - x0) / 4);
         const time = new Date(tStart + rangeMs * index / 4);
@@ -2349,7 +2567,7 @@
       const unit = this._lang() === 'uk' ? 'Вт' : 'W';
       const fmt = (value) => value.toLocaleString(this._locale(), { maximumFractionDigits: 0 });
       return `<div class="range-card power-range" data-role="power-range-card">
-        <div class="range-head"><h3>${this._escape(this._t('power_range_title'))}</h3><div class="range-values"><span>${this._escape(this._t('stat_min'))} <b data-value-key="power_min" data-value-digits="1">${this._escape(this._formatted('power_min', 1))}</b></span><span>${this._escape(this._t('stat_max'))} <b data-value-key="power_peak" data-value-digits="0">${this._escape(this._formatted('power_peak', 0))}</b></span></div></div>
+        <div class="range-head"><h3>${this._escape(this._t(this._statsStart === null ? 'power_range_title' : 'power_range_period'))}</h3><div class="range-values"><span>${this._escape(this._t('stat_min'))} <b data-value-key="power_min" data-value-digits="1">${this._escape(this._formatted('power_min', 1))}</b></span><span>${this._escape(this._t('stat_max'))} <b data-value-key="power_peak" data-value-digits="0">${this._escape(this._formatted('power_peak', 0))}</b></span></div></div>
         <div class="range-track"><i class="range-span" data-role="power-range-span" style="${layout.span}"></i><b class="range-now" data-role="power-range-now" style="${layout.now}"></b></div>
         <div class="range-scale"><span>0</span><span data-role="power-range-mid">${fmt(layout.top / 2)}</span><span data-role="power-range-top">${fmt(layout.top)} ${this._escape(unit)}</span></div>
       </div>`;
@@ -2359,7 +2577,7 @@
       return `<section class="detail-panel"><h2>${this._escape(this._t('params_title'))}</h2>${this._chart()}${this._rangeCard()}${this._powerRangeCard()}<div class="detail-grid">
         ${this._detail('apparent_power', this._t('apparent'), 0)}${this._detail('reactive_power', this._t('reactive'), 0)}${this._detail('phase_angle', this._t('phase'), 1)}
         ${this._detail('voltage_deviation', this._t('deviation'), 1)}${this._detail('voltage_average', this._t('average'), 1)}${this._detail('voltage_status', this._t('voltage_state'), 0)}
-        ${this._voltageRangeDetail('min', this._t('min_voltage'))}${this._voltageRangeDetail('max', this._t('max_voltage'))}${this._detail('current_max', this._t('max_current'), 2)}${this._detail('power_peak', this._t('peak_power'), 0)}
+        ${this._voltageRangeDetail('min', this._t('min_voltage'))}${this._voltageRangeDetail('max', this._t('max_voltage'))}${this._detail('current_max', this._t(this._statsStart === null ? 'max_current' : 'max_current_period'), 2)}${this._detail('power_peak', this._t(this._statsStart === null ? 'peak_power' : 'peak_power_period'), 0)}
       </div><h2 class="subheading">${this._escape(this._t('events'))}</h2><div class="detail-grid">
         ${this._detail('inverter_events', this._t('inverter_events'), 0)}${this._detail('inverter_current_duration', this._t('current_duration'), 1)}${this._detail('last_inverter_duration', this._t('last_duration'), 1)}${this._detail('total_inverter_time', this._t('total_duration'), 2)}${this._detail('sag_count', this._t('sag_events'), 0)}${this._detail('swell_count', this._t('swell_events'), 0)}
       </div></section>`;
@@ -2525,7 +2743,7 @@
         <div class="detail-grid settings-grid">
         ${this._setting('sag_threshold', this._t('sag'))}${this._setting('swell_threshold', this._t('swell'))}${this._setting('nominal_voltage', this._t('nominal'))}${this._setting('tariff_day', this._t('tariff_day'))}${this._setting('tariff_night', this._t('tariff_night'))}
         <div class="detail switch-setting"><span>${this._escape(this._t('two_zone'))}</span><strong data-role="switch-value">${this._escape(twoZone ? this._t('on') : this._t('off'))}</strong><button class="switch-button ${twoZone ? 'on' : ''}" data-switch="two_zone" aria-pressed="${twoZone}">${this._svg('gear')}<span data-role="switch-label">${this._escape(twoZone ? this._t('on') : this._t('off'))}</span></button></div>
-      </div><h2 class="subheading">${this._escape(this._t('diagnostics'))}</h2><div class="detail-grid">
+      </div>${this._statsStartSetting()}<h2 class="subheading">${this._escape(this._t('diagnostics'))}</h2><div class="detail-grid">
         ${this._detail('wifi_signal', this._t('wifi'), 0)}${this._detail('esp_temperature', this._t('temperature'), 1)}${this._detail('uptime', this._t('uptime'), 0)}${this._detail('ip_address', this._t('ip'), 0)}${this._detail('ssid', this._t('ssid'), 0)}${this._detail('inverter_events', this._t('inverter_events'), 0)}
       </div><h2 class="subheading">${this._escape(this._t('actions'))}</h2><div class="action-grid">
         ${this._action('reset_energy', this._t('reset_energy'))}${this._action('reset_events', this._t('reset_events'))}${this._action('reset_cost', this._t('reset_cost'))}${this._action('reset_stats', this._t('reset_stats'))}${this._action('restart', this._t('restart'))}
@@ -2664,7 +2882,7 @@
         this._finishDialog(dialogAction.dataset.dialogAction === 'confirm' || dialogAction.dataset.dialogAction === 'close');
         return;
       }
-      const target = event.target?.closest?.('[data-tab], [data-period], [data-metric], [data-action], [data-number-save], [data-switch], [data-chart-live], [data-chart-zoom], [data-chart-date-apply]');
+      const target = event.target?.closest?.('[data-tab], [data-period], [data-metric], [data-action], [data-number-save], [data-switch], [data-chart-live], [data-chart-zoom], [data-chart-date-apply], [data-stats-start-apply], [data-stats-start-clear]');
       if (!target) return;
       if (target.dataset.tab) {
         if (target.dataset.tab === this._activeTab) return;
@@ -2711,6 +2929,8 @@
       }
       if (target.dataset.chartZoom) { this._zoomChart(target.dataset.chartZoom); return; }
       if (target.dataset.chartDateApply !== undefined) { this._applyChartDateRange(); return; }
+      if (target.dataset.statsStartApply !== undefined) { this._applyStatsStartInput(); return; }
+      if (target.dataset.statsStartClear !== undefined) { this._setStatsStart(null); return; }
       if (target.dataset.metric) {
         if (this._chartMetric === target.dataset.metric) return;
         this._clearChartScrub();
@@ -3532,6 +3752,20 @@
         .voltage .state-indicator{top:-8px}
         .chart-plot.is-panning .chart-dot,.chart-plot.is-panning .chart-tag,.chart-plot.is-panning .chart-tag-text,.chart-plot.is-panning .chart-tag-sub{visibility:hidden}
         .chart-plot.is-panning .chart-line,.chart-plot.is-panning .chart-glow{vector-effect:non-scaling-stroke}
+        /* ===== Початок статистики ===== */
+        .stats-start{grid-column:1/-1}
+        .stats-start-controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+        .stats-start-controls input{flex:1 1 220px;min-width:0;min-height:44px;box-sizing:border-box;padding:0 12px;border-radius:11px;border:1px solid #3f6288;background:#07121f;color:#f3f7ff;font:inherit;font-weight:650;color-scheme:dark}
+        .stats-start-controls input:focus{outline:none;border-color:#1aa6ff;box-shadow:0 0 0 3px #1aa6ff30}
+        .stats-start-controls .save-button{min-height:44px;padding:0 18px}
+        .stats-start-controls .save-button.ghost{background:#0b1a2b;border-color:#3f6288;color:#c5d8ef}
+        .stats-start-controls .save-button:disabled{opacity:.45;cursor:default}
+        .stats-start-hint{margin:10px 0 0;color:#9fb7d6;font-size:13px;line-height:1.4}
+        .stats-start-error{margin:6px 0 0;min-height:0;color:#ff8a9a;font-size:13px}
+        .stats-start-error:empty{display:none}
+        .stats-note{margin:10px 4px 0;padding:6px 12px;border-radius:99px;border:1px solid #2f9bff40;background:#0a2038;color:#9fd2ff;font-size:12.5px;text-align:center}
+        .period-button.since{white-space:nowrap}
+
       `;
     }
   }
