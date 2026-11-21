@@ -138,7 +138,7 @@
       healthy: 'PZEM онлайн; якість напруги в межах порогів', quality_unknown: 'Якість напруги невідома', alarm_banner: 'Напруга поза заданим діапазоном', offline_banner: 'ESP недоступна',
       pzem_online: 'Дані PZEM доступні', pzem_offline: 'PZEM офлайн', source_unconfirmed: 'Джерело живлення не підтверджене', source_unknown: 'Джерело живлення невідоме', pzem_source_offline: 'PZEM офлайн; джерело живлення невідоме', pzem_offline_banner: 'PZEM не відповідає; джерело живлення невідоме',
       voltage: 'Напруга мережі', sag_state: 'Просідання', swell_state: 'Перенапруга', current: 'Струм', power: 'Потужність', frequency: 'Частота', pf: 'Коеф. потужності', normal: 'Норма', alarm: 'Поза нормою',
-      chart_title: 'Детальний графік', energy_chart_title: 'Споживання електроенергії', cost_chart_title: 'Вартість електроенергії', energy_metric_group: 'Показати', energy_metric_energy: 'Енергія', energy_metric_cost: 'Вартість', chart_period: 'Період графіків', since: 'Період', stats_title: 'Статистика', stats_start_label: 'Початок статистики',
+      chart_title: 'Детальний графік', energy_chart_title: 'Споживання електроенергії', cost_chart_title: 'Вартість електроенергії', energy_metric_group: 'Показати', energy_metric_energy: 'Енергія', energy_metric_cost: 'Вартість', energy_selected_interval: 'Вибраний інтервал', chart_period: 'Період графіків', since: 'Період', stats_title: 'Статистика', stats_start_label: 'Початок статистики',
       stats_hint: 'Оберіть дату й час: графіки та мінімум/максимум рахуватимуться від цього моменту. Без значення діють добові дані.', stats_shared_hint: 'Для синхронізації між пристроями ввімкніть пакет Home Assistant із helper input_text.grid_monitor_statistics_start.', stats_sync_saved: 'Збережено в Home Assistant; налаштування синхронізується між пристроями.', stats_sync_missing: 'Helper не знайдено: значення діє лише до перезавантаження. Увімкніть optional package для синхронізації.',
       stats_active: 'Графіки та мін/макс рахуються від', stats_apply: 'Застосувати', stats_clear: 'Скинути', chart_date_error_earlier: 'Дата не може бути раніше виставленого початку статистики',
       stats_error: 'Вкажіть коректні дату й час у минулому.', stats_note: 'Мін/макс від', power_range_period: 'Діапазон потужності за період', max_current_period: 'Максимальний струм за період', peak_power_period: 'Пікова потужність за період', stat_min: 'Мін.', stat_avg: 'Сер.', stat_max: 'Макс.', hour: 'Год', day: 'День', week: 'Тиждень', month: 'Місяць', loading: 'Завантаження історії…', no_history: 'Історія поки недоступна',
@@ -190,7 +190,7 @@
       healthy: 'PZEM online; voltage is within configured thresholds', quality_unknown: 'Voltage quality is unknown', alarm_banner: 'Voltage is outside the configured range', offline_banner: 'ESP is offline',
       pzem_online: 'PZEM data available', pzem_offline: 'PZEM offline', source_unconfirmed: 'Power source is not confirmed', source_unknown: 'Power source unknown', pzem_source_offline: 'PZEM offline; power source unknown', pzem_offline_banner: 'PZEM is not responding; power source is unknown',
       voltage: 'Grid voltage', sag_state: 'Sag', swell_state: 'Swell', current: 'Current', power: 'Power', frequency: 'Frequency', pf: 'Power factor', normal: 'Normal', alarm: 'Out of range',
-      chart_title: 'Detailed chart', energy_chart_title: 'Electricity consumption', cost_chart_title: 'Electricity cost', energy_metric_group: 'Show', energy_metric_energy: 'Energy', energy_metric_cost: 'Cost', chart_period: 'Chart period', since: 'Period', stats_title: 'Statistics', stats_start_label: 'Statistics start',
+      chart_title: 'Detailed chart', energy_chart_title: 'Electricity consumption', cost_chart_title: 'Electricity cost', energy_metric_group: 'Show', energy_metric_energy: 'Energy', energy_metric_cost: 'Cost', energy_selected_interval: 'Selected interval', chart_period: 'Chart period', since: 'Period', stats_title: 'Statistics', stats_start_label: 'Statistics start',
       stats_hint: 'Pick a date and time: charts and min/max will be calculated from that moment. Empty means daily values.', stats_shared_hint: 'To sync this setting across devices, enable the Home Assistant package with the input_text.grid_monitor_statistics_start helper.', stats_sync_saved: 'Saved in Home Assistant; this setting syncs across devices.', stats_sync_missing: 'Helper not found: this setting lasts only until reload. Enable the optional package to sync it.',
       stats_active: 'Charts and min/max are calculated from', stats_apply: 'Apply', stats_clear: 'Reset', chart_date_error_earlier: 'Date cannot be earlier than the statistics start time',
       stats_error: 'Enter a valid date and time in the past.', stats_note: 'Min/max since', power_range_period: 'Power range for the period', max_current_period: 'Peak current for the period', peak_power_period: 'Peak power for the period', stat_min: 'Min', stat_avg: 'Avg', stat_max: 'Max', hour: 'Hour', day: 'Day', week: 'Week', month: 'Month', loading: 'Loading history…', no_history: 'History is not available yet',
@@ -883,6 +883,7 @@
       this._historyRange = 'hour';
       this._energyHistoryRange = 'day';
       this._energyChartMetric = 'energy_total';
+      this._energySelectedBar = null;
       this._energyCustomRange = null;
       this._energyReturnRange = 'day';
       this._energyHistory = { energy_total: [], cost_total: [] };
@@ -945,6 +946,7 @@
       this._measureQueued = false;
       this._heartbeatTimer = null;
       this.shadowRoot.addEventListener('click', (event) => this._handleCardClick(event));
+      this.shadowRoot.addEventListener('keydown', (event) => this._handleCardKeydown(event));
       this.shadowRoot.addEventListener('toggle', (event) => {
         const panel = event.target;
         if (!panel?.matches?.('.chart-date-range-panel')) return;
@@ -1106,7 +1108,9 @@
       const prefix = config.prefix || 'grid_monitor';
       const entities = { ...DEFAULTS };
       if (prefix !== 'grid_monitor') {
-        Object.keys(entities).forEach((key) => { entities[key] = entities[key].replace('grid_monitor', prefix); });
+        Object.keys(entities).forEach((key) => {
+          if (key !== 'stats_start') entities[key] = entities[key].replace('grid_monitor', prefix);
+        });
       }
       Object.assign(entities, config.entities || {});
       const powerMode = ['grid_shared', 'after_avr', 'independent'].includes(config.esp_power_mode) ? config.esp_power_mode : 'after_avr';
@@ -1241,7 +1245,7 @@
       let plan = null;
       const defId = DEFAULTS[key];
       if (defId) {
-        const prefix = config?.prefix || 'grid_monitor';
+        const prefix = key === 'stats_start' ? 'grid_monitor' : config?.prefix || 'grid_monitor';
         const domain = defId.split('.')[0];
         const suffix = defId.split('.').slice(1).join('.').replace(/^grid_monitor_/, '');
         const aliases = ALIAS_SUFFIXES[key] || [];
@@ -1794,6 +1798,7 @@
       this._history = [];
       this._voltageHistoryKey = '';
       this._voltageHistory = [];
+      this._clearEnergyHistory();
       if (value !== null) {
         this._historyCustomRange = null;
         if (this._historyRange === 'since') {
@@ -1808,6 +1813,11 @@
       this._applyStatsExtremes();
       this._ensureStatsExtremes();
       this._ensureHistory();
+      this._energySelectedBar = null;
+      if (this._activeTab === 'energy') {
+        this._refreshEnergyCharts();
+        this._ensureEnergyHistory();
+      }
     }
 
     _statsExtremesCacheToken() {
@@ -2708,6 +2718,18 @@
       return { step, count, max: count * step };
     }
 
+    _energyBarSelectionHtml(metricKey = this._energyChartMetric || 'energy_total') {
+      const selected = this._energySelectedBar;
+      if (!selected || selected.metricKey !== metricKey) return '';
+      const bars = this._energyHistoryBars(this._energyHistory?.[metricKey] || [], this._energyHistoryBounds(), this._energyHistoryRange);
+      const bar = bars.find((candidate) => candidate.start === selected.start);
+      if (!bar) { this._energySelectedBar = null; return ''; }
+      const metric = CHART_METRICS[metricKey];
+      const unit = metric.unit(this._lang(), this._currencyCode());
+      const value = `${bar.value.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits })} ${unit}`;
+      return `<div class="energy-selection-detail"><span>${this._escape(this._t('energy_selected_interval'))}</span><time>${this._escape(bar.fullLabel)}</time><b>${this._escape(value)}</b></div>`;
+    }
+
     _energyBarSvg(metricKey = this._energyChartMetric || 'energy_total', history = this._energyHistory[metricKey], loading = this._energyHistoryLoading[metricKey]) {
       if (loading && !history?.length) return `<div class="chart-empty">${this._escape(this._t('loading'))}</div>`;
       if (metricKey === 'energy_total' && this._energyHistoryUnitFactor(metricKey) === null) {
@@ -2751,10 +2773,11 @@
         const rectHeight = Math.max(1, y1 - y);
         const value = bar.value.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits });
         const aria = `${bar.fullLabel}: ${value} ${unit}`;
-        return `<rect x="${x.toFixed(1)}" y="${(y1 - rectHeight).toFixed(1)}" width="${barWidth.toFixed(1)}" height="${rectHeight.toFixed(1)}" rx="3" fill="${fill}" data-energy-bar="${index}" data-energy-value="${bar.value}" aria-label="${this._escape(aria)}"><title>${this._escape(aria)}</title></rect>`;
+        const selected = this._energySelectedBar?.metricKey === metricKey && this._energySelectedBar.start === bar.start;
+        return `<rect class="energy-bar${selected ? ' selected' : ''}" x="${x.toFixed(1)}" y="${(y1 - rectHeight).toFixed(1)}" width="${barWidth.toFixed(1)}" height="${rectHeight.toFixed(1)}" rx="3" fill="${fill}" role="button" tabindex="0" aria-pressed="${selected}" data-energy-bar="${index}" data-energy-start="${bar.start}" data-energy-value="${bar.value}" aria-label="${this._escape(aria)}"><title>${this._escape(aria)}</title></rect>`;
       }).join('');
       const title = metricKey === 'energy_total' ? this._t('energy_chart_title') : this._t('cost_chart_title');
-      return `<svg class="energy-bars" data-energy-bar-count="${bars.length}" data-energy-start="${bounds.start}" data-energy-end="${bounds.end}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${this._escape(title)}" style="width:100%;height:auto;display:block;overflow:visible"><g class="chart-grid">${horizontal}${vertical}</g><g class="energy-bars-data">${rects}</g></svg>`;
+      return `<svg class="energy-bars" data-energy-bar-count="${bars.length}" data-energy-start="${bounds.start}" data-energy-end="${bounds.end}" viewBox="0 0 ${width} ${height}" role="group" aria-label="${this._escape(title)}" style="width:100%;height:auto;display:block;overflow:visible"><g class="chart-grid">${horizontal}${vertical}</g><g class="energy-bars-data">${rects}</g></svg>`;
     }
 
     _setChartMarker(chart, x, y, text, sub = '') {
@@ -2968,7 +2991,11 @@
     }
 
     _energyHistoryBounds(range = this._energyHistoryRange, now = Date.now()) {
-      if (range === 'custom' && this._energyCustomRange) return { ...this._energyCustomRange };
+      const applyStatisticsStart = (bounds) => {
+        const start = Number.isFinite(this._statsStart) ? Math.max(bounds.start, this._statsStart) : bounds.start;
+        return { start, end: Math.max(start, bounds.end) };
+      };
+      if (range === 'custom' && this._energyCustomRange) return applyStatisticsStart({ ...this._energyCustomRange });
       const end = new Date(now);
       let start;
       if (range === 'hour') start = new Date(end.getTime() - 3600e3);
@@ -2978,7 +3005,7 @@
         if (range === 'week') start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
         else if (range === 'month') start.setDate(1);
       }
-      return { start: start.getTime(), end: end.getTime() };
+      return applyStatisticsStart({ start: start.getTime(), end: end.getTime() });
     }
 
     _energyHistoryWindowToken() {
@@ -2987,10 +3014,12 @@
     }
 
     _energyHistoryCacheKey(metricKey) {
-      return `${this._energyHistoryRange}${this._energyHistoryWindowToken()}:${metricKey}:${this._entity(metricKey)}`;
+      const statsStart = Number.isFinite(this._statsStart) ? Math.round(this._statsStart) : '';
+      return `${this._energyHistoryRange}${this._energyHistoryWindowToken()}:stats:${statsStart}:${metricKey}:${this._entity(metricKey)}`;
     }
 
     _clearEnergyHistory() {
+      this._energySelectedBar = null;
       for (const metricKey of ['energy_total', 'cost_total']) {
         this._energyHistoryRequests[metricKey] += 1;
         this._energyHistoryLoading[metricKey] = false;
@@ -3092,6 +3121,8 @@
         plot.dataset.energyPlot = metricKey;
         plot.innerHTML = this._energyBarSvg(metricKey, this._energyHistory[metricKey], this._energyHistoryLoading[metricKey]);
       }
+      const selection = this.shadowRoot.querySelector('[data-energy-selection]');
+      if (selection) selection.innerHTML = this._energyBarSelectionHtml(metricKey);
       const stats = this.shadowRoot.querySelector('[data-energy-stats]');
       if (stats) {
         stats.dataset.energyStats = metricKey;
@@ -3375,7 +3406,7 @@
 
     _energyChart(metricKey = this._energyChartMetric || 'energy_total') {
       const title = metricKey === 'energy_total' ? 'energy_chart_title' : 'cost_chart_title';
-      return `<section class="card chart-card energy-history-card"><div class="chart-head"><h2><span class="chart-icon">${this._svg('chart')}</span><span data-energy-chart-title>${this._escape(this._t(title))}</span></h2>${this._energyChartControlsHtml()}</div><div class="chart-stats" data-energy-stats="${metricKey}">${this._chartStatsHtml(metricKey, this._energyHistory[metricKey], 'energy')}</div><div class="chart-plot energy-chart-plot" data-energy-plot="${metricKey}">${this._energyBarSvg(metricKey, this._energyHistory[metricKey], this._energyHistoryLoading[metricKey])}</div></section>`;
+      return `<section class="card chart-card energy-history-card"><div class="chart-head"><h2><span class="chart-icon">${this._svg('chart')}</span><span data-energy-chart-title>${this._escape(this._t(title))}</span></h2>${this._energyChartControlsHtml()}</div><div class="chart-stats" data-energy-stats="${metricKey}">${this._chartStatsHtml(metricKey, this._energyHistory[metricKey], 'energy')}</div><div class="chart-plot energy-chart-plot" data-energy-plot="${metricKey}">${this._energyBarSvg(metricKey, this._energyHistory[metricKey], this._energyHistoryLoading[metricKey])}</div><div class="energy-selection" data-energy-selection role="status" aria-live="polite">${this._energyBarSelectionHtml(metricKey)}</div></section>`;
     }
 
     _energyCoinArt() {
@@ -3658,6 +3689,24 @@
       return this._activeTab === 'home' ? this._home() : this._activeTab === 'params' ? this._params() : this._activeTab === 'energy' ? this._energy() : this._settings();
     }
 
+    _selectEnergyBar(index, restoreFocus = false) {
+      const metricKey = this._energyChartMetric || 'energy_total';
+      const bars = this._energyHistoryBars(this._energyHistory[metricKey] || [], this._energyHistoryBounds(), this._energyHistoryRange);
+      const bar = bars[index];
+      if (!bar) return;
+      this._energySelectedBar = { metricKey, start: bar.start };
+      this._refreshEnergyCharts();
+      if (restoreFocus) this.shadowRoot.querySelector(`[data-energy-bar="${index}"]`)?.focus?.();
+    }
+
+    _handleCardKeydown(event) {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      const target = event.target?.closest?.('[data-energy-bar]');
+      if (!target) return;
+      event.preventDefault?.();
+      this._selectEnergyBar(Number(target.dataset.energyBar), true);
+    }
+
     _handleCardClick(event) {
       const dialogAction = event.target?.closest?.('[data-dialog-action]');
       if (dialogAction) {
@@ -3665,9 +3714,10 @@
         return;
       }
       if (!event.target?.closest?.('.chart-date-range')) this._closeChartDateRangePopover();
-      const target = event.target?.closest?.('[data-scroll-top], [data-tab], [data-period], [data-energy-period], [data-energy-metric], [data-metric], [data-action], [data-number-save], [data-switch], [data-chart-live], [data-chart-zoom], [data-chart-date-toggle], [data-chart-date-apply], [data-stats-start-apply], [data-stats-start-clear]');
+      const target = event.target?.closest?.('[data-scroll-top], [data-tab], [data-period], [data-energy-period], [data-energy-metric], [data-energy-bar], [data-metric], [data-action], [data-number-save], [data-switch], [data-chart-live], [data-chart-zoom], [data-chart-date-toggle], [data-chart-date-apply], [data-stats-start-apply], [data-stats-start-clear]');
       if (!target) return;
       if (target.dataset.scrollTop !== undefined) { this._scrollPageToTop(); return; }
+      if (target.dataset.energyBar !== undefined) { this._selectEnergyBar(Number(target.dataset.energyBar)); return; }
       if (target.dataset.chartDateToggle !== undefined) {
         const panel = this.shadowRoot.getElementById(target.getAttribute('aria-controls'));
         let isOpen = false;
@@ -3745,6 +3795,7 @@
       if (target.dataset.energyMetric) {
         if (this._energyChartMetric === target.dataset.energyMetric) return;
         this._energyChartMetric = target.dataset.energyMetric;
+        this._energySelectedBar = null;
         this._refreshEnergyCharts();
         return;
       }
@@ -4490,6 +4541,9 @@
           .chart-stats>div{padding:8px;border-radius:11px}
           .chart-stats span{font-size:11px}
           .chart-stats b{font-size:15px}
+          .energy-selection-detail{grid-template-columns:minmax(0,1fr) auto}
+          .energy-selection-detail>span{grid-column:1/-1}
+          .energy-selection-detail>b{font-size:15px}
           .detail-panel{padding:18px 14px;border-radius:20px}
           .detail-panel h2{font-size:21px;margin-bottom:14px}
           .detail-panel h2.subheading{margin:22px 0 12px;font-size:12px}
@@ -4579,6 +4633,16 @@
         .energy-chart-controls h3{margin:0;font-size:17px}
         .energy-history-card{margin-top:12px}
         .energy-chart-plot{cursor:default;touch-action:auto;user-select:auto;-webkit-user-select:auto}
+        .energy-bars [data-energy-bar]{cursor:pointer;transition:filter .14s ease}
+        .energy-bars [data-energy-bar]:hover{filter:brightness(1.22)}
+        .energy-bars [data-energy-bar]:focus{outline:none;stroke:#e7f6ff;stroke-width:2}
+        .energy-bars [data-energy-bar][aria-pressed="true"]{stroke:#e7f6ff;stroke-width:2;filter:drop-shadow(0 0 5px #16b5ff)}
+        .energy-selection:empty{display:none}
+        .energy-selection{margin-top:10px;padding:10px 12px;border:1px solid #2b4562;border-radius:12px;background:#13243a}
+        .energy-selection-detail{display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr) auto;align-items:center;gap:8px 12px}
+        .energy-selection-detail>span{color:#9fb5d1;font-size:12px}
+        .energy-selection-detail>time{color:#d9e8fa;font-size:13px;overflow-wrap:anywhere}
+        .energy-selection-detail>b{color:#f3f7ff;font-size:17px;text-align:right;white-space:nowrap}
         .banner-main{flex:1 1 38%;min-width:0}
         .banner-main strong{display:block;max-width:none}
         .banner-system{flex:1 1 35%;min-width:0;display:grid;gap:3px;padding-left:16px;border-left:1px solid #ffffff2c}

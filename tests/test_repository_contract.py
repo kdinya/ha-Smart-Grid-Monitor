@@ -151,6 +151,8 @@ class RepositoryContractTests(unittest.TestCase):
             Loader=ESPHomeSafeLoader,
         )
         self.assertIn("input_text.grid_monitor_statistics_start", card)
+        self.assertIn("if (key !== 'stats_start')", card)
+        self.assertIn("key === 'stats_start' ? 'grid_monitor'", card)
         self.assertIn("callService('input_text', 'set_value'", card)
         self.assertNotIn("localStorage", card)
         self.assertEqual(package["input_text"]["grid_monitor_statistics_start"]["max"], 32)
