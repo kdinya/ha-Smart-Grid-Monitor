@@ -181,13 +181,13 @@ sensor:
       accuracy_decimals: 1
       filters:
         - lambda: |-
-            if (!isfinite(x) || x < 0.0f || x > 300.0f) return {};
+            if (!std::isfinite(x) || x < 0.0f || x > 300.0f) return {};
             return x;
         - timeout: 6s
       on_value:
         then:
           - lambda: |-
-              if (!isfinite(x)) return;
+              if (!std::isfinite(x)) return;
               float v = x;
               id(last_pzem_ms) = millis();
               id(pzem_seen) = true;
@@ -209,33 +209,33 @@ sensor:
       accuracy_decimals: 2
       filters:
         - lambda: |-
-            if (!isfinite(x) || x < 0.0f || x > 100.0f) return {};
+            if (!std::isfinite(x) || x < 0.0f || x > 100.0f) return {};
             return x;
         - timeout: 6s
       on_value:
         then:
           - lambda: |-
-              if (isfinite(x) && x > id(g_i_max)) id(g_i_max) = x;
+              if (std::isfinite(x) && x > id(g_i_max)) id(g_i_max) = x;
     power:
       id: grid_power
       name: "Power"
       accuracy_decimals: 1
       filters:
         - lambda: |-
-            if (!isfinite(x) || x < 0.0f || x > 30000.0f) return {};
+            if (!std::isfinite(x) || x < 0.0f || x > 30000.0f) return {};
             return x;
         - timeout: 6s
       on_value:
         then:
           - lambda: |-
-              if (isfinite(x) && x > id(g_p_max)) id(g_p_max) = x;
+              if (std::isfinite(x) && x > id(g_p_max)) id(g_p_max) = x;
     frequency:
       id: grid_freq
       name: "Frequency"
       accuracy_decimals: 2
       filters:
         - lambda: |-
-            if (!isfinite(x) || x < 0.0f || x > 70.0f) return {};
+            if (!std::isfinite(x) || x < 0.0f || x > 70.0f) return {};
             return x;
         - timeout: 6s
     power_factor:
@@ -244,7 +244,7 @@ sensor:
       accuracy_decimals: 2
       filters:
         - lambda: |-
-            if (!isfinite(x) || x < 0.0f || x > 1.0f) return {};
+            if (!std::isfinite(x) || x < 0.0f || x > 1.0f) return {};
             return x;
         - timeout: 6s
     energy:
@@ -256,14 +256,14 @@ sensor:
       accuracy_decimals: 3
       filters:
         - lambda: |-
-            if (!isfinite(x) || x < 0.0f || x > 10000000.0f) return {};
+            if (!std::isfinite(x) || x < 0.0f || x > 10000000.0f) return {};
             return x;
         - timeout: 6s
         - multiply: 0.001
       on_value:
         then:
           - lambda: |-
-              if (!isfinite(x)) return;
+              if (!std::isfinite(x)) return;
               float e = x;
               float last = id(e_last);
               if (last >= 0 && e >= last && (e - last) < 100.0) {
