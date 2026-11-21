@@ -270,7 +270,7 @@ sensor:
                 float d = e - last;
                 float price = id(th_tariff_day).state;
                 if (id(sw_two_zone).state) {
-                  auto t = id(ha_time).now();
+                  auto t = id(clock).now();
                   if (t.is_valid() && (t.hour >= 23 || t.hour < 7)) price = id(th_tariff_night).state;
                 }
                 id(e_today) += d;
@@ -416,7 +416,7 @@ sensor:
     lambda: |-
       float price = id(th_tariff_day).state;
       if (id(sw_two_zone).state) {
-        auto t = id(ha_time).now();
+        auto t = id(clock).now();
         if (t.is_valid() && (t.hour >= 23 || t.hour < 7)) price = id(th_tariff_night).state;
       }
       return price;
@@ -652,8 +652,11 @@ interval:
 
 # Скидання добових мін/макс і лічильників опівночі, місячних 1-го числа
 time:
-  - platform: homeassistant
-    id: ha_time
+  # SNTP: годинник самого ESP, тож опівнічне скидання і нічний тариф працюють без Home Assistant.
+  # POSIX-правило для України (EET/EEST з переходом на літній час); за потреби змініть.
+  - platform: sntp
+    id: clock
+    timezone: "EET-2EEST,M3.5.0/3,M10.5.0/4"
     on_time:
       - seconds: 0
         minutes: 0
@@ -663,6 +666,6 @@ time:
               id(g_v_min) = 999.0; id(g_v_max) = 0.0;
               id(g_i_max) = 0.0; id(g_p_max) = 0.0;
               id(e_today) = 0.0; id(cost_today) = 0.0;
-              if (id(ha_time).now().day_of_month == 1) {
+              if (id(clock).now().day_of_month == 1) {
                 id(e_month) = 0.0; id(cost_month) = 0.0;
               }
