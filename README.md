@@ -85,7 +85,7 @@ hacs.json                  # HACS frontend metadata
 
 ## Coverage
 
-Both interfaces cover the firmware's live electrical values, energy and cost counters, tariff settings, voltage quality and peaks, PZEM communication outage counts and durations, ESP diagnostics, configuration numbers, two-zone tariff switch, reset buttons and restart button. The frontend reads entities exposed by ESPHome; it does not infer inverter operation from a PZEM timeout.
+Both interfaces cover the firmware's live electrical values, energy and cost counters, tariff settings, voltage quality, daily minimum and maximum values, PZEM communication outage counts and durations, ESP diagnostics, configuration numbers, two-zone tariff switch, reset buttons (including the daily min/max reset) and restart button. The frontend reads entities exposed by ESPHome; it does not infer inverter operation from a PZEM timeout.
 
 ## Electrical safety
 

@@ -69,6 +69,12 @@ globals:
   - {id: g_v_max, type: float, restore_value: yes, initial_value: '0.0'}
   - {id: g_i_max, type: float, restore_value: yes, initial_value: '0.0'}
   - {id: g_p_max, type: float, restore_value: yes, initial_value: '0.0'}
+  - {id: g_p_min, type: float, restore_value: yes, initial_value: '1000000000.0'}
+  - {id: g_i_min, type: float, restore_value: yes, initial_value: '1000000000.0'}
+  - {id: g_f_min, type: float, restore_value: yes, initial_value: '1000000000.0'}
+  - {id: g_f_max, type: float, restore_value: yes, initial_value: '0.0'}
+  - {id: g_pf_min, type: float, restore_value: yes, initial_value: '2.0'}
+  - {id: g_pf_max, type: float, restore_value: yes, initial_value: '0.0'}
   # енергія і вартість
   - {id: e_last, type: float, restore_value: yes, initial_value: '-1.0'}
   - {id: e_today, type: float, restore_value: yes, initial_value: '0.0'}
@@ -216,7 +222,9 @@ sensor:
       on_value:
         then:
           - lambda: |-
-              if (std::isfinite(x) && x > id(g_i_max)) id(g_i_max) = x;
+              if (!std::isfinite(x)) return;
+              if (x < id(g_i_min)) id(g_i_min) = x;
+              if (x > id(g_i_max)) id(g_i_max) = x;
     power:
       id: grid_power
       name: "Power"
@@ -229,7 +237,9 @@ sensor:
       on_value:
         then:
           - lambda: |-
-              if (std::isfinite(x) && x > id(g_p_max)) id(g_p_max) = x;
+              if (!std::isfinite(x)) return;
+              if (x < id(g_p_min)) id(g_p_min) = x;
+              if (x > id(g_p_max)) id(g_p_max) = x;
     frequency:
       id: grid_freq
       name: "Frequency"
@@ -239,6 +249,12 @@ sensor:
             if (!std::isfinite(x) || x < 0.0f || x > 70.0f) return {};
             return x;
         - timeout: 6s
+      on_value:
+        then:
+          - lambda: |-
+              if (!std::isfinite(x) || x < 40.0f) return;
+              if (x < id(g_f_min)) id(g_f_min) = x;
+              if (x > id(g_f_max)) id(g_f_max) = x;
     power_factor:
       id: grid_pf
       name: "Power Factor"
@@ -248,6 +264,15 @@ sensor:
             if (!std::isfinite(x) || x < 0.0f || x > 1.0f) return {};
             return x;
         - timeout: 6s
+      on_value:
+        then:
+          - lambda: |-
+              // Коефіцієнт потужності без навантаження не має сенсу: враховуємо лише при помітній потужності.
+              if (!std::isfinite(x) || x <= 0.0f) return;
+              float p = id(grid_power).state;
+              if (!std::isfinite(p) || p < 5.0f) return;
+              if (x < id(g_pf_min)) id(g_pf_min) = x;
+              if (x > id(g_pf_max)) id(g_pf_max) = x;
     energy:
       id: grid_energy
       name: "Energy Total"
@@ -387,6 +412,50 @@ sensor:
     update_interval: 15s
     lambda: |-
       return id(g_p_max);
+
+  # ---------- Мін/макс за добу: потужність, струм, частота, коеф. потужності ----------
+  - platform: template
+    name: "Power Min Today"
+    unit_of_measurement: W
+    device_class: power
+    accuracy_decimals: 0
+    update_interval: 15s
+    lambda: |-
+      return id(g_p_min) > 1e8 ? NAN : id(g_p_min);
+  - platform: template
+    name: "Current Min Today"
+    unit_of_measurement: A
+    device_class: current
+    accuracy_decimals: 2
+    update_interval: 15s
+    lambda: |-
+      return id(g_i_min) > 1e8 ? NAN : id(g_i_min);
+  - platform: template
+    name: "Frequency Min Today"
+    unit_of_measurement: Hz
+    accuracy_decimals: 2
+    update_interval: 15s
+    lambda: |-
+      return id(g_f_min) > 1e8 ? NAN : id(g_f_min);
+  - platform: template
+    name: "Frequency Max Today"
+    unit_of_measurement: Hz
+    accuracy_decimals: 2
+    update_interval: 15s
+    lambda: |-
+      return id(g_f_max) <= 0 ? NAN : id(g_f_max);
+  - platform: template
+    name: "Power Factor Min Today"
+    accuracy_decimals: 2
+    update_interval: 15s
+    lambda: |-
+      return id(g_pf_min) > 1.5f ? NAN : id(g_pf_min);
+  - platform: template
+    name: "Power Factor Max Today"
+    accuracy_decimals: 2
+    update_interval: 15s
+    lambda: |-
+      return id(g_pf_max) <= 0 ? NAN : id(g_pf_max);
 
   # ---------- Енергія і вартість ----------
   - platform: template
@@ -589,6 +658,17 @@ text_sensor:
       name: "Connected SSID"
       entity_category: diagnostic
 
+# Скидання всіх добових мін/макс: використовується опівночі та кнопкою в Home Assistant
+script:
+  - id: reset_daily_stats
+    then:
+      - lambda: |-
+          id(g_v_min) = 999.0; id(g_v_max) = 0.0;
+          id(g_i_max) = 0.0; id(g_p_max) = 0.0;
+          id(g_i_min) = 1e9; id(g_p_min) = 1e9;
+          id(g_f_min) = 1e9; id(g_f_max) = 0.0;
+          id(g_pf_min) = 2.0; id(g_pf_max) = 0.0;
+
 # ------------------------------------------------------------
 #  Кнопки
 # ------------------------------------------------------------
@@ -623,6 +703,12 @@ button:
       - lambda: |-
           id(cost_today) = 0; id(cost_month) = 0; id(cost_total) = 0;
           id(e_today) = 0; id(e_month) = 0;
+  - platform: template
+    name: "Reset Daily Min Max Stats"
+    entity_category: config
+    icon: mdi:backup-restore
+    on_press:
+      - script.execute: reset_daily_stats
 
 # ------------------------------------------------------------
 #  Логіка: PZEM не відповідає 6 с = телеметрія недоступна.
@@ -664,9 +750,8 @@ time:
         minutes: 0
         hours: 0
         then:
+          - script.execute: reset_daily_stats
           - lambda: |-
-              id(g_v_min) = 999.0; id(g_v_max) = 0.0;
-              id(g_i_max) = 0.0; id(g_p_max) = 0.0;
               id(e_today) = 0.0; id(cost_today) = 0.0;
               if (id(esp_clock).now().day_of_month == 1) {
                 id(e_month) = 0.0; id(cost_month) = 0.0;

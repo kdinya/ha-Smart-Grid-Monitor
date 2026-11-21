@@ -62,7 +62,8 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn(".home-view .main-grid>.voltage{grid-column:1;grid-row:1}", card)
         # Status updates must keep home-active, otherwise the top tab bar reappears next to the side tabs.
         self.assertIn("${this._activeTab === 'home' ? ' home-active' : ''}", card)
-        self.assertIn("grid-template-rows:minmax(580px,auto)", card)
+        self.assertIn("grid-template-rows:auto", card)
+        self.assertIn(".voltage:after{display:none}", card)
 
     def test_gauge_arc_ticks_and_marker_share_one_geometry(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
@@ -70,6 +71,22 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("const gaugeMarker = (progress)", card)
         # The marker used to be computed on a different centre than the arc.
         self.assertNotIn("(180 + progress * 1.8)", card)
+
+    def test_daily_min_max_stats_and_confirmed_reset_are_exposed(self):
+        firmware = (ROOT / "esphome/grid-monitor.yaml").read_text(encoding="utf-8")
+        dashboard = (ROOT / "home-assistant/lovelace/grid-monitor-dashboard.yaml").read_text(encoding="utf-8")
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        for name in [
+            "Power Min Today", "Current Min Today", "Frequency Min Today", "Frequency Max Today",
+            "Power Factor Min Today", "Power Factor Max Today", "Reset Daily Min Max Stats",
+        ]:
+            self.assertIn(f'name: "{name}"', firmware)
+        self.assertIn("script.execute: reset_daily_stats", firmware)
+        self.assertIn("button.grid_monitor_reset_daily_min_max_stats", card)
+        self.assertIn("button.grid_monitor_reset_daily_min_max_stats", dashboard)
+        self.assertIn("reset_stats: ['reset_daily_min_max_stats', 'reset_stats']", card)
+        self.assertIn("this._action('reset_stats'", card)
+        self.assertIn("'reset_stats', 'restart'", card)
 
     def test_chart_is_measured_and_rescaled_to_the_card_width(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")

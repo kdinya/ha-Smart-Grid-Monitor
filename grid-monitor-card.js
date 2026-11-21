@@ -60,6 +60,13 @@
     reset_energy: ['reset_pzem_energy', 'reset_energy'],
     reset_events: ['reset_event_counters', 'reset_events'],
     reset_cost: ['reset_cost_counters', 'reset_cost'],
+    power_min: ['power_min_today', 'power_min'],
+    current_min: ['current_min_today', 'current_min'],
+    frequency_min: ['frequency_min_today', 'frequency_min'],
+    frequency_max: ['frequency_max_today', 'frequency_max'],
+    pf_min: ['power_factor_min_today', 'pf_min'],
+    pf_max: ['power_factor_max_today', 'pf_max'],
+    reset_stats: ['reset_daily_min_max_stats', 'reset_stats'],
     restart: ['restart'],
   };
 
@@ -80,6 +87,10 @@
     inverter_current_duration: 'sensor.grid_monitor_current_pzem_offline_duration', last_inverter_duration: 'sensor.grid_monitor_last_pzem_offline_duration', total_inverter_time: 'sensor.grid_monitor_total_pzem_offline_time',
     wifi_signal: 'sensor.grid_monitor_wifi_signal', uptime: 'sensor.grid_monitor_uptime', esp_temperature: 'sensor.grid_monitor_esp_temperature', ip_address: 'sensor.grid_monitor_ip_address', ssid: 'sensor.grid_monitor_connected_ssid',
     sag_threshold: 'number.grid_monitor_sag_threshold', swell_threshold: 'number.grid_monitor_swell_threshold', nominal_voltage: 'number.grid_monitor_nominal_voltage', tariff_day: 'number.grid_monitor_tariff_day', tariff_night: 'number.grid_monitor_tariff_night', two_zone: 'switch.grid_monitor_two_zone_tariff',
+    power_min: 'sensor.grid_monitor_power_min_today', current_min: 'sensor.grid_monitor_current_min_today',
+    frequency_min: 'sensor.grid_monitor_frequency_min_today', frequency_max: 'sensor.grid_monitor_frequency_max_today',
+    pf_min: 'sensor.grid_monitor_power_factor_min_today', pf_max: 'sensor.grid_monitor_power_factor_max_today',
+    reset_stats: 'button.grid_monitor_reset_daily_min_max_stats',
     reset_energy: 'button.grid_monitor_reset_pzem_energy', reset_events: 'button.grid_monitor_reset_event_counters', reset_cost: 'button.grid_monitor_reset_cost_counters', restart: 'button.grid_monitor_restart',
   };
 
@@ -92,6 +103,13 @@
     'reactive_power', 'phase_angle', 'voltage_deviation', 'voltage_average', 'cost_rate',
   ]);
   const LIVE_DISPLAY_KEYS = new Set([...LIVE_MEASUREMENT_KEYS, 'voltage_status']);
+  // Мін/макс за добу, які показуються дрібним шрифтом під значенням кожної плитки.
+  const METRIC_RANGE = {
+    power: { min: 'power_min', max: 'power_peak', digits: 0 },
+    current: { min: 'current_min', max: 'current_max', digits: 2 },
+    frequency: { min: 'frequency_min', max: 'frequency_max', digits: 2 },
+    power_factor: { min: 'pf_min', max: 'pf_max', digits: 2 },
+  };
 
   const TEXT = {
     uk: {
@@ -130,7 +148,7 @@
       editor_entities_detected: 'сенсорів знайдено',
       editor_custom_entities: 'Точне налаштування окремих сенсорів',
       editor_custom_prefix: 'Вказати інший префікс вручну...',
-      actions: 'Дії', reset_energy: 'Скинути енергію PZEM', reset_events: 'Скинути події', reset_cost: 'Скинути облік', restart: 'Перезапустити ESP', confirm: 'Виконати цю дію?', invalid_number: 'Введіть коректне число в допустимому діапазоні.',
+      actions: 'Дії', reset_energy: 'Скинути енергію PZEM', reset_events: 'Скинути події', reset_cost: 'Скинути облік', reset_stats: 'Скинути мін/макс за день', power_range_title: 'Діапазон потужності сьогодні', restart: 'Перезапустити ESP', confirm: 'Виконати цю дію?', invalid_number: 'Введіть коректне число в допустимому діапазоні.',
       dialog_confirm_title: 'Підтвердьте дію', dialog_error_title: 'Перевірте значення', dialog_confirm: 'Виконати', dialog_cancel: 'Скасувати', dialog_close: 'Зрозуміло',
     },
     en: {
@@ -169,7 +187,7 @@
       editor_entities_detected: 'sensors detected',
       editor_custom_entities: 'Fine-tune Individual Entities',
       editor_custom_prefix: 'Enter custom prefix manually...',
-      actions: 'Actions', reset_energy: 'Reset PZEM energy', reset_events: 'Reset events', reset_cost: 'Reset accounting', restart: 'Restart ESP', confirm: 'Run this action?', invalid_number: 'Enter a valid number within the allowed range.',
+      actions: 'Actions', reset_energy: 'Reset PZEM energy', reset_events: 'Reset events', reset_cost: 'Reset accounting', reset_stats: 'Reset daily min/max', power_range_title: 'Power range today', restart: 'Restart ESP', confirm: 'Run this action?', invalid_number: 'Enter a valid number within the allowed range.',
       dialog_confirm_title: 'Confirm action', dialog_error_title: 'Check the value', dialog_confirm: 'Continue', dialog_cancel: 'Cancel', dialog_close: 'Got it',
     },
   };
@@ -1244,7 +1262,9 @@
       const display = value === null ? this._escape(this._formatted(key, digits)) : value.toLocaleString(this._locale(), { maximumFractionDigits: digits });
       const unit = this._unit(key);
       const extraClass = key === 'power_factor' ? 'pf' : key;
-      return `<div class="card metric ${extraClass}"><div class="metric-icon">${this._svg(icon)}</div><div class="metric-value${value === null ? ' empty' : ''}" data-metric-key="${key}" data-metric-digits="${digits}"><span data-role="metric-number">${display}</span><span class="unit" data-role="metric-unit" style="${unit ? '' : 'display:none'}">${this._escape(unit)}</span></div><div class="metric-label">${this._escape(this._t(key === 'power_factor' ? 'pf' : key))}</div></div>`;
+      const range = METRIC_RANGE[key];
+      const rangeHtml = range ? `<div class="metric-range" data-role="metric-range"><span>${this._escape(this._t('stat_min'))} <b data-value-key="${range.min}" data-value-digits="${range.digits}">${this._escape(this._formatted(range.min, range.digits))}</b></span><span>${this._escape(this._t('stat_max'))} <b data-value-key="${range.max}" data-value-digits="${range.digits}">${this._escape(this._formatted(range.max, range.digits))}</b></span></div>` : '';
+      return `<div class="card metric ${extraClass}"><div class="metric-icon">${this._svg(icon)}</div><div class="metric-value${value === null ? ' empty' : ''}" data-metric-key="${key}" data-metric-digits="${digits}"><span data-role="metric-number">${display}</span><span class="unit" data-role="metric-unit" style="${unit ? '' : 'display:none'}">${this._escape(unit)}</span></div><div class="metric-label">${this._escape(this._t(key === 'power_factor' ? 'pf' : key))}</div>${rangeHtml}</div>`;
     }
 
     _chart() {
@@ -1512,10 +1532,46 @@
       const layout = this._rangeLayout();
       const apply = (role, style) => { const node = this.shadowRoot.querySelector(`[data-role="${role}"]`); if (node) node.setAttribute('style', style); };
       apply('range-zone-low', layout.zoneLow); apply('range-zone-high', layout.zoneHigh); apply('range-span', layout.span); apply('range-now', layout.now);
+      const power = this._powerRangeLayout();
+      apply('power-range-span', power.span); apply('power-range-now', power.now);
+      const unit = this._lang() === 'uk' ? 'Вт' : 'W';
+      const mid = this.shadowRoot.querySelector('[data-role="power-range-mid"]');
+      if (mid) mid.textContent = (power.top / 2).toLocaleString(this._locale(), { maximumFractionDigits: 0 });
+      const top = this.shadowRoot.querySelector('[data-role="power-range-top"]');
+      if (top) top.textContent = `${power.top.toLocaleString(this._locale(), { maximumFractionDigits: 0 })} ${unit}`;
+    }
+
+    _powerScaleMax() {
+      const peak = this._num('power_peak');
+      const base = Math.max(peak ?? 0, 500) * 1.15;
+      const magnitude = 10 ** Math.floor(Math.log10(base));
+      return [1, 2, 2.5, 5, 10].map((multiplier) => multiplier * magnitude).find((value) => value >= base) ?? 10 * magnitude;
+    }
+
+    _powerRangeLayout() {
+      const top = this._powerScaleMax();
+      const pct = (value) => (value === null ? null : Math.max(0, Math.min(100, (value / top) * 100)));
+      const low = pct(this._num('power_min')); const high = pct(this._num('power_peak')); const now = pct(this._num('power'));
+      return {
+        top,
+        span: low === null || high === null ? 'display:none' : `left:${low.toFixed(1)}%;width:${Math.max(high - low, 1.2).toFixed(1)}%`,
+        now: now === null ? 'display:none' : `left:${now.toFixed(1)}%`,
+      };
+    }
+
+    _powerRangeCard() {
+      const layout = this._powerRangeLayout();
+      const unit = this._lang() === 'uk' ? 'Вт' : 'W';
+      const fmt = (value) => value.toLocaleString(this._locale(), { maximumFractionDigits: 0 });
+      return `<div class="range-card power-range" data-role="power-range-card">
+        <div class="range-head"><h3>${this._escape(this._t('power_range_title'))}</h3><div class="range-values"><span>${this._escape(this._t('stat_min'))} <b data-value-key="power_min" data-value-digits="0">${this._escape(this._formatted('power_min', 0))}</b></span><span>${this._escape(this._t('stat_max'))} <b data-value-key="power_peak" data-value-digits="0">${this._escape(this._formatted('power_peak', 0))}</b></span></div></div>
+        <div class="range-track"><i class="range-span" data-role="power-range-span" style="${layout.span}"></i><b class="range-now" data-role="power-range-now" style="${layout.now}"></b></div>
+        <div class="range-scale"><span>0</span><span data-role="power-range-mid">${fmt(layout.top / 2)}</span><span data-role="power-range-top">${fmt(layout.top)} ${this._escape(unit)}</span></div>
+      </div>`;
     }
 
     _params() {
-      return `<section class="detail-panel"><h2>${this._escape(this._t('params_title'))}</h2>${this._chart()}${this._rangeCard()}<div class="detail-grid">
+      return `<section class="detail-panel"><h2>${this._escape(this._t('params_title'))}</h2>${this._chart()}${this._rangeCard()}${this._powerRangeCard()}<div class="detail-grid">
         ${this._detail('apparent_power', this._t('apparent'), 0)}${this._detail('reactive_power', this._t('reactive'), 0)}${this._detail('phase_angle', this._t('phase'), 1)}
         ${this._detail('voltage_deviation', this._t('deviation'), 1)}${this._detail('voltage_average', this._t('average'), 1)}${this._detail('voltage_status', this._t('voltage_state'), 0)}
         ${this._detail('voltage_min', this._t('min_voltage'), 1)}${this._detail('voltage_max', this._t('max_voltage'), 1)}${this._detail('current_max', this._t('max_current'), 2)}${this._detail('power_peak', this._t('peak_power'), 0)}
@@ -1687,7 +1743,7 @@
       </div><h2 class="subheading">${this._escape(this._t('diagnostics'))}</h2><div class="detail-grid">
         ${this._detail('wifi_signal', this._t('wifi'), 0)}${this._detail('esp_temperature', this._t('temperature'), 1)}${this._detail('uptime', this._t('uptime'), 0)}${this._detail('ip_address', this._t('ip'), 0)}${this._detail('ssid', this._t('ssid'), 0)}${this._detail('inverter_events', this._t('inverter_events'), 0)}
       </div><h2 class="subheading">${this._escape(this._t('actions'))}</h2><div class="action-grid">
-        ${this._action('reset_energy', this._t('reset_energy'))}${this._action('reset_events', this._t('reset_events'))}${this._action('reset_cost', this._t('reset_cost'))}${this._action('restart', this._t('restart'))}
+        ${this._action('reset_energy', this._t('reset_energy'))}${this._action('reset_events', this._t('reset_events'))}${this._action('reset_cost', this._t('reset_cost'))}${this._action('reset_stats', this._t('reset_stats'))}${this._action('restart', this._t('restart'))}
       </div></section>`;
     }
 
@@ -2064,7 +2120,7 @@
       }
       if (changed.has('esp_status') || changed.has('esp_connectivity')) this._updateDeviceStatus();
       if (changed.has('two_zone')) this._updateSwitch();
-      for (const key of ['reset_energy', 'reset_events', 'reset_cost', 'restart']) {
+      for (const key of ['reset_energy', 'reset_events', 'reset_cost', 'reset_stats', 'restart']) {
         if (!changed.has(key)) continue;
         const button = this.shadowRoot.querySelector(`[data-action="${key}"]`);
         if (button) button.disabled = !this._state(key);
@@ -2236,7 +2292,7 @@
         .detail-panel{padding:22px;margin-top:2px}.detail-panel h2{margin:0 0 18px;font-size:25px}.detail-panel h2.subheading{margin:24px 0 14px;font-size:19px}.detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.detail{padding:16px;border-radius:16px;background:#13243a;border:1px solid #2b4562;min-width:0}.detail>span,.detail label>span{display:block;color:#9fb5d1;font-size:14px;margin-bottom:7px}.detail b{font-size:22px;overflow-wrap:anywhere}.setting{display:flex;align-items:end;gap:10px}.setting label{flex:1;min-width:0}.setting-input{display:flex;align-items:center;gap:8px}.setting-input input{width:100%;min-width:0;background:#091727;border:1px solid #37526f;border-radius:9px;color:var(--text);padding:10px;font:inherit;font-size:18px}.setting-input small{color:#9fb5d1;white-space:nowrap}.save-button,.switch-button,.action-button{border:1px solid #278ed0;background:#092645;color:#d7efff;border-radius:10px;padding:9px 12px;font:inherit;cursor:pointer}.save-button:hover,.switch-button:hover,.action-button:hover{background:#0c3962}.save-button:disabled,.switch-button:disabled,.action-button:disabled{opacity:.45;cursor:not-allowed}.switch-setting{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.switch-setting>span{color:#9fb5d1;font-size:14px}.switch-setting>strong{font-size:16px}.switch-button{grid-column:1/-1;display:flex;align-items:center;gap:8px;justify-content:center}.switch-button .icon{width:20px;height:20px}.switch-button.on{border-color:#35ed91;color:#35ed91}.action-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.action-button{min-height:68px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;font-size:13px;border-color:#2b8ed0}.action-button span{font-size:22px;color:#45bdff}.action-button .icon{width:25px;height:25px}.footer{display:flex;justify-content:space-between;gap:10px;margin:14px 2px 0;color:#6885a2;font-size:11px}.footer span:last-child{max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
         .chart-head .periods+.periods{margin-left:0}.chart-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:4px 0 10px}.chart-stats>div{background:#13243a;border:1px solid #2b4562;border-radius:14px;padding:9px 12px;min-width:0}.chart-stats span{display:block;color:#9fb5d1;font-size:13px}.chart-stats b{display:block;font-size:19px;margin-top:3px;overflow-wrap:anywhere}
         .voltage-brand{display:flex;align-items:center;gap:18px;align-self:flex-start;min-width:0;max-width:100%}.voltage-brand .brand h1{font-size:clamp(20px,2.6cqw,32px)}.voltage-brand .brand p{font-size:clamp(13px,1.5cqw,16px)}.voltage .voltage-gauge{margin:auto 0}.main-right{display:flex;flex-direction:column;gap:14px;min-width:0}.main-right .home-status{margin:0 2px 0 auto}.main-right>.metrics{flex:1}
-        @container (min-width:960px){.shell.home-active>.tabs-top{display:none}.home-view .main-grid{grid-template-columns:minmax(0,1.03fr) minmax(0,1fr);grid-template-rows:minmax(580px,auto);align-items:stretch}.home-view .main-grid>.voltage{grid-column:1;grid-row:1}.home-view .main-grid>.main-right{grid-column:2;grid-row:1}.home-view .main-right>.tabs-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:0;align-self:stretch;width:100%}}
+        @container (min-width:960px){.shell.home-active>.tabs-top{display:none}.home-view .main-grid{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);grid-template-rows:auto;align-items:stretch}.home-view .main-grid>.voltage{grid-column:1;grid-row:1}.home-view .main-grid>.main-right{grid-column:2;grid-row:1}.home-view .main-right>.tabs-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:0;align-self:stretch;width:100%}}
         @container (max-width:760px){.shell{padding:12px}.header{gap:11px;padding:5px 2px 14px}.logo{width:58px;height:58px;border-radius:17px}.logo .icon{width:38px;height:38px}.headright{gap:8px}.connection strong{font-size:14px}.connection small{font-size:10px}.wifi-icon{font-size:21px;padding-left:10px}.wifi-icon .icon{width:24px;height:24px}.tabs{margin-bottom:12px}.tab{gap:5px;padding:12px 3px;font-size:12px}.tab .tab-icon{font-size:19px}.tab .icon{width:20px;height:20px}.main-grid{grid-template-columns:1fr;gap:10px}.voltage{min-height:300px}.voltage-gauge{width:min(100%,420px)}.metrics{gap:10px}.metric{min-height:135px}.metric-icon .icon{width:38px;height:38px}.metric-label{font-size:15px}.chart-card{padding:13px 11px}.chart-head h2{font-size:19px}.periods{width:100%;margin:0}.period-button{flex:1;padding:8px 4px;font-size:13px}.bottom-status{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.info{min-height:100px;padding:12px 8px}.info .symbol .icon{width:30px;height:30px}.info .small{font-size:13px}.info strong{font-size:16px}.banner{padding:14px;min-height:70px}.banner-check{width:38px;height:38px}.banner-check .icon{width:28px;height:28px}.house-art{width:80px}.detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.detail-panel{padding:16px}.detail-panel h2{font-size:22px}.action-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
         @container (max-width:420px){.headright .wifi-icon{display:none}.connection small{max-width:105px}.tab{font-size:11px}.tab .tab-icon{display:none}.metric{min-height:122px;padding:12px 8px}.metric-value{font-size:clamp(25px,8cqw,34px)}.info{gap:8px}.info .symbol .icon{width:26px;height:26px}.info .small{font-size:12px}.info strong{font-size:14px}.detail-grid{grid-template-columns:1fr}.setting{align-items:stretch}}
         /* Premium instrument finish: layered glass, metal highlights and soft depth. */
@@ -2419,6 +2475,9 @@
         .detail>span,.detail label>span{font-size:13px;color:#9fb7d6;margin-bottom:6px}
         .detail b{font-size:21px;font-weight:750;letter-spacing:-.2px}
 
+        @container (min-width:761px){.metric{min-height:0;padding:12px 10px}.metric-icon{font-size:40px}.metric-icon .icon{width:40px;height:40px}.metric-value{font-size:clamp(30px,3.4cqw,46px);margin:0}.metric-range{margin-top:6px}}
+        .metric-range{display:flex;justify-content:center;flex-wrap:wrap;gap:2px 16px;margin-top:8px;color:#9fb7d6;font-size:14px}.metric-range b{color:#e6f0ff;font-size:15px;font-weight:700;margin-left:4px}
+        .voltage:after{display:none}
         .range-card{position:relative;padding:18px 20px 14px;margin:0 0 16px;border-radius:18px;background:linear-gradient(145deg,#1a3350,#0b1a2d);border:1px solid #5d96ca3a;box-shadow:inset 0 1px 0 #ffffff1a,0 12px 26px #0005}
         .range-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 18px;margin-bottom:22px}
         .range-head h3{margin:0;font-size:16px;font-weight:750}

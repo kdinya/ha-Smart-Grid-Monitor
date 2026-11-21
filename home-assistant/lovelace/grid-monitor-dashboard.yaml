@@ -189,6 +189,24 @@ views:
           - entity: sensor.grid_monitor_power_peak_today
             name: Пікова потужність
             icon: mdi:flash-alert
+          - entity: sensor.grid_monitor_power_min_today
+            name: Мінімальна потужність
+            icon: mdi:flash-off
+          - entity: sensor.grid_monitor_current_min_today
+            name: Мінімальний струм
+            icon: mdi:current-ac
+          - entity: sensor.grid_monitor_frequency_min_today
+            name: Мінімальна частота
+            icon: mdi:sine-wave
+          - entity: sensor.grid_monitor_frequency_max_today
+            name: Максимальна частота
+            icon: mdi:sine-wave
+          - entity: sensor.grid_monitor_power_factor_min_today
+            name: Мінімальний коеф. потужності
+            icon: mdi:angle-acute
+          - entity: sensor.grid_monitor_power_factor_max_today
+            name: Максимальний коеф. потужності
+            icon: mdi:angle-acute
 
       - type: entities
         title: Переривання зв’язку з PZEM
@@ -295,6 +313,17 @@ views:
                 entity_id: button.grid_monitor_reset_cost_counters
             confirmation:
               text: Скинути лічильники вартості та енергії?
+          - type: button
+            entity: button.grid_monitor_reset_daily_min_max_stats
+            name: Скинути мін/макс за день
+            icon: mdi:backup-restore
+            tap_action:
+              action: call-service
+              service: button.press
+              target:
+                entity_id: button.grid_monitor_reset_daily_min_max_stats
+            confirmation:
+              text: Скинути мін/макс напруги, потужності, струму, частоти та коефіцієнта за добу?
           - type: button
             entity: button.grid_monitor_restart
             name: Перезапустити ESP
