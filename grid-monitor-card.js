@@ -1631,7 +1631,7 @@
         buf: { start: bounds.tStart, end: this._historyAt || Date.now(), items: Array.isArray(this._history) ? this._history.slice() : [] },
       };
       plot.classList.add('is-panning');
-      this._panEnsureBuffer(this._chartPan, bounds.tStart - 2 * bounds.rangeMs, Date.now());
+      this._panEnsureBuffer(this._chartPan, bounds.tStart - bounds.rangeMs, Date.now());
     }
 
     _chartPointerMove(event) {
@@ -1756,8 +1756,8 @@
       const { start, end } = this._chartPanTarget(pan);
       const range = end - start;
       if (!(range > 0)) return;
-      this._panEnsureBuffer(pan, start - range * 1.5, end);
-      if (!this._panCovers(pan, start, end)) { this._chartPanPreview(pan); return; }
+      this._panEnsureBuffer(pan, start - range * 0.5, end);
+      if (pan.buf.end <= start || pan.buf.start >= end) { this._chartPanPreview(pan); return; }
       this._panCommit(pan, start, end);
       pan.startX += pan.deltaX;
       pan.deltaX = 0;
@@ -1780,7 +1780,7 @@
       else if (wantEnd > buf.end + 60e3 && now - buf.end > 60e3) { from = buf.end; to = now; side = 'right'; }
       else return;
       const metricKey = this._chartMetric || 'power';
-      const path = `history/period/${encodeURIComponent(new Date(from).toISOString())}?filter_entity_id=${encodeURIComponent(this._entity(metricKey))}&end_time=${encodeURIComponent(new Date(to).toISOString())}&minimal_response`;
+      const path = `history/period/${encodeURIComponent(new Date(from).toISOString())}?filter_entity_id=${encodeURIComponent(this._entity(metricKey))}&end_time=${encodeURIComponent(new Date(to).toISOString())}&minimal_response&no_attributes`;
       pan.fetching = true;
       Promise.resolve().then(() => hass.callApi('GET', path)).then((response) => {
         if (this._chartPan !== pan) return;
