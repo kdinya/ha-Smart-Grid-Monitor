@@ -95,6 +95,17 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn(".shell:not(.home-active)>.page-layout{display:block}", card)
         self.assertIn(".shell:not(.home-active)>.page-layout>.tabs-side{display:none}", card)
 
+    def test_voltage_panel_reduces_vertical_padding_and_lowers_caption(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        self.assertIn('<text x="250" y="281" text-anchor="middle" class="voltage-label">', card)
+        self.assertIn(".voltage{padding:5px 12px 4px;justify-content:space-between}", card)
+        self.assertIn("@container (max-width:760px){.voltage{padding:5px 10px 4px}}", card)
+
+    def test_non_home_header_aligns_with_menu_and_reduces_content_gap(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        self.assertIn(".shell:not(.home-active)>.header{align-items:flex-start;padding-bottom:6px}", card)
+        self.assertIn("@container (max-width:959px){.shell:not(.home-active)>.header{padding-bottom:4px}.shell:not(.home-active)>.header>.tabs-top{margin-bottom:1px}}", card)
+
     def test_chart_scrubber_shows_full_width_historical_measurements_and_metric_correct_marker(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
         self.assertIn("data-role=\"chart-scrubber\"", card)
