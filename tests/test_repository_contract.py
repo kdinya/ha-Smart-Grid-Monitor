@@ -50,6 +50,16 @@ class RepositoryContractTests(unittest.TestCase):
             with self.subTest(path=relative):
                 yaml.load((ROOT / relative).read_text(encoding="utf-8"), Loader=ESPHomeSafeLoader)
 
+    def test_wide_home_layout_places_tabs_beside_voltage_panel(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        home = card.split("    _home() {", 1)[1].split("    _id(name)", 1)[0]
+        side_tabs = "${this._tabs('side')}"
+        self.assertIn(side_tabs, home)
+        self.assertLess(home.index(side_tabs), home.index('<div class="metrics">'))
+        self.assertIn("@container (min-width:960px)", card)
+        self.assertIn(".shell.home-active>.tabs-top{display:none}", card)
+        self.assertIn(".home-view .main-grid>.tabs-side{display:grid;grid-column:2;grid-row:1;", card)
+
     def test_dashboard_shows_explicit_voltage_status_not_stale_alarm(self):
         dashboard = yaml.load(
             (ROOT / "home-assistant/lovelace/grid-monitor-dashboard.yaml").read_text(encoding="utf-8"),
