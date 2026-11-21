@@ -1,7 +1,7 @@
 # ============================================================
 #  Grid Monitor: ESP32-C3 + PZEM-004T v3.0 (100A, CT)
-#  Проводка:  PZEM 5V -> 3V3 ESP (безпечний рівень 3.3V для UART), GND -> GND
-#             PZEM TX -> GPIO20 (RX ESP),  PZEM RX -> GPIO21 (TX ESP)
+#  Проводка:  PZEM VCC (3.3V) -> 3V3 ESP, GND -> GND
+#             PZEM TX -> GPIO4 (RX ESP),  PZEM RX -> GPIO5 (TX ESP)
 #  secrets.yaml: wifi_ssid, wifi_password, fallback_password, api_key, ota_password
 # ============================================================
 esphome:
@@ -19,7 +19,7 @@ esp32:
 preferences:
   flash_write_interval: 5min
 
-# Логи через USB, щоб UART0 (GPIO20/21) був вільний для PZEM
+# Логи через USB; UART PZEM підключений до GPIO4/5
 logger:
   hardware_uart: USB_SERIAL_JTAG
   level: INFO
@@ -51,8 +51,8 @@ captive_portal:
 # ------------------------------------------------------------
 uart:
   id: uart_pzem
-  tx_pin: GPIO21
-  rx_pin: GPIO20
+  tx_pin: GPIO5
+  rx_pin: GPIO4
   baud_rate: 9600
   stop_bits: 1
 
