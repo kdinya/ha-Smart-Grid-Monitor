@@ -92,11 +92,15 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertNotIn("${this._activeTab === 'home' ? '' : this._tabs('side')}", render)
         self.assertIn(".shell:not(.home-active)>.header>.tabs-top{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));flex:0 0 45%;width:45%;min-width:360px;max-width:560px;margin:0 0 0 auto", card)
         self.assertIn(".shell:not(.home-active)>.header>.tabs-top .tab{padding:15px 8px}", card)
-        self.assertIn(".shell:not(.home-active)>.page-layout{display:block;margin-top:-30px}", card)
+        self.assertIn(".shell:not(.home-active)>.page-layout{display:block;margin-top:-20px}", card)
         self.assertIn(".shell:not(.home-active)>.page-layout>.tabs-side{display:none}", card)
 
     def test_energy_tab_has_separate_kwh_and_cost_history_charts(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        params_chart = card.split("    _chart() {", 1)[1].split("    _readStatsStart()", 1)[0]
+        self.assertIn("['power', 'voltage'].map", params_chart)
+        self.assertNotIn("energy_total", params_chart)
+        self.assertNotIn("cost_total", params_chart)
         energy = card.split("    _energy() {", 1)[1].split("    _energyChartControlsHtml()", 1)[0]
         self.assertIn("${this._energyChart('energy_total')}", energy)
         self.assertIn("${this._energyChart('cost_total')}", energy)
@@ -104,7 +108,64 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn('data-energy-plot="${metricKey}"', chart)
         self.assertIn("this._chartSvg(metricKey, this._energyHistory[metricKey], 'energy'", chart)
         self.assertIn("energy_total: { digits: 3, plausible: [0, 1e7], unit: () => 'kWh' }", card)
-        self.assertIn("cost_total: { digits: 2, plausible: [0, 1e9], unit: (lang) => (lang === 'uk' ? 'грн' : 'UAH') }", card)
+        self.assertIn("cost_total: { digits: 2, plausible: [0, 1e9], unit: (lang, currency = 'UAH') => (currency === 'UAH' && lang === 'uk' ? 'грн' : currency) }", card)
+
+    def test_visual_editor_currency_selector_is_persisted_and_explicitly_display_only(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        editor = card.split("class GridMonitorCardEditor", 1)[1].split("customElements.define('grid-monitor-card-editor'", 1)[0]
+        self.assertIn('id="sel_currency"', editor)
+        self.assertLess(editor.index('id="sel_lang"'), editor.index('id="sel_currency"'))
+        self.assertIn("setValue('#sel_currency', ['UAH', 'EUR', 'USD'].includes(this._config.currency) ? this._config.currency : 'UAH')", editor)
+        self.assertIn("this._config.currency = e.target.value", editor)
+        self.assertIn("Only the label changes; numbers are not converted", card)
+        self.assertIn("this._currencyUnit(key, 'UAH')", card)
+
+    def test_night_tariff_is_conditional_in_card_and_native_dashboard(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        settings = card.split("    _settings() {", 1)[1].split("    _chipArt()", 1)[0]
+        energy = card.split("    _energy() {", 1)[1].split("    _energyChartControlsHtml()", 1)[0]
+        tariff = card.split("    _tariffBars() {", 1)[1].split("    _settings()", 1)[0]
+        self.assertIn("twoZone ? this._setting('tariff_night'", settings)
+        self.assertIn("${twoZone ? row('tariff_night', 'night', 'night-rate', night) : ''}", tariff)
+        self.assertIn("${twoZone ? `<div class=\"detail tariff-state\"", energy)
+        self.assertIn("${twoZone ? `<span class=\"rate-pulse\"", energy)
+
+        dashboard = yaml.load(
+            (ROOT / "home-assistant/lovelace/grid-monitor-dashboard.yaml").read_text(encoding="utf-8"),
+            Loader=ESPHomeSafeLoader,
+        )
+        conditionals = [node for node in _walk(dashboard) if node.get("type") == "conditional"]
+        night_cards = [node for node in conditionals if node.get("card", {}).get("entity") == "number.grid_monitor_tariff_night"]
+        self.assertTrue(night_cards)
+        self.assertEqual(night_cards[0]["conditions"][0]["entity"], "switch.grid_monitor_two_zone_tariff")
+        self.assertEqual(night_cards[0]["conditions"][0]["state"], "on")
+
+    def test_statistics_start_is_stored_in_home_assistant_helper_not_browser_storage(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        package = yaml.load(
+            (ROOT / "home-assistant/packages/grid_monitor.yaml").read_text(encoding="utf-8"),
+            Loader=ESPHomeSafeLoader,
+        )
+        self.assertIn("input_text.grid_monitor_statistics_start", card)
+        self.assertIn("callService('input_text', 'set_value'", card)
+        self.assertNotIn("localStorage", card)
+        self.assertEqual(package["input_text"]["grid_monitor_statistics_start"]["max"], 32)
+
+    def test_scroll_to_top_is_fixed_and_smooth_for_home_assistant_scroll_containers(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        self.assertIn('popover="manual" data-scroll-top aria-label=', card)
+        self.assertIn("document.addEventListener('scroll', this._scrollVisibilityHandler, { capture: true, passive: true })", card)
+        self.assertIn("button.showPopover()", card)
+        self.assertIn("window.scrollTo({ top: 0, behavior: 'smooth' })", card)
+        self.assertIn("scroller.scrollTo({ top: 0, behavior: 'smooth' })", card)
+        self.assertIn(".back-to-top{position:fixed;", card)
+
+    def test_plug_illustration_uses_rounded_european_pins_and_side_contacts(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        plug = card.split("    _plugArt() {", 1)[1].split("    _tariffBars()", 1)[0]
+        self.assertIn('width="7" height="26" rx="3.5"', plug)
+        self.assertIn("Side grounding contacts typical of a Schuko-style plug", plug)
+        self.assertNotIn("Electric Plasma Arc between prongs", plug)
 
     def test_date_picker_uses_top_layer_and_online_indicators_are_static(self):
         import re
@@ -181,7 +242,7 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("chart.dataset.chartMin", card)
         self.assertIn(".chart-reading-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr))", card)
         self.assertIn("this._queueChartReadings(point.t)", card)
-        self.assertIn(".shell:not(.home-active)>.page-layout{display:block;margin-top:-30px}", card)
+        self.assertIn(".shell:not(.home-active)>.page-layout{display:block;margin-top:-20px}", card)
         self.assertIn(".shell:not(.home-active)>.page-layout>.tabs-side{display:none}", card)
 
     def test_daily_voltage_and_power_minima_ignore_invalid_restored_values(self):

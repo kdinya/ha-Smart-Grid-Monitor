@@ -68,6 +68,7 @@
     pf_max: ['power_factor_max_today', 'pf_max'],
     reset_stats: ['reset_daily_min_max_stats', 'reset_stats'],
     restart: ['restart'],
+    stats_start: ['statistics_start'],
   };
 
   const DEFAULTS = {
@@ -92,6 +93,7 @@
     pf_min: 'sensor.grid_monitor_power_factor_min_today', pf_max: 'sensor.grid_monitor_power_factor_max_today',
     reset_stats: 'button.grid_monitor_reset_daily_min_max_stats',
     reset_energy: 'button.grid_monitor_reset_pzem_energy', reset_events: 'button.grid_monitor_reset_event_counters', reset_cost: 'button.grid_monitor_reset_cost_counters', restart: 'button.grid_monitor_restart',
+    stats_start: 'input_text.grid_monitor_statistics_start',
   };
 
   const SETTING_ENTITY_KEYS = new Set(['sag_threshold', 'swell_threshold', 'nominal_voltage', 'tariff_day', 'tariff_night']);
@@ -111,8 +113,6 @@
     power_factor: { min: 'pf_min', max: 'pf_max', digits: 2 },
   };
 
-  // Початок статистики зберігається в браузері: від цього моменту рахуються графік та мін/макс.
-  const STATS_START_STORAGE_KEY = 'grid-monitor-card:stats-start';
   // «Мін/макс за добу» з прошивки, які від вибраного моменту рахуються з історії Home Assistant.
   const STATS_OVERRIDES = {
     voltage_min: ['voltage', 'min'], voltage_max: ['voltage', 'max'],
@@ -139,7 +139,7 @@
       pzem_online: 'Дані PZEM доступні', pzem_offline: 'PZEM офлайн', source_unconfirmed: 'Джерело живлення не підтверджене', source_unknown: 'Джерело живлення невідоме', pzem_source_offline: 'PZEM офлайн; джерело живлення невідоме', pzem_offline_banner: 'PZEM не відповідає; джерело живлення невідоме',
       voltage: 'Напруга мережі', sag_state: 'Просідання', swell_state: 'Перенапруга', current: 'Струм', power: 'Потужність', frequency: 'Частота', pf: 'Коеф. потужності', normal: 'Норма', alarm: 'Поза нормою',
       chart_title: 'Детальний графік', energy_chart_title: 'Споживання електроенергії', cost_chart_title: 'Вартість електроенергії', chart_period: 'Період графіків', since: 'Період', stats_title: 'Статистика', stats_start_label: 'Початок статистики',
-      stats_hint: 'Оберіть дату й час: графіки та мінімум/максимум рахуватимуться від цього моменту. Без значення діють добові дані.',
+      stats_hint: 'Оберіть дату й час: графіки та мінімум/максимум рахуватимуться від цього моменту. Без значення діють добові дані.', stats_shared_hint: 'Для синхронізації між пристроями ввімкніть пакет Home Assistant із helper input_text.grid_monitor_statistics_start.', stats_sync_saved: 'Збережено в Home Assistant; налаштування синхронізується між пристроями.', stats_sync_missing: 'Helper не знайдено: значення діє лише до перезавантаження. Увімкніть optional package для синхронізації.',
       stats_active: 'Графіки та мін/макс рахуються від', stats_apply: 'Застосувати', stats_clear: 'Скинути', chart_date_error_earlier: 'Дата не може бути раніше виставленого початку статистики',
       stats_error: 'Вкажіть коректні дату й час у минулому.', stats_note: 'Мін/макс від', power_range_period: 'Діапазон потужності за період', max_current_period: 'Максимальний струм за період', peak_power_period: 'Пікова потужність за період', stat_min: 'Мін.', stat_avg: 'Сер.', stat_max: 'Макс.', hour: 'Год', day: 'День', week: 'Тиждень', month: 'Місяць', loading: 'Завантаження історії…', no_history: 'Історія поки недоступна',
       chart_select_time: 'Перетягуйте графік; двома пальцями масштабуйте, повзунком вибирайте час', chart_date_range: 'Вибрати період', chart_from: 'Від', chart_to: 'До', chart_apply: 'Показати', chart_date_error: 'Перевірте дати: кінець має бути пізніше початку й не в майбутньому', chart_zoom_in: 'Збільшити масштаб', chart_zoom_out: 'Зменшити масштаб', chart_readings: 'Дані на вибраний час', chart_readings_loading: 'Завантаження вимірювань…', chart_readings_unavailable: 'Історія вимірювань недоступна', chart_live: 'Зараз', active_power: 'Активна потужність',
@@ -163,6 +163,11 @@
       editor_lang_auto: 'Авто (налаштування Home Assistant)',
       editor_lang_uk: 'Українська',
       editor_lang_en: 'English',
+      editor_currency: 'Валюта відображення (без перерахунку)',
+      editor_currency_hint: 'Змінюється лише позначення. Числа не перераховуються; тарифні сутності в Home Assistant залишаються в UAH.',
+      editor_currency_uah: 'UAH · грн',
+      editor_currency_eur: 'EUR',
+      editor_currency_usd: 'USD',
       editor_power_mode: 'Схема живлення ESP',
       editor_power_mode_hint: 'PZEM підключений до мережі в усіх режимах.',
       editor_power_grid_shared: 'Від мережі разом із модулем',
@@ -175,6 +180,7 @@
       editor_custom_prefix: 'Вказати інший префікс вручну...',
       actions: 'Дії', reset_energy: 'Скинути енергію PZEM', reset_events: 'Скинути події', reset_cost: 'Скинути облік', reset_stats: 'Скинути мін/макс за день', power_range_title: 'Діапазон потужності сьогодні', restart: 'Перезапустити ESP', confirm: 'Виконати цю дію?', invalid_number: 'Введіть коректне число в допустимому діапазоні.',
       dialog_confirm_title: 'Підтвердьте дію', dialog_error_title: 'Перевірте значення', dialog_confirm: 'Виконати', dialog_cancel: 'Скасувати', dialog_close: 'Зрозуміло',
+      scroll_to_top: 'На початок сторінки',
     },
     en: {
       title: 'Grid voltage', subtitle: 'PZEM-004T v3.0 · Grid Monitor', online: 'Online', offline: 'Offline', updated: 'Updated',
@@ -184,7 +190,7 @@
       pzem_online: 'PZEM data available', pzem_offline: 'PZEM offline', source_unconfirmed: 'Power source is not confirmed', source_unknown: 'Power source unknown', pzem_source_offline: 'PZEM offline; power source unknown', pzem_offline_banner: 'PZEM is not responding; power source is unknown',
       voltage: 'Grid voltage', sag_state: 'Sag', swell_state: 'Swell', current: 'Current', power: 'Power', frequency: 'Frequency', pf: 'Power factor', normal: 'Normal', alarm: 'Out of range',
       chart_title: 'Detailed chart', energy_chart_title: 'Electricity consumption', cost_chart_title: 'Electricity cost', chart_period: 'Chart period', since: 'Period', stats_title: 'Statistics', stats_start_label: 'Statistics start',
-      stats_hint: 'Pick a date and time: charts and min/max will be calculated from that moment. Empty means daily values.',
+      stats_hint: 'Pick a date and time: charts and min/max will be calculated from that moment. Empty means daily values.', stats_shared_hint: 'To sync this setting across devices, enable the Home Assistant package with the input_text.grid_monitor_statistics_start helper.', stats_sync_saved: 'Saved in Home Assistant; this setting syncs across devices.', stats_sync_missing: 'Helper not found: this setting lasts only until reload. Enable the optional package to sync it.',
       stats_active: 'Charts and min/max are calculated from', stats_apply: 'Apply', stats_clear: 'Reset', chart_date_error_earlier: 'Date cannot be earlier than the statistics start time',
       stats_error: 'Enter a valid date and time in the past.', stats_note: 'Min/max since', power_range_period: 'Power range for the period', max_current_period: 'Peak current for the period', peak_power_period: 'Peak power for the period', stat_min: 'Min', stat_avg: 'Avg', stat_max: 'Max', hour: 'Hour', day: 'Day', week: 'Week', month: 'Month', loading: 'Loading history…', no_history: 'History is not available yet',
       chart_select_time: 'Drag the chart to pan; pinch to zoom, or use the slider to select a time', chart_date_range: 'Select period', chart_from: 'From', chart_to: 'To', chart_apply: 'Show', chart_date_error: 'Check dates: the end must be after the start and not in the future', chart_zoom_in: 'Zoom in', chart_zoom_out: 'Zoom out', chart_readings: 'Readings at selected time', chart_readings_loading: 'Loading readings…', chart_readings_unavailable: 'Measurement history is unavailable', chart_live: 'Now', active_power: 'Active power',
@@ -208,6 +214,11 @@
       editor_lang_auto: 'Auto (from Home Assistant)',
       editor_lang_uk: 'Ukrainian',
       editor_lang_en: 'English',
+      editor_currency: 'Display currency (no conversion)',
+      editor_currency_hint: 'Only the label changes; numbers are not converted. Home Assistant tariff entities remain in UAH.',
+      editor_currency_uah: 'UAH · грн',
+      editor_currency_eur: 'EUR',
+      editor_currency_usd: 'USD',
       editor_power_mode: 'ESP power arrangement',
       editor_power_mode_hint: 'PZEM remains connected to the mains in every mode.',
       editor_power_grid_shared: 'Mains shared with the module',
@@ -220,6 +231,7 @@
       editor_custom_prefix: 'Enter custom prefix manually...',
       actions: 'Actions', reset_energy: 'Reset PZEM energy', reset_events: 'Reset events', reset_cost: 'Reset accounting', reset_stats: 'Reset daily min/max', power_range_title: 'Power range today', restart: 'Restart ESP', confirm: 'Run this action?', invalid_number: 'Enter a valid number within the allowed range.',
       dialog_confirm_title: 'Confirm action', dialog_error_title: 'Check the value', dialog_confirm: 'Continue', dialog_cancel: 'Cancel', dialog_close: 'Got it',
+      scroll_to_top: 'Back to top',
     },
   };
 
@@ -228,7 +240,7 @@
     power: { digits: 0, plausible: [0, MAX_PLAUSIBLE_POWER_W], unit: (lang) => (lang === 'uk' ? 'Вт' : 'W') },
     voltage: { digits: 1, plausible: [50, 400], unit: (lang) => (lang === 'uk' ? 'В' : 'V') },
     energy_total: { digits: 3, plausible: [0, 1e7], unit: () => 'kWh' },
-    cost_total: { digits: 2, plausible: [0, 1e9], unit: (lang) => (lang === 'uk' ? 'грн' : 'UAH') },
+    cost_total: { digits: 2, plausible: [0, 1e9], unit: (lang, currency = 'UAH') => (currency === 'UAH' && lang === 'uk' ? 'грн' : currency) },
   };
   const CHART_READINGS = [
     { key: 'current', label: 'current', digits: 2, plausible: [0, 100] },
@@ -268,6 +280,7 @@
     check: '<path d="m11 25 9 9 18-20" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>',
     gear: '<path d="M24 7v5m0 24v5M7 24h5m24 0h5M12 12l4 4m16 16 4 4m0-24-4 4m-16 16-4 4" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><circle cx="24" cy="24" r="12" fill="none" stroke="currentColor" stroke-width="4"/>',
     plug: '<path d="M17 7v12m14-12v12M12 19h24v3a12 12 0 0 1-12 12v8m0-8a12 12 0 0 1-12-12z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',
+    arrow_up: '<path d="M24 7 9 22l3.2 3.2L21.7 16v25h4.6V16l9.5 9.2L39 22z" fill="currentColor"/>',
   };
 
   class GridMonitorCardEditor extends HTMLElement {
@@ -327,6 +340,7 @@
       setValue('#inp_prefix', this._config.prefix || 'grid_monitor');
       setValue('#sel_device', this._config.prefix || 'grid_monitor');
       setValue('#sel_lang', this._config.language || '');
+      setValue('#sel_currency', ['UAH', 'EUR', 'USD'].includes(this._config.currency) ? this._config.currency : 'UAH');
       setValue('#sel_power_mode', this._config.esp_power_mode || 'after_avr');
       const performance = this.shadowRoot.querySelector('#chk_performance');
       if (performance && performance !== active) performance.checked = this._config.performance === true;
@@ -501,6 +515,7 @@
       const currentPrefix = this._config.prefix || 'grid_monitor';
       const activeCandidate = candidates.find((c) => c.prefix === currentPrefix) || { prefix: currentPrefix, count: 0, total: Object.keys(DEFAULTS).length };
       const lang = this._config.language || '';
+      const currency = ['UAH', 'EUR', 'USD'].includes(this._config.currency) ? this._config.currency : 'UAH';
       const name = this._config.name || '';
       const powerMode = this._config.esp_power_mode || 'after_avr';
 
@@ -703,6 +718,16 @@
         </div>
 
         <div class="field">
+          <label>${this._t('editor_currency')}</label>
+          <select id="sel_currency">
+            <option value="UAH" ${currency === 'UAH' ? 'selected' : ''}>${this._t('editor_currency_uah')}</option>
+            <option value="EUR" ${currency === 'EUR' ? 'selected' : ''}>${this._t('editor_currency_eur')}</option>
+            <option value="USD" ${currency === 'USD' ? 'selected' : ''}>${this._t('editor_currency_usd')}</option>
+          </select>
+          <div class="hint">${this._t('editor_currency_hint')}</div>
+        </div>
+
+        <div class="field">
           <label>${this._t('editor_power_mode')}</label>
           <select id="sel_power_mode">
             <option value="grid_shared" ${powerMode === 'grid_shared' ? 'selected' : ''}>${this._t('editor_power_grid_shared')}</option>
@@ -771,6 +796,11 @@
 
       root.getElementById('sel_lang').addEventListener('change', (e) => {
         this._config.language = e.target.value || undefined;
+        this._fireChanged();
+      });
+
+      root.getElementById('sel_currency').addEventListener('change', (e) => {
+        this._config.currency = e.target.value;
         this._fireChanged();
       });
 
@@ -895,6 +925,8 @@
       this._updateScheduled = false;
       this._dialogResolver = null;
       this._renderPending = false;
+      this._scrollListenersAttached = false;
+      this._scrollVisibilityHandler = () => this._updateScrollTopVisibility();
       this._chartW = 0;
       this._chartPts = [];
       this._scrubTime = null;
@@ -965,6 +997,12 @@
         this._visibilityHandler = () => { if (this._isActive()) this._resumeUpdates(); };
         document.addEventListener('visibilitychange', this._visibilityHandler);
       }
+      if (typeof document !== 'undefined' && typeof window !== 'undefined' && !this._scrollListenersAttached) {
+        document.addEventListener('scroll', this._scrollVisibilityHandler, { capture: true, passive: true });
+        window.addEventListener('scroll', this._scrollVisibilityHandler, { passive: true });
+        this._scrollListenersAttached = true;
+      }
+      this._updateScrollTopVisibility();
       this._scheduleHeartbeatExpiry();
     }
 
@@ -975,6 +1013,11 @@
       this._intersectionObserver = null;
       if (this._visibilityHandler && typeof document !== 'undefined') document.removeEventListener('visibilitychange', this._visibilityHandler);
       this._visibilityHandler = null;
+      if (this._scrollListenersAttached && typeof document !== 'undefined' && typeof window !== 'undefined') {
+        document.removeEventListener('scroll', this._scrollVisibilityHandler, true);
+        window.removeEventListener('scroll', this._scrollVisibilityHandler);
+        this._scrollListenersAttached = false;
+      }
       if (this._heartbeatTimer !== null) window.clearTimeout(this._heartbeatTimer);
       this._heartbeatTimer = null;
     }
@@ -983,6 +1026,56 @@
     _isActive() {
       if (typeof document !== 'undefined' && document.hidden) return false;
       return this._inView !== false;
+    }
+
+    _pageScroller() {
+      let node = this;
+      while (node) {
+        const parent = node.parentElement || node.getRootNode?.().host || null;
+        if (!parent) break;
+        let overflowY = '';
+        try { overflowY = window.getComputedStyle(parent).overflowY; } catch (_error) { /* styles may not be readable yet */ }
+        if (parent.scrollHeight > parent.clientHeight + 1 && /auto|scroll/.test(overflowY)) return parent;
+        node = parent;
+      }
+      return typeof document !== 'undefined' ? (document.scrollingElement || document.documentElement || document.body) : null;
+    }
+
+    _scrollTop() {
+      const scroller = this._pageScroller();
+      if (!scroller) return 0;
+      if (typeof document !== 'undefined' && (scroller === document.body || scroller === document.documentElement || scroller === document.scrollingElement)) {
+        return Math.max(window.scrollY || 0, scroller.scrollTop || 0);
+      }
+      return scroller.scrollTop || 0;
+    }
+
+    _updateScrollTopVisibility() {
+      const button = this.shadowRoot?.querySelector('[data-scroll-top]');
+      if (!button) return;
+      const shouldShow = this._scrollTop() >= 180;
+      if (typeof button.showPopover === 'function' && typeof button.hidePopover === 'function') {
+        let isOpen = false;
+        try { isOpen = button.matches(':popover-open'); } catch (_error) { isOpen = false; }
+        try {
+          if (shouldShow && !isOpen) button.showPopover();
+          else if (!shouldShow && isOpen) button.hidePopover();
+        } catch (_error) { button.hidden = !shouldShow; }
+      } else button.hidden = !shouldShow;
+    }
+
+    _scrollPageToTop() {
+      const scroller = this._pageScroller();
+      if (!scroller) return;
+      const isDocument = typeof document !== 'undefined' && (scroller === document.body || scroller === document.documentElement || scroller === document.scrollingElement);
+      if (isDocument && typeof window.scrollTo === 'function') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else if (typeof scroller.scrollTo === 'function') {
+        scroller.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        scroller.scrollTop = 0;
+      }
+      this._updateScrollTopVisibility();
     }
 
     _resumeUpdates() {
@@ -1015,12 +1108,12 @@
       const powerMode = ['grid_shared', 'after_avr', 'independent'].includes(config.esp_power_mode) ? config.esp_power_mode : 'after_avr';
       this._entityOverrides = { ...(config.entities || {}) };
       this._config = { ...config, entities, name: config.name || null, esp_power_mode: powerMode };
-      this._statsStart = this._readStatsStart();
+      this._statsStart = this._hass ? this._readStatsStart() : null;
+      this._statsStartApplied = Boolean(this._hass);
       if (this._historyRange === 'since') {
         this._historyRange = 'day';
         this._historyReturnRange = 'day';
       }
-      this._statsStartApplied = true;
       this._stateSnapshot = this._captureStateSnapshot();
       this._render();
       this._scheduleHeartbeatExpiry();
@@ -1042,8 +1135,14 @@
       const wasEspOnline = Boolean(this._config) && this._effectiveEspStatus() === 'on';
       this._hass = nextHass;
       this._appliedHass = nextHass;
+      let statsStartLoaded = false;
+      if (!this._statsStartApplied) {
+        this._statsStart = this._readStatsStart();
+        this._statsStartApplied = true;
+        statsStartLoaded = true;
+      }
       const nextSnapshot = this._captureStateSnapshot(this._stateSnapshot);
-      if (!this._config || !this._hasRendered || this._renderedLanguage !== this._lang()) {
+      if (!this._config || !this._hasRendered || this._renderedLanguage !== this._lang() || statsStartLoaded) {
         this._stateSnapshot = nextSnapshot;
         this._render();
       } else {
@@ -1226,7 +1325,20 @@
     _escape(value) {
       return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
     }
+    _currencyCode() {
+      const currency = this._config?.currency;
+      return ['UAH', 'EUR', 'USD'].includes(currency) ? currency : 'UAH';
+    }
+    _currencyUnit(key, currency = this._currencyCode()) {
+      const label = currency === 'UAH' && this._lang() === 'uk' ? 'грн' : currency;
+      if (key === 'cost_rate') return `${label}/${this._lang() === 'uk' ? 'год' : 'h'}`;
+      if (key === 'tariff' || key === 'tariff_day' || key === 'tariff_night') return `${label}/${this._lang() === 'uk' ? 'кВт·год' : 'kWh'}`;
+      return label;
+    }
     _unit(key) {
+      if (['cost_today', 'cost_month', 'cost_total', 'cost_rate', 'tariff', 'tariff_day', 'tariff_night'].includes(key)) {
+        return this._currencyUnit(key);
+      }
       const unit = this._state(key)?.attributes?.unit_of_measurement || '';
       if (this._lang() !== 'uk') return unit;
       return ({ V: 'В', A: 'А', W: 'Вт', Hz: 'Гц', kWh: 'кВт·год', VA: 'ВА', var: 'вар', UAH: 'грн', 'UAH/kWh': 'грн/кВт·год', 'UAH/h': 'грн/год', min: 'хв', h: 'год', dBm: 'дБм' })[unit] || unit;
@@ -1268,7 +1380,9 @@
       const min = Number.isFinite(Number(attrs.min)) ? Number(attrs.min) : '';
       const max = Number.isFinite(Number(attrs.max)) ? Number(attrs.max) : '';
       const step = Number.isFinite(Number(attrs.step)) && Number(attrs.step) > 0 ? Number(attrs.step) : 'any';
-      return `<div class="setting detail"><label><span>${this._escape(label)}</span><div class="setting-input"><input type="text" inputmode="decimal" data-number-input="${key}" value="${value === null ? '' : value}" data-min="${min}" data-max="${max}" data-step="${step}" ${!state ? 'disabled' : ''}><small data-unit-key="${key}">${this._escape(this._unit(key))}</small></div></label><button class="save-button" data-number-save="${key}" ${!state ? 'disabled' : ''}>${this._escape(this._t('save'))}</button></div>`;
+      const unit = key === 'tariff_day' || key === 'tariff_night' ? this._currencyUnit(key, 'UAH') : this._unit(key);
+      const unitBinding = key === 'tariff_day' || key === 'tariff_night' ? '' : `data-unit-key="${key}"`;
+      return `<div class="setting detail"><label><span>${this._escape(label)}</span><div class="setting-input"><input type="text" inputmode="decimal" data-number-input="${key}" value="${value === null ? '' : value}" data-min="${min}" data-max="${max}" data-step="${step}" ${!state ? 'disabled' : ''}><small ${unitBinding}>${this._escape(unit)}</small></div></label><button class="save-button" data-number-save="${key}" ${!state ? 'disabled' : ''}>${this._escape(this._t('save'))}</button></div>`;
     }
     _updatedTime() {
       const latest = ['voltage', 'power', 'current'].map((key) => this._state(key)?.last_updated).filter(Boolean).map((value) => new Date(value)).filter((value) => Number.isFinite(value.getTime())).sort((a, b) => b - a)[0];
@@ -1581,28 +1695,28 @@
     _chart() {
       const labels = ['hour', 'day', 'week', 'month'];
       const buttons = labels.map((period) => `<button class="period-button ${this._historyRange === period ? 'active' : ''}" data-period="${period}" aria-pressed="${this._historyRange === period}">${this._escape(this._t(period))}</button>`).join('');
-      const metricButtons = Object.keys(CHART_METRICS).map((metric) => `<button class="period-button ${this._chartMetric === metric ? 'active' : ''}" data-metric="${metric}" aria-pressed="${this._chartMetric === metric}">${this._escape(this._t(metric))}</button>`).join('');
+      const metricButtons = ['power', 'voltage'].map((metric) => `<button class="period-button ${this._chartMetric === metric ? 'active' : ''}" data-metric="${metric}" aria-pressed="${this._chartMetric === metric}">${this._escape(this._t(metric))}</button>`).join('');
       return `<section class="card chart-card detailed-chart"><div class="chart-head"><h2><span class="chart-icon">${this._svg('chart')}</span>${this._escape(this._t('chart_title'))}</h2><div class="periods" role="group" aria-label="${this._escape(this._t('chart_title'))}">${metricButtons}</div><div class="periods" role="group" aria-label="${this._escape(this._t('hour'))}">${buttons}${this._chartDateRangeHtml()}</div></div><div class="chart-stats" data-role="chart-stats">${this._chartStatsHtml()}</div><div class="chart-plot" data-role="chart-plot">${this._chartSvg()}</div>${this._chartScrubberHtml()}${this._chartReadingsHtml()}</section>`;
     }
 
-    _statsStorageKey() { return `${STATS_START_STORAGE_KEY}:${this._config?.prefix || 'grid_monitor'}`; }
-
     _readStatsStart() {
-      try {
-        const raw = window.localStorage?.getItem(this._statsStorageKey());
-        const value = Number(raw);
-        return raw && Number.isFinite(value) && value > 0 && value < Date.now() ? value : null;
-      } catch (_error) {
-        return null;
-      }
+      const raw = this._state('stats_start')?.state;
+      if (!raw || raw === 'unknown' || raw === 'unavailable') return null;
+      const value = Number.isFinite(Number(raw)) ? Number(raw) : Date.parse(raw);
+      return Number.isFinite(value) && value > 0 && value < Date.now() ? value : null;
     }
 
-    _writeStatsStart(value) {
+    async _writeStatsStart(value) {
+      const helper = this._state('stats_start');
+      if (!helper || helper.state === 'unknown' || helper.state === 'unavailable' || typeof this._hass?.callService !== 'function') return false;
       try {
-        if (value === null) window.localStorage?.removeItem(this._statsStorageKey());
-        else window.localStorage?.setItem(this._statsStorageKey(), String(value));
+        await this._hass.callService('input_text', 'set_value', {
+          entity_id: this._entity('stats_start'),
+          value: value === null ? '' : new Date(value).toISOString(),
+        });
+        return true;
       } catch (_error) {
-        // Сховище браузера може бути недоступним; значення тоді діє до перезавантаження сторінки.
+        return false;
       }
     }
 
@@ -1626,7 +1740,7 @@
     _statsStartSetting() {
       const active = Number.isFinite(this._statsStart);
       const hint = active ? `${this._t('stats_active')} ${this._statsStartFullLabel()}` : this._t('stats_hint');
-      return `<h2 class="subheading">${this._escape(this._t('stats_title'))}</h2><div class="detail stats-start" data-role="stats-start"><label><span>${this._escape(this._t('stats_start_label'))}</span><div class="stats-start-controls"><input type="datetime-local" data-stats-start-input max="${this._formatDateTimeInput(Date.now())}" value="${active ? this._formatDateTimeInput(this._statsStart) : ''}"><button class="save-button" type="button" data-stats-start-apply>${this._escape(this._t('stats_apply'))}</button><button class="save-button ghost" type="button" data-stats-start-clear data-role="stats-start-clear" ${active ? '' : 'disabled'}>${this._escape(this._t('stats_clear'))}</button></div></label><p class="stats-start-hint" data-role="stats-start-hint">${this._escape(hint)}</p><p class="stats-start-error" role="alert" data-role="stats-start-error"></p></div>`;
+      return `<h2 class="subheading">${this._escape(this._t('stats_title'))}</h2><div class="detail stats-start" data-role="stats-start"><label><span>${this._escape(this._t('stats_start_label'))}</span><div class="stats-start-controls"><input type="datetime-local" data-stats-start-input max="${this._formatDateTimeInput(Date.now())}" value="${active ? this._formatDateTimeInput(this._statsStart) : ''}"><button class="save-button" type="button" data-stats-start-apply>${this._escape(this._t('stats_apply'))}</button><button class="save-button ghost" type="button" data-stats-start-clear data-role="stats-start-clear" ${active ? '' : 'disabled'}>${this._escape(this._t('stats_clear'))}</button></div></label><p class="stats-start-hint" data-role="stats-start-hint">${this._escape(hint)}</p><p class="stats-start-sync" data-role="stats-start-sync">${this._escape(this._t('stats_shared_hint'))}</p><p class="stats-start-error" role="alert" data-role="stats-start-error"></p></div>`;
     }
 
     _updateStatsControls() {
@@ -1639,6 +1753,8 @@
       if (hint) hint.textContent = active ? `${this._t('stats_active')} ${this._statsStartFullLabel()}` : this._t('stats_hint');
       const error = this.shadowRoot.querySelector('[data-role="stats-start-error"]');
       if (error) error.textContent = '';
+      const sync = this.shadowRoot.querySelector('[data-role="stats-start-sync"]');
+      if (sync) sync.textContent = this._state('stats_start') && !['unknown', 'unavailable'].includes(this._raw('stats_start')) ? this._t('stats_sync_saved') : this._t('stats_sync_missing');
     }
 
     _applyStatsStartInput() {
@@ -1652,9 +1768,12 @@
       this._setStatsStart(value);
     }
 
-    _setStatsStart(value) {
+    _setStatsStart(value, persist = true) {
       this._statsStart = value;
-      this._writeStatsStart(value);
+      if (persist) this._writeStatsStart(value).then((saved) => {
+        const sync = this.shadowRoot.querySelector('[data-role="stats-start-sync"]');
+        if (sync) sync.textContent = this._t(saved ? 'stats_sync_saved' : 'stats_sync_missing');
+      });
       this._statsExtremes = null;
       this._statsExtremesKey = '';
       this._statsExtremesAt = 0;
@@ -2016,7 +2135,7 @@
       const min = minPoint?.v ?? null;
       const max = maxPoint?.v ?? null;
       const avg = historyValues.length ? historyValues.reduce((sum, value) => sum + value, 0) / historyValues.length : null;
-      const unit = metric.unit(this._lang());
+      const unit = metric.unit(this._lang(), this._currencyCode());
       const cell = (label, value, formatter = fmt, point = null) => {
         const timestamp = Number.isFinite(point?.t) ? `<small>${this._escape(this._formatChartStatTimestamp(point.t, range, customRange))}</small>` : '';
         return `<div><span>${this._escape(label)}</span><b>${this._escape(value === null ? '—' : `${formatter(value)} ${unit}`)}</b>${timestamp}</div>`;
@@ -2429,7 +2548,7 @@
       const { series, tStart, tEnd, rangeMs } = data;
       const scale = this._chartScale(series, metricKey);
       const metric = CHART_METRICS[metricKey];
-      const unit = metric.unit(this._lang());
+      const unit = metric.unit(this._lang(), this._currencyCode());
       const X = (t) => x0 + Math.min(1, Math.max(0, (t - tStart) / rangeMs)) * (x1 - x0);
       const Y = (v) => y1 - ((Math.max(scale.lo, Math.min(scale.max, v)) - scale.lo) / (scale.max - scale.lo)) * (y1 - y0);
       const pts = series.map((point) => ({ x: X(point.t), y: Y(point.v), v: point.v, t: point.t }));
@@ -2487,7 +2606,7 @@
       const chart = this.shadowRoot.querySelector('svg.chart');
       if (!chart || !point) return;
       const metric = CHART_METRICS[this._chartMetric || 'power'];
-      const unit = metric.unit(this._lang());
+      const unit = metric.unit(this._lang(), this._currencyCode());
       const when = new Date(point.t);
       const sub = when.toLocaleDateString(this._locale(), { day: '2-digit', month: '2-digit' }) + ' ' + when.toLocaleTimeString(this._locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
       this._setChartMarker(chart, point.x, point.y, `${point.v.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits })} ${unit}`, sub);
@@ -3036,11 +3155,11 @@
           ${this._detail('energy_today', this._t('today'), 3)}${this._detail('energy_month', this._t('energy_month'), 2)}${this._detail('energy_total', this._t('energy_total'), 3)}
           ${this._detail('cost_today', this._t('cost_today'), 2)}${this._detail('cost_month', this._t('cost_month'), 2)}${this._detail('cost_total', this._t('cost_total'), 2)}
           ${this._detail('tariff', this._t('tariff'), 2)}${this._detail('cost_rate', this._t('cost_rate'), 2)}
-          <div class="detail tariff-state"><span>${this._escape(this._t('two_zone'))}</span><b data-role="energy-two-zone-value" class="${twoZone ? 'good' : ''}">${this._escape(twoZone ? this._t('on') : this._t('off'))}</b><i class="tariff-led ${twoZone ? 'active' : ''}" data-role="energy-two-zone-led"></i></div>
+          ${twoZone ? `<div class="detail tariff-state"><span>${this._escape(this._t('two_zone'))}</span><b data-role="energy-two-zone-value" class="good">${this._escape(this._t('on'))}</b><i class="tariff-led active" data-role="energy-two-zone-led"></i></div>` : ''}
         </div>
         <div class="visual-grid energy-visual-grid">
           <section class="visual-card tariff-visual"><h3>${this._escape(this._t('tariff_compare'))}</h3>${this._tariffBars()}</section>
-          <section class="visual-card current-tariff"><h3>${this._escape(this._t('current_rate'))}</h3><strong class="big-number" data-value-key="tariff" data-value-digits="2">${this._escape(this._formatted('tariff', 2))}</strong><span class="rate-pulse">${this._svg('energy')} ${this._escape(this._t('two_zone'))}: <span data-role="energy-two-zone-label">${this._escape(twoZone ? this._t('on') : this._t('off'))}</span></span></section>
+          <section class="visual-card current-tariff"><h3>${this._escape(this._t('current_rate'))}</h3><strong class="big-number" data-value-key="tariff" data-value-digits="2">${this._escape(this._formatted('tariff', 2))}</strong>${twoZone ? `<span class="rate-pulse">${this._svg('energy')} ${this._escape(this._t('two_zone'))}: <span data-role="energy-two-zone-label">${this._escape(this._t('on'))}</span></span>` : ''}</section>
         </div>
       </section>`;
     }
@@ -3127,9 +3246,10 @@
               <stop offset="60%" stop-color="#15243d"/>
               <stop offset="100%" stop-color="#0a1324"/>
             </linearGradient>
-            <linearGradient id="brassPin" x1="0" y1="0" x2="0" y2="1">
+            <linearGradient id="brassPin" x1="0" y1="0" x2="1" y2="0">
               <stop offset="0%" stop-color="#fff0aa"/>
-              <stop offset="45%" stop-color="#e0a828"/>
+              <stop offset="28%" stop-color="#e0a828"/>
+              <stop offset="55%" stop-color="#fff1b0"/>
               <stop offset="100%" stop-color="#805505"/>
             </linearGradient>
             <filter id="arcGlow" x="-30%" y="-30%" width="160%" height="160%">
@@ -3147,10 +3267,15 @@
           <!-- Heavy Power Cable Tail -->
           <path d="M65,116 C65,105 60,94 65,84" fill="none" stroke="#091424" stroke-width="15" stroke-linecap="round"/>
           <path d="M65,116 C65,105 60,94 65,84" fill="none" stroke="#162947" stroke-width="12" stroke-linecap="round"/>
+          <path d="M61,111 C61,103 59,97 62,89" fill="none" stroke="#527099" stroke-opacity=".45" stroke-width="1.5" stroke-linecap="round"/>
 
           <!-- Strain Relief Collar -->
           <rect x="56" y="80" width="18" height="10" rx="3" fill="#1b2e4d" stroke="#2c4c7c" stroke-width="1.2"/>
           <line x1="56" y1="84" x2="74" y2="84" stroke="#0d182b" stroke-width="1.2"/>
+          <line x1="58" y1="82" x2="58" y2="88" stroke="#527099" stroke-opacity=".6" stroke-width=".8"/>
+          <line x1="62" y1="82" x2="62" y2="88" stroke="#091424" stroke-width=".8"/>
+          <line x1="66" y1="82" x2="66" y2="88" stroke="#527099" stroke-opacity=".6" stroke-width=".8"/>
+          <line x1="70" y1="82" x2="70" y2="88" stroke="#091424" stroke-width=".8"/>
 
           <!-- Main Plug Ergonomic Body -->
           <path d="M40,46 C40,40 50,38 65,38 C80,38 90,40 90,46 L86,80 C86,83 80,85 65,85 C50,85 44,83 44,80 Z" fill="url(#plugBody)" stroke="#385b8c" stroke-width="1.5"/>
@@ -3161,28 +3286,28 @@
           <line x1="50" y1="65" x2="80" y2="65" stroke="#0e1b2e" stroke-width="2.5" stroke-linecap="round"/>
           <line x1="50" y1="65" x2="80" y2="65" stroke="#4872ab" stroke-width="1" stroke-linecap="round"/>
 
-          <!-- Solid Brass Prongs -->
-          <rect x="48" y="16" width="9" height="24" rx="3" fill="url(#brassPin)" stroke="#5e3f05" stroke-width="1"/>
-          <rect x="73" y="16" width="9" height="24" rx="3" fill="url(#brassPin)" stroke="#5e3f05" stroke-width="1"/>
-
-          <!-- Prong Holes -->
-          <circle cx="52.5" cy="23" r="1.8" fill="#3d2700"/>
-          <circle cx="77.5" cy="23" r="1.8" fill="#3d2700"/>
-
-          <!-- Electric Plasma Arc between prongs -->
-          <g filter="url(#arcGlow)">
-            <path d="M57,20 Q65,10 73,20" fill="none" stroke="#00f2ff" stroke-width="2.2" stroke-linecap="round"/>
-            <path d="M57,20 Q65,14 73,20" fill="none" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round"/>
+          <!-- Rounded European plug pins with metallic highlights and recessed tips -->
+          <g stroke="#624508" stroke-width=".7">
+            <rect x="49" y="15" width="7" height="26" rx="3.5" fill="url(#brassPin)"/>
+            <rect x="74" y="15" width="7" height="26" rx="3.5" fill="url(#brassPin)"/>
           </g>
+          <path d="M51 19v17M76 19v17" fill="none" stroke="#fff6cf" stroke-opacity=".72" stroke-width="1" stroke-linecap="round"/>
+          <ellipse cx="52.5" cy="17" rx="2.4" ry="1.2" fill="#76510a"/>
+          <ellipse cx="77.5" cy="17" rx="2.4" ry="1.2" fill="#76510a"/>
+
+          <!-- Side grounding contacts typical of a Schuko-style plug -->
+          <path d="M42 57Q37 62 42 68M88 57Q93 62 88 68" fill="none" stroke="#d2dee8" stroke-width="2.6" stroke-linecap="round"/>
+          <path d="M42 59Q39 62 42 66M88 59Q91 62 88 66" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width=".8" stroke-linecap="round"/>
         </svg>
       `;
     }
 
     _tariffBars() {
       const day = this._num('tariff_day'); const night = this._num('tariff_night');
-      const max = Math.max(day || 0, night || 0, 0.01);
+      const twoZone = this._raw('two_zone') === 'on';
+      const max = Math.max(day || 0, twoZone ? night || 0 : 0, 0.01);
       const row = (key, label, cls, value) => `<div class="bar-row"><span>${this._escape(this._t(label))}</span><div class="bar-track"><i class="${cls}" data-tariff-fill="${key}" style="width:${value === null ? 0 : Math.max(0, Math.min(100, value / max * 100)).toFixed(1)}%"></i></div><b data-value-key="${key}" data-value-digits="2">${this._escape(this._formatted(key, 2))}</b></div>`;
-      return `<div class="bar-list">${row('tariff_day', 'day', 'day-rate', day)}${row('tariff_night', 'night', 'night-rate', night)}</div>`;
+      return `<div class="bar-list">${row('tariff_day', 'day', 'day-rate', day)}${twoZone ? row('tariff_night', 'night', 'night-rate', night) : ''}</div>`;
     }
 
     _settings() {
@@ -3193,7 +3318,7 @@
       return `<section class="detail-panel settings-panel"><h2>${this._escape(this._t('settings_title'))}</h2>
         <div class="settings-hero">${this._chipArt()}<div class="device-copy"><strong>${this._escape(this._t('device_name'))}</strong><span>${this._escape(this._t('device_description'))}</span></div><div class="device-status ${deviceClass}" data-role="device-status"><i></i><b data-role="device-state">${this._escape(deviceState)}</b></div></div>
         <div class="detail-grid settings-grid">
-        ${this._setting('sag_threshold', this._t('sag'))}${this._setting('swell_threshold', this._t('swell'))}${this._setting('nominal_voltage', this._t('nominal'))}${this._setting('tariff_day', this._t('tariff_day'))}${this._setting('tariff_night', this._t('tariff_night'))}
+        ${this._setting('sag_threshold', this._t('sag'))}${this._setting('swell_threshold', this._t('swell'))}${this._setting('nominal_voltage', this._t('nominal'))}${this._setting('tariff_day', this._t('tariff_day'))}${twoZone ? this._setting('tariff_night', this._t('tariff_night')) : ''}
         <div class="detail switch-setting"><span>${this._escape(this._t('two_zone'))}</span><strong data-role="switch-value">${this._escape(twoZone ? this._t('on') : this._t('off'))}</strong><button class="switch-button ${twoZone ? 'on' : ''}" data-switch="two_zone" aria-pressed="${twoZone}">${this._svg('gear')}<span data-role="switch-label">${this._escape(twoZone ? this._t('on') : this._t('off'))}</span></button></div>
       </div>${this._statsStartSetting()}<h2 class="subheading">${this._escape(this._t('diagnostics'))}</h2><div class="detail-grid">
         ${this._detail('wifi_signal', this._t('wifi'), 0)}${this._detail('esp_temperature', this._t('temperature'), 1)}${this._detail('uptime', this._t('uptime'), 0)}${this._detail('ip_address', this._t('ip'), 0)}${this._detail('ssid', this._t('ssid'), 0)}${this._detail('inverter_events', this._t('inverter_events'), 0)}
@@ -3318,9 +3443,10 @@
           <div class="view">${activeContent}</div>
         </div>
         <footer class="footer"><span>ESPHome · Grid Monitor</span><span data-value-key="ssid" data-value-digits="0">${this._escape(this._formatted('ssid', 0))}</span></footer>
-      </main>`;
+      </main><button class="back-to-top" type="button" popover="manual" data-scroll-top aria-label="${this._escape(this._t('scroll_to_top'))}" title="${this._escape(this._t('scroll_to_top'))}">${this._svg('arrow_up')}</button>`;
       this._hasRendered = true;
       this._renderedLanguage = this._lang();
+      this._updateScrollTopVisibility();
       this._queueChartMeasure();
     }
 
@@ -3335,8 +3461,9 @@
         return;
       }
       if (!event.target?.closest?.('.chart-date-range')) this._closeChartDateRangePopover();
-      const target = event.target?.closest?.('[data-tab], [data-period], [data-energy-period], [data-metric], [data-action], [data-number-save], [data-switch], [data-chart-live], [data-chart-zoom], [data-chart-date-toggle], [data-chart-date-apply], [data-stats-start-apply], [data-stats-start-clear]');
+      const target = event.target?.closest?.('[data-scroll-top], [data-tab], [data-period], [data-energy-period], [data-metric], [data-action], [data-number-save], [data-switch], [data-chart-live], [data-chart-zoom], [data-chart-date-toggle], [data-chart-date-apply], [data-stats-start-apply], [data-stats-start-clear]');
       if (!target) return;
+      if (target.dataset.scrollTop !== undefined) { this._scrollPageToTop(); return; }
       if (target.dataset.chartDateToggle !== undefined) {
         const panel = this.shadowRoot.getElementById(target.getAttribute('aria-controls'));
         let isOpen = false;
@@ -3468,6 +3595,11 @@
     }
 
     _updateChanged(changed) {
+      if (changed.has('stats_start')) {
+        const start = this._readStatsStart();
+        if (start !== this._statsStart) this._setStatsStart(start, false);
+        this._updateStatsControls();
+      }
       this._updateValueBindings(changed);
       if (changed.has('esp_status') || changed.has('esp_connectivity')) this._refreshConnectivityUI();
       if (changed.has('voltage') || changed.has('power') || changed.has('current')) this._updateHeaderTime();
@@ -3499,6 +3631,13 @@
       if (this._activeTab === 'params') {
         this._updateRange();
         if (changed.has(this._chartMetric || 'power')) this._refreshChart();
+      }
+      if (changed.has('two_zone') && (this._activeTab === 'energy' || this._activeTab === 'settings')) {
+        const view = this.shadowRoot.querySelector('.view');
+        if (view) view.innerHTML = this._activeContent();
+        this._queueChartMeasure();
+        if (this._activeTab === 'energy') this._ensureEnergyHistory();
+        return;
       }
       if (this._activeTab === 'energy') this._updateEnergy(changed);
       if (this._activeTab === 'settings') this._updateSettings(changed);
@@ -3599,7 +3738,7 @@
       }
       const value = Math.max(minimum, Math.min(maximum, current));
       const y = y1 - ((value - minimum) / (maximum - minimum)) * (y1 - y0);
-      this._setChartMarker(chart, x1, y, `${current.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits })} ${metric.unit(this._lang())}`);
+      this._setChartMarker(chart, x1, y, `${current.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits })} ${metric.unit(this._lang(), this._currencyCode())}`);
     }
 
     _updateHomeStatus() {
@@ -3834,8 +3973,8 @@
         .detail-panel{padding:22px;margin-top:2px}.detail-panel h2{margin:0 0 18px;font-size:25px}.detail-panel h2.subheading{margin:24px 0 14px;font-size:19px}.detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.detail{padding:16px;border-radius:16px;background:#13243a;border:1px solid #2b4562;min-width:0}.detail>span,.detail label>span{display:block;color:#9fb5d1;font-size:14px;margin-bottom:7px}.detail b{font-size:22px;overflow-wrap:anywhere}.setting{display:flex;align-items:end;gap:10px}.setting label{flex:1;min-width:0}.setting-input{display:flex;align-items:center;gap:8px}.setting-input input{width:100%;min-width:0;background:#091727;border:1px solid #37526f;border-radius:9px;color:var(--text);padding:10px;font:inherit;font-size:18px}.setting-input small{color:#9fb5d1;white-space:nowrap}.save-button,.switch-button,.action-button{border:1px solid #278ed0;background:#092645;color:#d7efff;border-radius:10px;padding:9px 12px;font:inherit;cursor:pointer}.save-button:hover,.switch-button:hover,.action-button:hover{background:#0c3962}.save-button:disabled,.switch-button:disabled,.action-button:disabled{opacity:.45;cursor:not-allowed}.switch-setting{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.switch-setting>span{color:#9fb5d1;font-size:14px}.switch-setting>strong{font-size:16px}.switch-button{grid-column:1/-1;display:flex;align-items:center;gap:8px;justify-content:center}.switch-button .icon{width:20px;height:20px}.switch-button.on{border-color:#35ed91;color:#35ed91}.action-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.action-button{min-height:68px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;font-size:13px;border-color:#2b8ed0}.action-button span{font-size:22px;color:#45bdff}.action-button .icon{width:25px;height:25px}.footer{display:flex;justify-content:space-between;gap:10px;margin:14px 2px 0;color:#6885a2;font-size:11px}.footer span:last-child{max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
         .chart-head .periods+.periods{margin-left:0}.chart-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:4px 0 10px}.chart-stats>div{background:#13243a;border:1px solid #2b4562;border-radius:14px;padding:9px 12px;min-width:0}.chart-stats span{display:block;color:#9fb5d1;font-size:13px}.chart-stats b{display:block;font-size:19px;margin-top:3px;overflow-wrap:anywhere}.chart-stats small{display:block;margin-top:3px;color:#86a1c1;font-size:12px;line-height:1.25}
         .voltage-brand{display:flex;align-items:flex-start;gap:10px;align-self:flex-start;width:100%;min-width:0;max-width:100%;margin-bottom:0;flex-wrap:wrap}.voltage-brand .logo{flex:none}.voltage-brand .brand{flex:1 1 auto}.voltage-brand .brand h1{margin:0 0 2px;line-height:1.15;font-size:clamp(20px,2.6cqw,32px)}.voltage-brand .brand p{font-size:clamp(13px,1.5cqw,16px);line-height:1.2}.voltage-brand .home-status{flex:none;align-self:flex-start;gap:8px;margin-left:auto;max-width:100%}.voltage-brand .home-status .connection small{margin-top:2px}.voltage .voltage-gauge{margin:0}.main-right{display:flex;flex-direction:column;gap:10px;min-width:0}.main-right>.metrics{flex:1}
-        @container (min-width:960px){.shell.home-active>.tabs-top{display:none}.shell:not(.home-active)>.tabs-top{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:45%;min-width:360px;max-width:560px;margin:0 0 14px auto;padding:8px;gap:6px}.shell:not(.home-active)>.tabs-top .tab{padding:15px 8px}.shell:not(.home-active)>.page-layout{display:block;margin-top:-30px}.shell:not(.home-active)>.page-layout>.tabs-side{display:none}.home-view .main-grid{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);grid-template-rows:auto;align-items:stretch}.home-view .main-grid>.voltage{grid-column:1;grid-row:1}.home-view .main-grid>.main-right{grid-column:2;grid-row:1}.home-view .main-right>.tabs-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:0;align-self:stretch;width:100%}}
-        @container (max-width:959px){.home-view .main-grid{grid-template-columns:minmax(0,1fr);align-items:start}.home-view .main-right{display:contents}.home-view .main-right>.tabs-side{display:none}.home-view .main-grid>.voltage{grid-column:1;grid-row:1}.home-view .main-right>.metrics{grid-column:1;grid-row:2}.shell:not(.home-active)>.tabs-top{display:grid}.shell:not(.home-active)>.page-layout{display:block;margin-top:-30px}.shell:not(.home-active)>.page-layout>.tabs-side{display:none}}
+        @container (min-width:960px){.shell.home-active>.tabs-top{display:none}.shell:not(.home-active)>.tabs-top{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:45%;min-width:360px;max-width:560px;margin:0 0 14px auto;padding:8px;gap:6px}.shell:not(.home-active)>.tabs-top .tab{padding:15px 8px}.shell:not(.home-active)>.page-layout{display:block;margin-top:-20px}.shell:not(.home-active)>.page-layout>.tabs-side{display:none}.home-view .main-grid{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);grid-template-rows:auto;align-items:stretch}.home-view .main-grid>.voltage{grid-column:1;grid-row:1}.home-view .main-grid>.main-right{grid-column:2;grid-row:1}.home-view .main-right>.tabs-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:0;align-self:stretch;width:100%}}
+        @container (max-width:959px){.home-view .main-grid{grid-template-columns:minmax(0,1fr);align-items:start}.home-view .main-right{display:contents}.home-view .main-right>.tabs-side{display:none}.home-view .main-grid>.voltage{grid-column:1;grid-row:1}.home-view .main-right>.metrics{grid-column:1;grid-row:2}.shell:not(.home-active)>.tabs-top{display:grid}.shell:not(.home-active)>.page-layout{display:block;margin-top:-20px}.shell:not(.home-active)>.page-layout>.tabs-side{display:none}}
         @container (max-width:760px){.shell{padding:12px}.header{gap:11px;padding:5px 2px 14px}.logo{width:58px;height:58px;border-radius:17px}.logo .icon{width:38px;height:38px}.headright{gap:8px}.connection strong{font-size:14px}.connection small{font-size:10px}.tabs{margin-bottom:12px}.tab{gap:5px;padding:12px 3px;font-size:12px}.tab .tab-icon{font-size:19px}.tab .icon{width:20px;height:20px}.main-grid{grid-template-columns:1fr;gap:10px}.voltage{min-height:300px}.voltage-gauge{width:min(100%,420px)}.metrics{gap:10px}.metric{min-height:135px}.metric-icon .icon{width:38px;height:38px}.metric-label{font-size:15px}.chart-card{padding:13px 11px}.chart-head h2{font-size:19px}.periods{width:100%;margin:0}.period-button{flex:1;padding:8px 4px;font-size:13px}.bottom-status{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.info{min-height:100px;padding:12px 8px}.info .symbol .icon{width:30px;height:30px}.info .small{font-size:13px}.info strong{font-size:16px}.banner{padding:14px;min-height:70px}.banner-check{width:38px;height:38px}.banner-check .icon{width:28px;height:28px}.house-art{width:80px}.detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.detail-panel{padding:16px}.detail-panel h2{font-size:22px}.action-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
         @container (max-width:420px){.connection small{max-width:105px}.tab{font-size:11px}.tab .tab-icon{display:none}.metric{min-height:122px;padding:12px 8px}.metric-value{font-size:clamp(25px,8cqw,34px)}.info{gap:8px}.info .symbol .icon{width:26px;height:26px}.info .small{font-size:12px}.info strong{font-size:14px}.detail-grid{grid-template-columns:1fr}.setting{align-items:stretch}}
         /* Premium instrument finish: layered glass, metal highlights and soft depth. */
@@ -3861,6 +4000,9 @@
         .app-dialog-backdrop{position:fixed;inset:0;z-index:99999;display:grid;place-items:center;padding:18px;background:rgba(2,8,18,.78);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px)}
         .app-dialog{width:min(100%,430px);padding:24px;border:1px solid #55bfff75;border-radius:22px;background:radial-gradient(ellipse at 50% 0%,#17436a,#0b1728 68%);color:#f3f7ff;box-shadow:0 24px 70px #000c,inset 0 1px 0 #ffffff20;text-align:center}
         .dialog-mark{width:48px;height:48px;margin:0 auto 14px;display:grid;place-items:center;border-radius:15px;border:1px solid #32b7ff6e;background:linear-gradient(145deg,#0d5893,#0b2949);color:#77d6ff;font-size:28px;font-weight:800;box-shadow:0 0 24px #078fff33}.dialog-mark .icon{width:25px;height:25px}
+        .back-to-top{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));z-index:10000;width:54px;height:54px;display:grid;place-items:center;border:1px solid #75d5ff9c;border-radius:50%;background:linear-gradient(145deg,#0da8f4,#0759b7);color:#fff;box-shadow:0 8px 24px #0009,0 0 20px #079fff55;cursor:pointer;transition:transform .18s,box-shadow .18s}.back-to-top:hover{transform:translateY(-3px);box-shadow:0 11px 28px #000a,0 0 24px #079fff88}.back-to-top .icon{width:27px;height:27px}.back-to-top[hidden]{display:none}
+        .back-to-top{inset:auto max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) auto;margin:0}.back-to-top:not(:popover-open){display:none}
+        .back-to-top:popover-open{display:grid}
         .app-dialog h2{margin:0;color:#bdeaff;font-size:20px;line-height:1.3}.app-dialog p{margin:12px 0 22px;color:#c6d7ea;font-size:15px;line-height:1.55;white-space:pre-line;overflow-wrap:anywhere}
         .dialog-actions{display:flex;justify-content:center;gap:10px}.dialog-button{min-width:118px;min-height:44px;padding:10px 16px;border:1px solid transparent;border-radius:12px;font:inherit;font-weight:700;cursor:pointer;transition:transform .16s,box-shadow .16s,background .16s}.dialog-button:hover{transform:translateY(-1px)}.dialog-button:focus-visible{outline:2px solid #bcecff;outline-offset:3px}.dialog-button.primary{border-color:#36afff;background:linear-gradient(120deg,#0da8f4,#0867cb);color:#fff;box-shadow:0 6px 18px #008eff45}.dialog-button.secondary{border-color:#58718c;background:#182a3f;color:#d7e6f6}.dialog-button.secondary:hover{background:#213b58}
         @media(max-width:480px){.app-dialog{padding:20px 16px;border-radius:18px}.dialog-actions{flex-direction:column-reverse}.dialog-button{width:100%}}
@@ -4266,6 +4408,7 @@
         .stats-start-controls .save-button.ghost{background:#0b1a2b;border-color:#3f6288;color:#c5d8ef}
         .stats-start-controls .save-button:disabled{opacity:.45;cursor:default}
         .stats-start-hint{margin:10px 0 0;color:#9fb7d6;font-size:13px;line-height:1.4}
+        .stats-start-sync{margin:5px 0 0;color:#77bceb;font-size:12px;line-height:1.4;overflow-wrap:anywhere}
         .stats-start-error{margin:6px 0 0;min-height:0;color:#ff8a9a;font-size:13px}
         .stats-start-error:empty{display:none}
         .stats-note{margin:10px 4px 0;padding:6px 12px;border-radius:99px;border:1px solid #2f9bff40;background:#0a2038;color:#9fd2ff;font-size:12.5px;text-align:center}

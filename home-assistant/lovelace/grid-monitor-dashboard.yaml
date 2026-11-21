@@ -258,8 +258,15 @@ views:
             name: Двозонний тариф
           - entity: number.grid_monitor_tariff_day
             name: Денний тариф
-          - entity: number.grid_monitor_tariff_night
-            name: Нічний тариф
+
+      - type: conditional
+        conditions:
+          - entity: switch.grid_monitor_two_zone_tariff
+            state: 'on'
+        card:
+          type: entity
+          entity: number.grid_monitor_tariff_night
+          name: Нічний тариф
 
       - type: entities
         title: Діагностика
