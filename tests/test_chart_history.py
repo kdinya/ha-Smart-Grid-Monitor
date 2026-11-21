@@ -6,7 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class ChartHistoryTests(unittest.TestCase):
-    def test_history_buckets_are_duration_weighted_and_skip_unavailable_intervals(self):
+    def test_history_buckets_preserve_spikes_and_skip_unavailable_intervals(self):
         script = r"""
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -28,8 +28,20 @@ card._history = [
 ];
 const result = card._bucketHistory(0, 100, 2).map(({ t, v }) => ({ t, v }));
 assert.equal(JSON.stringify(result), JSON.stringify([
-  { t: 25, v: 140 },
+  { t: 0, v: 100 },
+  { t: 40, v: 300 },
   { t: 75, v: 200 },
+]));
+card._history = [
+  { time: new Date(0), value: 100 },
+  { time: new Date(40), value: 2500 },
+  { time: new Date(45), value: 100 },
+];
+const spikeAndReturn = card._bucketHistory(0, 100, 1).map(({ t, v }) => ({ t, v }));
+assert.equal(JSON.stringify(spikeAndReturn), JSON.stringify([
+  { t: 0, v: 100 },
+  { t: 40, v: 2500 },
+  { t: 45, v: 100 },
 ]));
 """
         result = subprocess.run(
