@@ -56,10 +56,14 @@ class RepositoryContractTests(unittest.TestCase):
         side_tabs = "${this._tabs('side')}"
         self.assertIn(side_tabs, home)
         self.assertLess(home.index(side_tabs), home.index('<div class="metrics">'))
+        self.assertLess(home.index("${this._headRightHtml(status)}"), home.index(side_tabs))
         self.assertIn("@container (min-width:960px)", card)
         self.assertIn(".shell.home-active>.tabs-top{display:none}", card)
         self.assertIn(".home-view .main-right>.tabs-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:0;align-self:stretch;width:100%}", card)
         self.assertIn(".home-view .main-grid>.voltage{grid-column:1;grid-row:1}", card)
+        self.assertIn(".home-view .main-right{display:contents}", card)
+        self.assertIn(".metric-icon .icon{width:40px;height:40px}", card)
+        self.assertIn(".metric-value{font-size:clamp(30px,3.4cqw,46px);margin:0}", card)
         # Status updates must keep home-active, otherwise the top tab bar reappears next to the side tabs.
         self.assertIn("${this._activeTab === 'home' ? ' home-active' : ''}", card)
         self.assertIn("grid-template-rows:auto", card)
