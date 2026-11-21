@@ -121,6 +121,7 @@
       editor_custom_entities: 'Точне налаштування окремих сенсорів',
       editor_custom_prefix: 'Вказати інший префікс вручну...',
       actions: 'Дії', reset_energy: 'Скинути енергію PZEM', reset_events: 'Скинути події', reset_cost: 'Скинути облік', restart: 'Перезапустити ESP', confirm: 'Виконати цю дію?', invalid_number: 'Введіть коректне число в допустимому діапазоні.',
+      dialog_confirm_title: 'Підтвердьте дію', dialog_error_title: 'Перевірте значення', dialog_confirm: 'Виконати', dialog_cancel: 'Скасувати', dialog_close: 'Зрозуміло',
     },
     en: {
       title: 'Grid voltage', subtitle: 'PZEM-004T v3.0 · Grid Monitor', online: 'Online', offline: 'Offline', updated: 'Updated',
@@ -158,6 +159,7 @@
       editor_custom_entities: 'Fine-tune Individual Entities',
       editor_custom_prefix: 'Enter custom prefix manually...',
       actions: 'Actions', reset_energy: 'Reset PZEM energy', reset_events: 'Reset events', reset_cost: 'Reset accounting', restart: 'Restart ESP', confirm: 'Run this action?', invalid_number: 'Enter a valid number within the allowed range.',
+      dialog_confirm_title: 'Confirm action', dialog_error_title: 'Check the value', dialog_confirm: 'Continue', dialog_cancel: 'Cancel', dialog_close: 'Got it',
     },
   };
 
@@ -187,21 +189,106 @@
       this.attachShadow({ mode: 'open' });
       this._config = {};
       this._hass = null;
+      this._hasRendered = false;
+      this._renderedLanguage = null;
     }
 
     setConfig(config) {
+      const previousLanguage = this._renderedLanguage;
       this._config = { ...config };
-      this._render();
+      if (!this._hasRendered || previousLanguage !== this._lang()) {
+        this._render();
+        return;
+      }
+      this._syncConfigToDom();
     }
 
     set hass(hass) {
       this._hass = hass;
-      this._render();
+      if (!this._hasRendered || this._renderedLanguage !== this._lang()) {
+        this._render();
+        return;
+      }
+      this._refreshPickers();
+      this._updateCandidateStatus();
+    }
+
+    _lang() {
+      const forced = this._config?.language;
+      if (forced === 'uk' || forced === 'en') return forced;
+      const locale = this._hass?.locale?.language || this._hass?.language || 'uk';
+      return String(locale).toLowerCase().startsWith('uk') ? 'uk' : 'en';
     }
 
     _t(key) {
-      const lang = this._config.language || (this._hass?.locale?.language || this._hass?.language || 'uk').toLowerCase().startsWith('uk') ? 'uk' : 'en';
-      return TEXT[lang]?.[key] || TEXT.en?.[key] || key;
+      return TEXT[this._lang()]?.[key] || TEXT.en?.[key] || key;
+    }
+
+    _hasActivePicker() {
+      const active = this.shadowRoot?.activeElement;
+      return Boolean(active && (active.tagName === 'SELECT' || active.matches?.('input[list]')));
+    }
+
+    _syncConfigToDom() {
+      if (!this.shadowRoot) return;
+      const active = this.shadowRoot.activeElement;
+      const setValue = (selector, value) => {
+        const element = this.shadowRoot.querySelector(selector);
+        if (element && element !== active) element.value = value;
+      };
+      setValue('#inp_name', this._config.name || '');
+      setValue('#inp_prefix', this._config.prefix || 'grid_monitor');
+      setValue('#sel_device', this._config.prefix || 'grid_monitor');
+      setValue('#sel_lang', this._config.language || '');
+      setValue('#sel_power_mode', this._config.esp_power_mode || 'after_avr');
+      this.shadowRoot.querySelectorAll('input[data-entity-key]').forEach((input) => {
+        const key = input.getAttribute('data-entity-key');
+        if (input !== active) input.value = this._config.entities?.[key] || '';
+      });
+      if (!this._hasActivePicker()) this._refreshPickers();
+      this._updateCandidateStatus();
+    }
+
+    _refreshPickers() {
+      if (!this.shadowRoot || this._hasActivePicker()) return;
+      const currentPrefix = this._config.prefix || 'grid_monitor';
+      const candidates = this._getCandidates();
+      const device = this.shadowRoot.getElementById('sel_device');
+      if (device) {
+        const html = candidates.map((candidate) => {
+          const star = candidate.count >= 4 ? ' ★' : '';
+          return `<option value="${this._escape(candidate.prefix)}">${this._escape(candidate.prefix)} (${candidate.count} ${this._t('editor_entities_detected')})${star}</option>`;
+        }).join('');
+        const options = `${html}<option value="__custom__">${this._escape(this._t('editor_custom_prefix'))}</option>`;
+        if (device.innerHTML !== options) device.innerHTML = options;
+        device.value = candidates.some((candidate) => candidate.prefix === currentPrefix) ? currentPrefix : '__custom__';
+      }
+      for (const key of ['voltage', 'current', 'power', 'frequency', 'power_factor', 'energy_today', 'cost_today', 'mains', 'inverter']) {
+        const datalist = this.shadowRoot.getElementById(`entity_options_${key}`);
+        if (datalist) {
+          const options = this._getEntityDatalistOptions(key);
+          if (datalist.innerHTML !== options) datalist.innerHTML = options;
+        }
+      }
+      const prefix = this.shadowRoot.getElementById('inp_prefix');
+      if (prefix && prefix !== this.shadowRoot.activeElement) prefix.value = currentPrefix;
+    }
+
+    _updateCandidateStatus() {
+      const status = this.shadowRoot?.querySelector('[data-role="candidate-status"]');
+      if (!status) return;
+      const prefix = this._config.prefix || 'grid_monitor';
+      const candidate = this._getCandidates().find((item) => item.prefix === prefix);
+      const count = candidate?.count || 0;
+      const total = Object.keys(DEFAULTS).length;
+      const dot = status.querySelector('.status-dot');
+      const label = status.querySelector('[data-role="candidate-count"]');
+      const color = count > 0 ? '#35ed91' : '#ffb51b';
+      if (dot) {
+        dot.style.background = color;
+        dot.style.boxShadow = `0 0 8px ${color}`;
+      }
+      if (label) label.textContent = `${count} / ${total} ${this._t('editor_entities_detected')} (${prefix})`;
     }
 
     _getEspHomeEntityIds() {
@@ -303,8 +390,11 @@
       const best = this._getCandidates().find((candidate) => candidate.count > 0);
       if (best) {
         this._config.prefix = best.prefix;
+        const prefixInput = this.shadowRoot.getElementById('inp_prefix');
+        if (prefixInput) prefixInput.value = best.prefix;
         this._fireChanged();
-        this._render();
+        this._refreshPickers();
+        this._updateCandidateStatus();
       }
     }
 
@@ -335,6 +425,7 @@
         <style>
           :host {
             display: block;
+            color-scheme: dark;
             font-family: var(--primary-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
             color: #e6f1ff;
             background: #0b172a;
@@ -368,6 +459,7 @@
           }
           .field input, .field select {
             width: 100%;
+            color-scheme: dark;
             box-sizing: border-box;
             background: rgba(14, 27, 49, 0.95);
             border: 1px solid rgba(18, 181, 255, 0.3);
@@ -377,6 +469,10 @@
             font-size: 0.95rem;
             outline: none;
             transition: border-color 0.2s, box-shadow 0.2s;
+          }
+          .field select option {
+            background: #0e1b31;
+            color: #fff;
           }
           .field input:focus, .field select:focus {
             border-color: #12b5ff;
@@ -487,9 +583,9 @@
           <div class="hint">${this._t('editor_prefix_hint')}</div>
         </div>
 
-        <div class="status-badge">
+        <div class="status-badge" data-role="candidate-status">
           <span class="status-dot"></span>
-          <span>${activeCandidate.count} / ${activeCandidate.total} ${this._t('editor_entities_detected')} (${currentPrefix})</span>
+          <span data-role="candidate-count">${activeCandidate.count} / ${activeCandidate.total} ${this._t('editor_entities_detected')} (${currentPrefix})</span>
         </div>
 
         <div class="field">
@@ -527,6 +623,8 @@
       `;
 
       this._bindEvents();
+      this._hasRendered = true;
+      this._renderedLanguage = this._lang();
     }
 
     _escape(val) {
@@ -546,7 +644,7 @@
           this._config.prefix = val;
           root.getElementById('inp_prefix').value = val;
           this._fireChanged();
-          this._render();
+          this._updateCandidateStatus();
         } else {
           root.getElementById('inp_prefix').focus();
         }
@@ -642,6 +740,8 @@
       this._renderedLanguage = null;
       this._pendingChangedKeys = new Set();
       this._updateScheduled = false;
+      this._dialogResolver = null;
+      this._renderPending = false;
       this.shadowRoot.addEventListener('click', (event) => this._handleCardClick(event));
     }
 
@@ -1342,6 +1442,10 @@
 
     _render() {
       if (!this._config || !this._hass) return;
+      if (this._dialogResolver) {
+        this._renderPending = true;
+        return;
+      }
       const status = this._displayStatus();
       const online = status.esp === 'on';
       const readyClass = this._hasRendered ? ' render-ready' : '';
@@ -1364,6 +1468,11 @@
     }
 
     _handleCardClick(event) {
+      const dialogAction = event.target?.closest?.('[data-dialog-action]');
+      if (dialogAction) {
+        this._finishDialog(dialogAction.dataset.dialogAction === 'confirm' || dialogAction.dataset.dialogAction === 'close');
+        return;
+      }
       const target = event.target?.closest?.('[data-tab], [data-period], [data-action], [data-number-save], [data-switch]');
       if (!target) return;
       if (target.dataset.tab) {
@@ -1621,6 +1730,67 @@
       if (changed.has('two_zone')) this._updateEnergyTwoZone();
     }
 
+    _showDialog({ title, message, confirm = false }) {
+      if (this._dialogResolver) this._finishDialog(false);
+      return new Promise((resolve) => {
+        this._dialogResolver = resolve;
+        this._dialogReturnFocus = this.shadowRoot.activeElement;
+        const dialog = document.createElement('div');
+        dialog.className = 'app-dialog-backdrop';
+        dialog.dataset.dialogRoot = '';
+        const cancelButton = confirm
+          ? `<button type="button" class="dialog-button secondary" data-dialog-action="cancel">${this._escape(this._t('dialog_cancel'))}</button>`
+          : '';
+        const primaryAction = confirm ? 'confirm' : 'close';
+        const primaryLabel = confirm ? this._t('dialog_confirm') : this._t('dialog_close');
+        dialog.innerHTML = `<section class="app-dialog" role="dialog" aria-modal="true" aria-labelledby="grid-monitor-dialog-title" aria-describedby="grid-monitor-dialog-message">
+          <div class="dialog-mark" aria-hidden="true">${confirm ? this._svg('gear') : '!'}</div>
+          <h2 id="grid-monitor-dialog-title">${this._escape(title)}</h2>
+          <p id="grid-monitor-dialog-message">${this._escape(message)}</p>
+          <div class="dialog-actions">${cancelButton}<button type="button" class="dialog-button primary" data-dialog-action="${primaryAction}">${this._escape(primaryLabel)}</button></div>
+        </section>`;
+        dialog.addEventListener('keydown', (event) => {
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            this._finishDialog(false);
+            return;
+          }
+          if (event.key === 'Tab') {
+            const buttons = [...dialog.querySelectorAll('button:not([disabled])')];
+            if (!buttons.length) return;
+            const first = buttons[0];
+            const last = buttons[buttons.length - 1];
+            if (event.shiftKey && this.shadowRoot.activeElement === first) {
+              event.preventDefault();
+              last.focus();
+            } else if (!event.shiftKey && this.shadowRoot.activeElement === last) {
+              event.preventDefault();
+              first.focus();
+            }
+          }
+        });
+        this.shadowRoot.append(dialog);
+        const focusTarget = dialog.querySelector('[data-dialog-action="confirm"], [data-dialog-action="close"]');
+        if (focusTarget) focusTarget.focus();
+      });
+    }
+
+    _finishDialog(result) {
+      const dialog = this.shadowRoot.querySelector('[data-dialog-root]');
+      if (dialog) dialog.remove();
+      const resolve = this._dialogResolver;
+      const returnFocus = this._dialogReturnFocus;
+      this._dialogResolver = null;
+      this._dialogReturnFocus = null;
+      if (resolve) resolve(Boolean(result));
+      if (this._renderPending) {
+        this._renderPending = false;
+        this._render();
+      } else if (returnFocus?.isConnected) {
+        returnFocus.focus();
+      }
+    }
+
     async _saveNumber(key) {
       const entity = this._entity(key);
       const input = this.shadowRoot.querySelector(`[data-number-input="${key}"]`);
@@ -1629,13 +1799,13 @@
       const value = Number(rawVal);
       const state = this._state(key);
       if (!state || !Number.isFinite(value)) {
-        window.alert(this._t('invalid_number'));
+        await this._showDialog({ title: this._t('dialog_error_title'), message: this._t('invalid_number') });
         return;
       }
       const min = Number(state.attributes?.min);
       const max = Number(state.attributes?.max);
       if ((Number.isFinite(min) && value < min) || (Number.isFinite(max) && value > max)) {
-        window.alert(this._t('invalid_number'));
+        await this._showDialog({ title: this._t('dialog_error_title'), message: this._t('invalid_number') });
         return;
       }
       await this._hass.callService('number', 'set_value', { entity_id: entity, value });
@@ -1662,7 +1832,13 @@
     async _call(key) {
       const entity = this._entity(key);
       const state = this._state(key);
-      if (!state || !this._hass || !window.confirm(`${this._t('confirm')}\n${state.attributes?.friendly_name || entity}`)) return;
+      if (!state || !this._hass) return;
+      const confirmed = await this._showDialog({
+        title: this._t('dialog_confirm_title'),
+        message: `${this._t('confirm')}\n${state.attributes?.friendly_name || entity}`,
+        confirm: true,
+      });
+      if (!confirmed) return;
       await this._hass.callService('button', 'press', { entity_id: entity });
     }
 
@@ -1706,6 +1882,12 @@
         @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
         @container (max-width:760px){.energy-hero{grid-template-columns:1fr}.energy-visual{min-height:145px}.energy-visual-grid{grid-template-columns:1fr}.energy-object{width:76px;height:76px;right:10px;bottom:8px}.settings-hero{gap:11px;padding:12px}.chip-art{width:56px;height:56px}.device-copy strong{font-size:15px}.device-status{font-size:12px}}
         @container (max-width:420px){.energy-visual{min-height:130px;padding:15px}.energy-visual .hero-number{font-size:clamp(24px,7cqw,31px);max-width:80%}.energy-visual small{font-size:11px;max-width:80%}.energy-object{width:58px;height:58px;right:8px;bottom:6px;opacity:.8}.settings-hero{flex-wrap:wrap}.chip-art{width:46px;height:46px}.device-status{margin-left:6px}.bar-row{grid-template-columns:47px minmax(24px,1fr) minmax(75px,auto);gap:7px}.banner strong{max-width:68%}}
+        .app-dialog-backdrop{position:fixed;inset:0;z-index:99999;display:grid;place-items:center;padding:18px;background:rgba(2,8,18,.78);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px)}
+        .app-dialog{width:min(100%,430px);padding:24px;border:1px solid #55bfff75;border-radius:22px;background:radial-gradient(ellipse at 50% 0%,#17436a,#0b1728 68%);color:#f3f7ff;box-shadow:0 24px 70px #000c,inset 0 1px 0 #ffffff20;text-align:center}
+        .dialog-mark{width:48px;height:48px;margin:0 auto 14px;display:grid;place-items:center;border-radius:15px;border:1px solid #32b7ff6e;background:linear-gradient(145deg,#0d5893,#0b2949);color:#77d6ff;font-size:28px;font-weight:800;box-shadow:0 0 24px #078fff33}.dialog-mark .icon{width:25px;height:25px}
+        .app-dialog h2{margin:0;color:#bdeaff;font-size:20px;line-height:1.3}.app-dialog p{margin:12px 0 22px;color:#c6d7ea;font-size:15px;line-height:1.55;white-space:pre-line;overflow-wrap:anywhere}
+        .dialog-actions{display:flex;justify-content:center;gap:10px}.dialog-button{min-width:118px;min-height:44px;padding:10px 16px;border:1px solid transparent;border-radius:12px;font:inherit;font-weight:700;cursor:pointer;transition:transform .16s,box-shadow .16s,background .16s}.dialog-button:hover{transform:translateY(-1px)}.dialog-button:focus-visible{outline:2px solid #bcecff;outline-offset:3px}.dialog-button.primary{border-color:#36afff;background:linear-gradient(120deg,#0da8f4,#0867cb);color:#fff;box-shadow:0 6px 18px #008eff45}.dialog-button.secondary{border-color:#58718c;background:#182a3f;color:#d7e6f6}.dialog-button.secondary:hover{background:#213b58}
+        @media(max-width:480px){.app-dialog{padding:20px 16px;border-radius:18px}.dialog-actions{flex-direction:column-reverse}.dialog-button{width:100%}}
       `;
     }
   }
