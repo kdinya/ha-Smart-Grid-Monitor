@@ -106,14 +106,19 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn(".action-grid .action-button:nth-child(5){grid-column:1/-1}", card)
         self.assertNotIn("minmax(104px,1fr)", card)
 
-    def test_home_combines_pzem_and_power_scheme_in_one_card(self):
+    def test_home_places_esp_power_scheme_in_final_pzem_banner(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
         home = card.split("    _home() {", 1)[1].split("    _id(", 1)[0]
         self.assertIn('class="card info info-system"', home)
-        self.assertIn('class="info-system-section"', home)
+        self.assertNotIn('class="info-system-section"', home)
         self.assertEqual(home.count('data-role="home-mains"'), 1)
         self.assertEqual(home.count('data-role="esp-power-label"'), 1)
-        self.assertIn('data-role="esp-power-note"', home)
+        pzem_card = home.split('class="card info info-system"', 1)[1].split('</div></div>', 1)[0]
+        self.assertNotIn('data-role="esp-power-label"', pzem_card)
+        banner = home.split('class="card banner ', 1)[1]
+        self.assertIn('data-role="home-banner-label"', banner)
+        self.assertIn('data-role="esp-power-label"', banner)
+        self.assertIn('data-role="esp-power-note"', banner)
         self.assertIn(".bottom-status{grid-template-columns:repeat(4,minmax(0,1fr))", card)
 
     def test_mobile_layout_prioritizes_voltage_and_avoids_horizontal_action_scrolling(self):
@@ -127,14 +132,17 @@ class RepositoryContractTests(unittest.TestCase):
 
     def test_voltage_panel_reduces_vertical_padding_and_lowers_caption(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
-        self.assertIn('<text x="250" y="281" text-anchor="middle" class="voltage-label">', card)
+        self.assertIn('<text x="250" y="286" text-anchor="middle" class="voltage-label">', card)
+        self.assertIn('viewBox="0 0 500 330"', card)
+        self.assertIn('y="322" text-anchor="middle" class="gauge-end"', card)
         self.assertIn(".voltage{padding:5px 12px 4px;justify-content:space-between}", card)
         self.assertIn("@container (max-width:760px){.voltage{padding:5px 10px 4px}}", card)
 
     def test_non_home_header_aligns_with_menu_and_reduces_content_gap(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
-        self.assertIn(".shell:not(.home-active)>.header{align-items:flex-start;padding-bottom:2px}", card)
-        self.assertIn("@container (max-width:959px){.shell:not(.home-active)>.header{padding-bottom:2px}.shell:not(.home-active)>.header>.tabs-top{margin-bottom:0}}", card)
+        self.assertIn(".shell:not(.home-active)>.header{align-items:flex-start;padding-bottom:1px}", card)
+        self.assertIn("@container (max-width:959px){.shell:not(.home-active)>.header{padding-bottom:1px}.shell:not(.home-active)>.header>.tabs-top{margin-bottom:0}}", card)
+        self.assertIn(".shell:not(.home-active)>.header>.tabs-top{margin:0 0 4px}", card)
 
     def test_chart_scrubber_shows_full_width_historical_measurements_and_metric_correct_marker(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
@@ -192,8 +200,13 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("if (sample.v > 0 && (!bucket.minPositive || sample.v < bucket.minPositive.v)) bucket.minPositive = sample", card)
         self.assertIn("if (!bucket.max || sample.v > bucket.max.v) bucket.max = sample", card)
         self.assertIn("[bucket.first, bucket.min, bucket.minPositive, bucket.max, bucket.last]", card)
-        self.assertIn("metricKey === 'power' ? plottedValues.filter((value) => value > 0) : plottedValues", card)
+        self.assertIn("metricKey === 'power' ? plottedPoints.filter((point) => point.v > 0) : plottedPoints", card)
         self.assertIn("this._historyBounds(range)", card)
+        self.assertIn("_chartDateRangeHtml()", card)
+        self.assertIn("type=\"datetime-local\" data-chart-date-start", card)
+        self.assertIn("data-chart-zoom=\"in\"", card)
+        self.assertIn("this._chartPointerDistance(points)", card)
+        self.assertIn("this._setCustomChartRange(start, end)", card)
         self.assertIn("start.setHours(0, 0, 0, 0)", card)
         self.assertIn("start.getDay() + 6", card)
         self.assertIn("start.setDate(1)", card)

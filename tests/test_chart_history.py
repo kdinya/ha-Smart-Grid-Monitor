@@ -279,6 +279,92 @@ assert.equal(marker.text, '230 V');
         )
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
+    def test_chart_pan_and_zoom_preserve_exact_custom_date_windows(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = {
+  window: { customCards: [] },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+};
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+card._historyRange = 'hour';
+card._historyCustomRange = null;
+const now = Date.now() - 1000;
+const live = card._historyBounds('hour', now);
+const span = live.end - live.start;
+const olderShift = card._chartPanShiftForDelta(80, span, 320);
+assert.equal(olderShift, span / 4);
+card._historyRange = 'custom';
+card._historyCustomRange = { start: live.start - olderShift, end: live.end - olderShift };
+const older = card._historyBounds();
+assert.equal(older.end - older.start, span);
+assert.equal(older.end, live.end - olderShift);
+assert.ok(older.end < live.end, 'dragging right browses older data');
+assert.ok(card._chartPanShiftForDelta(-80, span, 320) < 0, 'dragging left browses newer data');
+assert.match(card._historyWindowToken(), /:custom:/);
+let zoomed;
+card._chartTimeBounds = () => ({ tStart: now - 3600000, tEnd: now, rangeMs: 3600000 });
+card._setCustomChartRange = (start, end) => { zoomed = { start, end }; };
+card._zoomChart('in');
+assert.equal(zoomed.end - zoomed.start, 1800000, 'zoom-in halves the visible time window');
+assert.ok(zoomed.end <= Date.now(), 'zoom window does not extend into the future');
+"""
+        result = subprocess.run(
+            ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_chart_minimum_and_maximum_include_local_time_or_date(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = {
+  window: { customCards: [] },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+};
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+card._chartMetric = 'voltage';
+card._historyRange = 'day';
+card._history = [{ value: 210 }, { value: 240 }];
+card._locale = () => 'en-GB';
+card._lang = () => 'en';
+card._t = (key) => ({ stat_min: 'Min', stat_avg: 'Avg', stat_max: 'Max' })[key];
+card._escape = (value) => String(value).replaceAll('<', '&lt;');
+card._chartData = () => ({ series: [
+  { v: 210, t: Date.parse('2026-11-21T10:05:00Z') },
+  { v: 240, t: Date.parse('2026-11-21T12:35:00Z') },
+] });
+let html = card._chartStatsHtml();
+assert.match(html, /Min<\/span><b>210 V<\/b><small>10:05<\/small>/);
+assert.match(html, /Max<\/span><b>240 V<\/b><small>12:35<\/small>/);
+card._historyRange = 'month';
+html = card._chartStatsHtml();
+assert.match(html, /Min<\/span><b>210 V<\/b><small>21\/11\/2026<\/small>/);
+assert.match(html, /Max<\/span><b>240 V<\/b><small>21\/11\/2026<\/small>/);
+"""
+        result = subprocess.run(
+            ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
+            capture_output=True,
+            text=True,
+            check=False,
+            env={**os.environ, "TZ": "UTC"},
+        )
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()
