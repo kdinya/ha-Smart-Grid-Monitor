@@ -406,5 +406,110 @@ assert.match(html, /Max<\/span><b>240 V<\/b><small>21\/11\/2026<\/small>/);
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
 
+
+    def test_stats_start_strictly_bounds_chart_and_extremes(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = {
+  window: { customCards: [] },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+};
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+
+// 1. When statsStart is set, all history bounds cannot precede statsStart
+const statsStart = Date.parse('2026-11-21T10:00:00Z');
+const now = Date.parse('2026-11-21T16:00:00Z');
+card._statsStart = statsStart;
+card._historyCustomRange = null;
+
+// Day range would normally start at midnight 2026-11-21 00:00:00Z
+const dayBounds = card._historyBounds('day', now);
+assert.equal(dayBounds.start, statsStart, 'day bound cannot be earlier than statsStart');
+
+// Month range would start at 1st of month
+const monthBounds = card._historyBounds('month', now);
+assert.equal(monthBounds.start, statsStart, 'month bound cannot be earlier than statsStart');
+
+// Custom range earlier than statsStart is clamped
+card._historyCustomRange = { start: statsStart - 7200000, end: now };
+const customBounds = card._historyBounds('custom', now);
+assert.equal(customBounds.start, statsStart, 'custom range cannot start before statsStart');
+
+// 2. Pan and Zoom cannot navigate before statsStart
+const panTarget = card._chartPanTarget({
+  pointerType: 'mouse',
+  rangeMs: 3600000,
+  deltaX: 500, // dragging far right to see earlier data
+  plotWidth: 300,
+  tStart: statsStart + 1800000,
+  tEnd: statsStart + 5400000,
+});
+assert.ok(panTarget.start >= statsStart, 'pan target cannot precede statsStart');
+
+let customSet = null;
+card._setCustomChartRange = (s, e) => { customSet = { s, e }; };
+card._chartTimeBounds = () => ({ tStart: statsStart, tEnd: statsStart + 3600000, rangeMs: 3600000 });
+card._zoomChart('out');
+assert.ok(customSet.s >= statsStart, 'zoom-out cannot expand before statsStart');
+
+// 3. parseHistoryResponse clamps / excludes items before statsStart
+const rawResponse = [[
+  { last_changed: '2026-11-21T08:00:00Z', state: '220' }, // ended before statsStart
+  { last_changed: '2026-11-21T09:30:00Z', state: '215' }, // active across statsStart
+  { last_changed: '2026-11-21T11:00:00Z', state: '235' }, // after statsStart
+]];
+const parsed = card._parseHistoryResponse(rawResponse, 'voltage');
+assert.equal(parsed.length, 2, 'state that ended before statsStart is dropped');
+assert.equal(parsed[0].time.getTime(), statsStart, 'earlier active state is clamped to statsStart');
+assert.equal(parsed[0].value, 215);
+assert.equal(parsed[1].value, 235);
+
+// 4. _computeStatsExtremes ignores states that ended before statsStart
+const metricSeries = [
+  [
+    { entity_id: 'sensor.voltage', last_changed: '2026-11-21T07:00:00Z', state: '190' }, // ended before statsStart - was lowest
+    { entity_id: 'sensor.voltage', last_changed: '2026-11-21T09:00:00Z', state: '260' }, // ended before statsStart - was highest
+    { entity_id: 'sensor.voltage', last_changed: '2026-11-21T09:45:00Z', state: '225' }, // active at statsStart
+    { entity_id: 'sensor.voltage', last_changed: '2026-11-21T12:00:00Z', state: '230' },
+  ],
+];
+card._entity = (key) => `sensor.${key}`;
+const extremes = card._computeStatsExtremes(metricSeries);
+assert.equal(extremes.voltage.min, 225, '190V before statsStart is ignored');
+assert.equal(extremes.voltage.max, 230, '260V before statsStart is ignored');
+
+// 5. _chartStatsHtml ignores points before statsStart
+card._chartMetric = 'voltage';
+card._historyRange = 'day';
+card._history = [{ time: new Date(statsStart - 3600000), value: 180 }, { time: new Date(statsStart + 3600000), value: 230 }];
+card._locale = () => 'en-GB';
+card._lang = () => 'en';
+card._t = (key) => ({ stat_min: 'Min', stat_avg: 'Avg', stat_max: 'Max' })[key];
+card._escape = (v) => String(v);
+card._formatChartStatTimestamp = () => '12:00';
+card._chartData = () => ({ series: [
+  { v: 180, t: statsStart - 3600000 },
+  { v: 230, t: statsStart + 3600000 },
+] });
+const html = card._chartStatsHtml();
+assert.ok(!html.includes('180'), 'min before statsStart is not shown');
+assert.ok(html.includes('230'), 'sample after statsStart is shown');
+"""
+        result = subprocess.run(
+            ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
+            capture_output=True,
+            text=True,
+            check=False,
+            env={**os.environ, "TZ": "UTC"},
+        )
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()

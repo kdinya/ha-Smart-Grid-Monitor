@@ -140,7 +140,7 @@
       voltage: 'Напруга мережі', sag_state: 'Просідання', swell_state: 'Перенапруга', current: 'Струм', power: 'Потужність', frequency: 'Частота', pf: 'Коеф. потужності', normal: 'Норма', alarm: 'Поза нормою',
       chart_title: 'Детальний графік', since: 'З', stats_title: 'Статистика', stats_start_label: 'Початок статистики',
       stats_hint: 'Оберіть дату й час: графіки та мінімум/максимум рахуватимуться від цього моменту. Без значення діють добові дані.',
-      stats_active: 'Графіки та мін/макс рахуються від', stats_apply: 'Застосувати', stats_clear: 'Скинути',
+      stats_active: 'Графіки та мін/макс рахуються від', stats_apply: 'Застосувати', stats_clear: 'Скинути', chart_date_error_earlier: 'Дата не може бути раніше виставленого початку статистики',
       stats_error: 'Вкажіть коректні дату й час у минулому.', stats_note: 'Мін/макс від', power_range_period: 'Діапазон потужності за період', max_current_period: 'Максимальний струм за період', peak_power_period: 'Пікова потужність за період', stat_min: 'Мін.', stat_avg: 'Сер.', stat_max: 'Макс.', hour: 'Год', day: 'День', week: 'Тиждень', month: 'Місяць', loading: 'Завантаження історії…', no_history: 'Історія поки недоступна',
       chart_select_time: 'Перетягуйте графік; двома пальцями масштабуйте, повзунком вибирайте час', chart_date_range: 'Дати', chart_from: 'Від', chart_to: 'До', chart_apply: 'Показати', chart_date_error: 'Перевірте дати: кінець має бути пізніше початку й не в майбутньому', chart_zoom_in: 'Збільшити масштаб', chart_zoom_out: 'Зменшити масштаб', chart_readings: 'Дані на вибраний час', chart_readings_loading: 'Завантаження вимірювань…', chart_readings_unavailable: 'Історія вимірювань недоступна', chart_live: 'Зараз', active_power: 'Активна потужність',
       mains: 'Зв’язок з PZEM', has_voltage: 'Дані доступні', no_voltage: 'Дані недоступні', source: 'Живлення ESP', from_mains: 'Мережа (не підтверджено)', from_inverter: 'Джерело невідоме', pzem_link: 'Зв’язок з PZEM', active: 'Онлайн', inactive: 'Офлайн', today_consumption: 'Споживання сьогодні',
@@ -183,7 +183,7 @@
       voltage: 'Grid voltage', sag_state: 'Sag', swell_state: 'Swell', current: 'Current', power: 'Power', frequency: 'Frequency', pf: 'Power factor', normal: 'Normal', alarm: 'Out of range',
       chart_title: 'Detailed chart', since: 'Since', stats_title: 'Statistics', stats_start_label: 'Statistics start',
       stats_hint: 'Pick a date and time: charts and min/max will be calculated from that moment. Empty means daily values.',
-      stats_active: 'Charts and min/max are calculated from', stats_apply: 'Apply', stats_clear: 'Reset',
+      stats_active: 'Charts and min/max are calculated from', stats_apply: 'Apply', stats_clear: 'Reset', chart_date_error_earlier: 'Date cannot be earlier than the statistics start time',
       stats_error: 'Enter a valid date and time in the past.', stats_note: 'Min/max since', power_range_period: 'Power range for the period', max_current_period: 'Peak current for the period', peak_power_period: 'Peak power for the period', stat_min: 'Min', stat_avg: 'Avg', stat_max: 'Max', hour: 'Hour', day: 'Day', week: 'Week', month: 'Month', loading: 'Loading history…', no_history: 'History is not available yet',
       chart_select_time: 'Drag the chart to pan; pinch to zoom, or use the slider to select a time', chart_date_range: 'Dates', chart_from: 'From', chart_to: 'To', chart_apply: 'Show', chart_date_error: 'Check dates: the end must be after the start and not in the future', chart_zoom_in: 'Zoom in', chart_zoom_out: 'Zoom out', chart_readings: 'Readings at selected time', chart_readings_loading: 'Loading readings…', chart_readings_unavailable: 'Measurement history is unavailable', chart_live: 'Now', active_power: 'Active power',
       mains: 'PZEM connection', has_voltage: 'Data available', no_voltage: 'Data unavailable', source: 'ESP power source', from_mains: 'Mains (not confirmed)', from_inverter: 'Source unknown', pzem_link: 'PZEM connection', active: 'Online', inactive: 'Offline', today_consumption: 'Consumption today',
@@ -919,7 +919,7 @@
       this._entityOverrides = { ...(config.entities || {}) };
       this._config = { ...config, entities, name: config.name || null, esp_power_mode: powerMode };
       this._statsStart = this._readStatsStart();
-      if (this._statsStart !== null && !this._statsStartApplied) {
+      if (Number.isFinite(this._statsStart) && !this._statsStartApplied) {
         this._historyRange = 'since';
         this._historyReturnRange = 'since';
       }
@@ -1063,7 +1063,7 @@
     }
     _num(key) {
       if (LIVE_MEASUREMENT_KEYS.has(key) && this._effectiveEspStatus() === 'off') return null;
-      if (this._statsStart !== null && STATS_OVERRIDES[key]) {
+      if (Number.isFinite(this._statsStart) && STATS_OVERRIDES[key]) {
         const [metric, bound] = STATS_OVERRIDES[key];
         const value = this._statsExtremes?.[metric]?.[bound];
         return Number.isFinite(value) ? value : null;
@@ -1084,7 +1084,7 @@
     _formatted(key, digits = 1) {
       if (LIVE_DISPLAY_KEYS.has(key) && this._effectiveEspStatus() === 'off') return this._t('unavailable');
       const n = this._num(key);
-      if (n === null && this._statsStart !== null && STATS_OVERRIDES[key]) return '—';
+      if (n === null && Number.isFinite(this._statsStart) && STATS_OVERRIDES[key]) return '—';
       if (n === null) {
         const raw = this._raw(key);
         if (raw === 'unavailable') return this._t('unavailable');
@@ -1104,7 +1104,7 @@
         return days ? `${days} ${u.d} ${hours} ${u.h}` : hours ? `${hours} ${u.h} ${minutes} ${u.m}` : `${minutes} ${u.m}`;
       }
       const value = n.toLocaleString(this._locale(), { maximumFractionDigits: digits });
-      const unit = this._unit(key) || (this._statsStart !== null && STATS_OVERRIDES[key] ? this._unit(STATS_OVERRIDES[key][0]) : '');
+      const unit = this._unit(key) || (Number.isFinite(this._statsStart) && STATS_OVERRIDES[key] ? this._unit(STATS_OVERRIDES[key][0]) : '');
       return `${value}${unit ? ` ${unit}` : ''}`;
     }
     _svg(name, extra = '') { return `<svg class="icon ${extra}" viewBox="0 0 48 48" aria-hidden="true">${ICONS[name] || ''}</svg>`; }
@@ -1430,7 +1430,7 @@
 
     _chart() {
       const labels = ['hour', 'day', 'week', 'month'];
-      const sinceButton = this._statsStart === null ? '' : `<button class="period-button since ${this._historyRange === 'since' ? 'active' : ''}" data-period="since" aria-pressed="${this._historyRange === 'since'}">${this._escape(`${this._t('since')} ${this._statsStartLabel()}`)}</button>`;
+      const sinceButton = !Number.isFinite(this._statsStart) ? '' : `<button class="period-button since ${this._historyRange === 'since' ? 'active' : ''}" data-period="since" aria-pressed="${this._historyRange === 'since'}">${this._escape(`${this._t('since')} ${this._statsStartLabel()}`)}</button>`;
       const buttons = labels.map((period) => `<button class="period-button ${this._historyRange === period ? 'active' : ''}" data-period="${period}" aria-pressed="${this._historyRange === period}">${this._escape(this._t(period))}</button>`).join('') + sinceButton;
       const metricButtons = Object.keys(CHART_METRICS).map((metric) => `<button class="period-button ${this._chartMetric === metric ? 'active' : ''}" data-metric="${metric}" aria-pressed="${this._chartMetric === metric}">${this._escape(this._t(metric))}</button>`).join('');
       return `<section class="card chart-card detailed-chart"><div class="chart-head"><h2><span class="chart-icon">${this._svg('chart')}</span>${this._escape(this._t('chart_title'))}</h2><div class="periods" role="group" aria-label="${this._escape(this._t('chart_title'))}">${metricButtons}</div><div class="periods" role="group" aria-label="${this._escape(this._t('hour'))}">${buttons}</div><div class="chart-tools"><button class="chart-zoom-button" type="button" data-chart-zoom="out" aria-label="${this._escape(this._t('chart_zoom_out'))}" title="${this._escape(this._t('chart_zoom_out'))}">−</button><button class="chart-zoom-button" type="button" data-chart-zoom="in" aria-label="${this._escape(this._t('chart_zoom_in'))}" title="${this._escape(this._t('chart_zoom_in'))}">+</button>${this._chartDateRangeHtml()}</div></div><div class="chart-stats" data-role="chart-stats">${this._chartStatsHtml()}</div><div class="chart-plot" data-role="chart-plot">${this._chartSvg()}</div>${this._chartScrubberHtml()}${this._chartReadingsHtml()}</section>`;
@@ -1458,7 +1458,7 @@
     }
 
     _statsStartLabel() {
-      if (this._statsStart === null) return '';
+      if (!Number.isFinite(this._statsStart)) return '';
       const when = new Date(this._statsStart);
       const time = when.toLocaleTimeString(this._locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
       if (when.toDateString() === new Date().toDateString()) return time;
@@ -1466,23 +1466,23 @@
     }
 
     _statsStartFullLabel() {
-      if (this._statsStart === null) return '';
+      if (!Number.isFinite(this._statsStart)) return '';
       return new Date(this._statsStart).toLocaleString(this._locale(), { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
     }
 
     _statsNote() {
-      if (this._statsStart === null) return '';
+      if (!Number.isFinite(this._statsStart)) return '';
       return `<div class="stats-note" data-role="stats-note">${this._escape(`${this._t('stats_note')} ${this._statsStartFullLabel()}`)}</div>`;
     }
 
     _statsStartSetting() {
-      const active = this._statsStart !== null;
+      const active = Number.isFinite(this._statsStart);
       const hint = active ? `${this._t('stats_active')} ${this._statsStartFullLabel()}` : this._t('stats_hint');
       return `<h2 class="subheading">${this._escape(this._t('stats_title'))}</h2><div class="detail stats-start" data-role="stats-start"><label><span>${this._escape(this._t('stats_start_label'))}</span><div class="stats-start-controls"><input type="datetime-local" data-stats-start-input max="${this._formatDateTimeInput(Date.now())}" value="${active ? this._formatDateTimeInput(this._statsStart) : ''}"><button class="save-button" type="button" data-stats-start-apply>${this._escape(this._t('stats_apply'))}</button><button class="save-button ghost" type="button" data-stats-start-clear data-role="stats-start-clear" ${active ? '' : 'disabled'}>${this._escape(this._t('stats_clear'))}</button></div></label><p class="stats-start-hint" data-role="stats-start-hint">${this._escape(hint)}</p><p class="stats-start-error" role="alert" data-role="stats-start-error"></p></div>`;
     }
 
     _updateStatsControls() {
-      const active = this._statsStart !== null;
+      const active = Number.isFinite(this._statsStart);
       const input = this.shadowRoot.querySelector('[data-stats-start-input]');
       if (input) input.value = active ? this._formatDateTimeInput(this._statsStart) : '';
       const clear = this.shadowRoot.querySelector('[data-role="stats-start-clear"]');
@@ -1537,11 +1537,11 @@
     }
 
     _statsExtremesCacheToken() {
-      return this._statsStart === null ? '' : `${Math.round(this._statsStart)}:${STATS_METRIC_KEYS.map((key) => this._entity(key)).join(',')}`;
+      return !Number.isFinite(this._statsStart) ? '' : `${Math.round(this._statsStart)}:${STATS_METRIC_KEYS.map((key) => this._entity(key)).join(',')}`;
     }
 
     _ensureStatsExtremes() {
-      if (!this._hass || !this._config || this._statsStart === null) return;
+      if (!this._hass || !this._config || !Number.isFinite(this._statsStart)) return;
       const token = this._statsExtremesCacheToken();
       if (this._statsExtremesLoading && this._statsExtremesToken === token) return;
       if (token === this._statsExtremesKey && Date.now() - this._statsExtremesAt < 60000) return;
@@ -1553,6 +1553,7 @@
       const series = Array.isArray(response) ? response : [];
       const byEntity = new Map(STATS_METRIC_KEYS.map((key) => [this._entity(key), key]));
       const ordered = series.length === STATS_METRIC_KEYS.length;
+      const statsStart = Number.isFinite(this._statsStart) ? this._statsStart : null;
       series.forEach((items, index) => {
         if (!Array.isArray(items) || !items.length) return;
         const key = byEntity.get(items[0]?.entity_id) ?? (ordered ? STATS_METRIC_KEYS[index] : undefined);
@@ -1560,9 +1561,17 @@
         const { plausible: [lowest, highest], positiveMin } = STATS_METRICS[key];
         let min = null;
         let max = null;
-        items.forEach((item) => {
+        items.forEach((item, itemIdx) => {
           const value = item?.state === '' || item?.state === null || item?.state === undefined ? NaN : Number(item.state);
           if (!Number.isFinite(value) || value < lowest || value > highest) return;
+          if (statsStart !== null) {
+            const itemTime = new Date(item.last_changed || item.last_updated).getTime();
+            if (Number.isFinite(itemTime) && itemTime < statsStart) {
+              const nextItem = items[itemIdx + 1];
+              const nextTime = nextItem ? new Date(nextItem.last_changed || nextItem.last_updated).getTime() : NaN;
+              if (Number.isFinite(nextTime) && nextTime <= statsStart) return;
+            }
+          }
           if (max === null || value > max) max = value;
           if ((!positiveMin || value > 0) && (min === null || value < min)) min = value;
         });
@@ -1572,7 +1581,7 @@
     }
 
     async _loadStatsExtremes(token) {
-      if (!this._hass || this._statsStart === null) return;
+      if (!this._hass || !Number.isFinite(this._statsStart)) return;
       const hass = this._hass;
       const request = ++this._statsExtremesRequest;
       this._statsExtremesLoading = true;
@@ -1612,15 +1621,23 @@
 
     _chartDateRangeHtml() {
       const { start, end } = this._historyBounds();
-      return `<details class="chart-date-range"><summary>${this._escape(this._t('chart_date_range'))}</summary><div class="chart-date-range-panel"><label>${this._escape(this._t('chart_from'))}<input type="datetime-local" data-chart-date-start value="${this._formatDateTimeInput(start)}"></label><label>${this._escape(this._t('chart_to'))}<input type="datetime-local" data-chart-date-end value="${this._formatDateTimeInput(end)}"></label><button type="button" class="chart-date-apply" data-chart-date-apply>${this._escape(this._t('chart_apply'))}</button><small data-role="chart-date-error" aria-live="polite"></small></div></details>`;
+      const minAttr = Number.isFinite(this._statsStart) ? ` min="${this._formatDateTimeInput(this._statsStart)}"` : '';
+      return `<details class="chart-date-range"><summary>${this._escape(this._t('chart_date_range'))}</summary><div class="chart-date-range-panel"><label>${this._escape(this._t('chart_from'))}<input type="datetime-local" data-chart-date-start${minAttr} value="${this._formatDateTimeInput(start)}"></label><label>${this._escape(this._t('chart_to'))}<input type="datetime-local" data-chart-date-end${minAttr} value="${this._formatDateTimeInput(end)}"></label><button type="button" class="chart-date-apply" data-chart-date-apply>${this._escape(this._t('chart_apply'))}</button><small data-role="chart-date-error" aria-live="polite"></small></div></details>`;
     }
 
     _updateChartDateRangeControls() {
       const bounds = this._historyBounds();
       const start = this.shadowRoot.querySelector('[data-chart-date-start]');
       const end = this.shadowRoot.querySelector('[data-chart-date-end]');
-      if (start) start.value = this._formatDateTimeInput(bounds.start);
-      if (end) end.value = this._formatDateTimeInput(bounds.end);
+      const minVal = Number.isFinite(this._statsStart) ? this._formatDateTimeInput(this._statsStart) : '';
+      if (start) {
+        start.value = this._formatDateTimeInput(bounds.start);
+        if (minVal) start.setAttribute('min', minVal); else start.removeAttribute('min');
+      }
+      if (end) {
+        end.value = this._formatDateTimeInput(bounds.end);
+        if (minVal) end.setAttribute('min', minVal); else end.removeAttribute('min');
+      }
       const error = this.shadowRoot.querySelector('[data-role="chart-date-error"]');
       if (error) error.textContent = '';
     }
@@ -1635,12 +1652,20 @@
         if (error) error.textContent = this._t('chart_date_error');
         return;
       }
+      if (Number.isFinite(this._statsStart) && start < this._statsStart) {
+        if (error) error.textContent = this._t('chart_date_error_earlier') || this._t('chart_date_error');
+        return;
+      }
       if (error) error.textContent = '';
       this._setCustomChartRange(start, end);
     }
 
     _setCustomChartRange(start, end) {
       if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return;
+      if (Number.isFinite(this._statsStart)) {
+        start = Math.max(start, this._statsStart);
+        if (end <= start) end = Math.min(Date.now(), start + 60e3);
+      }
       if (this._historyRange !== 'custom') this._historyReturnRange = this._historyRange;
       this._historyCustomRange = { start, end };
       this._historyRange = 'custom';
@@ -1661,6 +1686,10 @@
       let start = center - nextRange / 2;
       let end = center + nextRange / 2;
       if (end > Date.now()) { start -= end - Date.now(); end = Date.now(); }
+      if (Number.isFinite(this._statsStart) && start < this._statsStart) {
+        start = this._statsStart;
+      }
+      if (end <= start) end = Math.min(Date.now(), start + minRange);
       this._setCustomChartRange(start, end);
     }
 
@@ -1736,7 +1765,7 @@
       if (this._historyRange === 'week' || this._historyRange === 'month') {
         return when.toLocaleDateString(this._locale(), { day: '2-digit', month: '2-digit', year: 'numeric' });
       }
-      if ((this._historyRange === 'custom' && this._historyCustomRange?.end - this._historyCustomRange?.start >= 24 * 3600e3) || (this._historyRange === 'since' && this._statsStart !== null && Date.now() - this._statsStart >= 24 * 3600e3)) {
+      if ((this._historyRange === 'custom' && this._historyCustomRange?.end - this._historyCustomRange?.start >= 24 * 3600e3) || (this._historyRange === 'since' && Number.isFinite(this._statsStart) && Date.now() - this._statsStart >= 24 * 3600e3)) {
         return when.toLocaleString(this._locale(), { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
       }
       return when.toLocaleTimeString(this._locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -1746,9 +1775,12 @@
       const metricKey = this._chartMetric || 'power';
       const metric = CHART_METRICS[metricKey];
       const data = this._chartData();
-      const plottedPoints = data?.series.filter((point) => Number.isFinite(point.v)) || [];
+      const plottedPoints = (data?.series || []).filter((point) => Number.isFinite(point.v) && (!Number.isFinite(this._statsStart) || point.t >= this._statsStart));
       const minimumPoints = metricKey === 'power' ? plottedPoints.filter((point) => point.v > 0) : plottedPoints;
-      const historyValues = (Array.isArray(this._history) ? this._history : []).map((item) => item.value).filter(Number.isFinite);
+      const historyValues = (Array.isArray(this._history) ? this._history : [])
+        .filter((item) => !Number.isFinite(this._statsStart) || (item.time && item.time.getTime() >= this._statsStart))
+        .map((item) => item.value)
+        .filter(Number.isFinite);
       const fmt = (value) => value.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits });
       const formatMinimum = (value) => {
         if (value === null) return '—';
@@ -1773,9 +1805,15 @@
     }
 
     _historyBounds(range = this._historyRange, now = Date.now()) {
-      if (range === 'since' && this._statsStart !== null) return { start: this._statsStart, end: now };
+      if (range === 'since' && Number.isFinite(this._statsStart)) return { start: this._statsStart, end: now };
       if (range === 'custom' && this._historyCustomRange) {
-        return { start: this._historyCustomRange.start, end: this._historyCustomRange.end };
+        let start = this._historyCustomRange.start;
+        let end = this._historyCustomRange.end;
+        if (Number.isFinite(this._statsStart)) {
+          start = Math.max(start, this._statsStart);
+          end = Math.max(end, start);
+        }
+        return { start, end };
       }
       const end = new Date(now);
       let start;
@@ -1787,11 +1825,15 @@
         if (range === 'week') start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
         else if (range === 'month') start.setDate(1);
       }
-      return { start: start.getTime(), end: end.getTime() };
+      let startTime = start.getTime();
+      if (Number.isFinite(this._statsStart)) {
+        startTime = Math.max(startTime, this._statsStart);
+      }
+      return { start: startTime, end: Math.max(end.getTime(), startTime) };
     }
 
     _historyWindowToken() {
-      if (this._historyRange === 'since' && this._statsStart !== null) return `:since:${Math.round(this._statsStart)}`;
+      if (this._historyRange === 'since' && Number.isFinite(this._statsStart)) return `:since:${Math.round(this._statsStart)}`;
       if (this._historyRange !== 'custom' || !this._historyCustomRange) return '';
       return `:custom:${Math.round(this._historyCustomRange.start)}:${Math.round(this._historyCustomRange.end)}`;
     }
@@ -1875,6 +1917,10 @@
       let start = center - nextRange / 2;
       let end = center + nextRange / 2;
       if (end > Date.now()) { start -= end - Date.now(); end = Date.now(); }
+      if (Number.isFinite(this._statsStart) && start < this._statsStart) {
+        start = this._statsStart;
+      }
+      if (end <= start) end = Math.min(Date.now(), start + minRange);
       return { start, end };
     }
 
@@ -1992,7 +2038,7 @@
       if (!pan?.buf || pan.fetching || Date.now() < pan.blockedUntil || typeof hass?.callApi !== 'function') return;
       const now = Date.now();
       const buf = pan.buf;
-      const floor = now - 366 * 24 * 3600e3;
+      const floor = Number.isFinite(this._statsStart) ? this._statsStart : now - 366 * 24 * 3600e3;
       let from; let to; let side;
       if (Math.max(wantStart, floor) < buf.start - 1000) { from = Math.max(wantStart, floor); to = buf.start; side = 'left'; }
       else if (wantEnd > buf.end + 60e3 && now - buf.end > 60e3) { from = buf.end; to = now; side = 'right'; }
@@ -2392,13 +2438,32 @@
     _parseHistoryResponse(response, metricKey) {
       const series = Array.isArray(response?.[0]) ? response[0] : [];
       const [minValid, maxValid] = CHART_METRICS[metricKey].plausible;
-      return series.map((item) => {
+      const statsStart = Number.isFinite(this._statsStart) ? this._statsStart : null;
+      const parsed = series.map((item) => {
         const value = Number(item.state);
         const plausible = Number.isFinite(value) && value >= minValid && value <= maxValid;
-        return { time: new Date(item.last_changed || item.last_updated), value: plausible ? value : null };
+        const time = new Date(item.last_changed || item.last_updated);
+        return { time, value: plausible ? value : null };
       })
         .filter((item) => Number.isFinite(item.time.getTime()))
         .sort((a, b) => a.time - b.time);
+
+      if (statsStart === null) return parsed;
+
+      const clamped = [];
+      for (let i = 0; i < parsed.length; i += 1) {
+        const item = parsed[i];
+        const next = parsed[i + 1];
+        const t = item.time.getTime();
+        const nextT = next ? next.time.getTime() : Infinity;
+        if (nextT <= statsStart) continue;
+        if (t < statsStart) {
+          clamped.push({ ...item, time: new Date(statsStart) });
+        } else {
+          clamped.push(item);
+        }
+      }
+      return clamped;
     }
 
     async _loadHistory(key = `${this._historyRange}${this._historyWindowToken()}:${this._chartMetric || 'power'}:${this._entity(this._chartMetric || 'power')}`) {
@@ -2484,8 +2549,14 @@
     }
 
     _voltageRangeStats() {
+      if (Number.isFinite(this._statsStart) && this._statsExtremes?.voltage && (Number.isFinite(this._statsExtremes.voltage.min) || Number.isFinite(this._statsExtremes.voltage.max))) {
+        return {
+          min: this._statsExtremes.voltage.min ?? null,
+          max: this._statsExtremes.voltage.max ?? null,
+        };
+      }
       const data = this._chartData(this._voltageHistory, 'voltage');
-      const values = data?.series.map((point) => point.v).filter(Number.isFinite) || [];
+      const values = data?.series.filter((point) => !Number.isFinite(this._statsStart) || point.t >= this._statsStart).map((point) => point.v).filter(Number.isFinite) || [];
       return {
         min: values.length ? Math.min(...values) : null,
         max: values.length ? Math.max(...values) : null,
@@ -2567,7 +2638,7 @@
       const unit = this._lang() === 'uk' ? 'Вт' : 'W';
       const fmt = (value) => value.toLocaleString(this._locale(), { maximumFractionDigits: 0 });
       return `<div class="range-card power-range" data-role="power-range-card">
-        <div class="range-head"><h3>${this._escape(this._t(this._statsStart === null ? 'power_range_title' : 'power_range_period'))}</h3><div class="range-values"><span>${this._escape(this._t('stat_min'))} <b data-value-key="power_min" data-value-digits="1">${this._escape(this._formatted('power_min', 1))}</b></span><span>${this._escape(this._t('stat_max'))} <b data-value-key="power_peak" data-value-digits="0">${this._escape(this._formatted('power_peak', 0))}</b></span></div></div>
+        <div class="range-head"><h3>${this._escape(this._t(!Number.isFinite(this._statsStart) ? 'power_range_title' : 'power_range_period'))}</h3><div class="range-values"><span>${this._escape(this._t('stat_min'))} <b data-value-key="power_min" data-value-digits="1">${this._escape(this._formatted('power_min', 1))}</b></span><span>${this._escape(this._t('stat_max'))} <b data-value-key="power_peak" data-value-digits="0">${this._escape(this._formatted('power_peak', 0))}</b></span></div></div>
         <div class="range-track"><i class="range-span" data-role="power-range-span" style="${layout.span}"></i><b class="range-now" data-role="power-range-now" style="${layout.now}"></b></div>
         <div class="range-scale"><span>0</span><span data-role="power-range-mid">${fmt(layout.top / 2)}</span><span data-role="power-range-top">${fmt(layout.top)} ${this._escape(unit)}</span></div>
       </div>`;
@@ -2577,7 +2648,7 @@
       return `<section class="detail-panel"><h2>${this._escape(this._t('params_title'))}</h2>${this._chart()}${this._rangeCard()}${this._powerRangeCard()}<div class="detail-grid">
         ${this._detail('apparent_power', this._t('apparent'), 0)}${this._detail('reactive_power', this._t('reactive'), 0)}${this._detail('phase_angle', this._t('phase'), 1)}
         ${this._detail('voltage_deviation', this._t('deviation'), 1)}${this._detail('voltage_average', this._t('average'), 1)}${this._detail('voltage_status', this._t('voltage_state'), 0)}
-        ${this._voltageRangeDetail('min', this._t('min_voltage'))}${this._voltageRangeDetail('max', this._t('max_voltage'))}${this._detail('current_max', this._t(this._statsStart === null ? 'max_current' : 'max_current_period'), 2)}${this._detail('power_peak', this._t(this._statsStart === null ? 'peak_power' : 'peak_power_period'), 0)}
+        ${this._voltageRangeDetail('min', this._t('min_voltage'))}${this._voltageRangeDetail('max', this._t('max_voltage'))}${this._detail('current_max', this._t(!Number.isFinite(this._statsStart) ? 'max_current' : 'max_current_period'), 2)}${this._detail('power_peak', this._t(!Number.isFinite(this._statsStart) ? 'peak_power' : 'peak_power_period'), 0)}
       </div><h2 class="subheading">${this._escape(this._t('events'))}</h2><div class="detail-grid">
         ${this._detail('inverter_events', this._t('inverter_events'), 0)}${this._detail('inverter_current_duration', this._t('current_duration'), 1)}${this._detail('last_inverter_duration', this._t('last_duration'), 1)}${this._detail('total_inverter_time', this._t('total_duration'), 2)}${this._detail('sag_count', this._t('sag_events'), 0)}${this._detail('swell_count', this._t('swell_events'), 0)}
       </div></section>`;
@@ -2995,6 +3066,26 @@
       if (changed.has('mains') || changed.has('inverter') || changed.has('source_status') || changed.has('voltage_status') || changed.has('esp_status') || changed.has('voltage_alarm')) {
         this._updateStatusClasses();
         if (this._activeTab === 'home') this._updateHomeStatus();
+      }
+      if (Number.isFinite(this._statsStart) && this._statsExtremes && Date.now() >= this._statsStart) {
+        let extremesChanged = false;
+        for (const metric of STATS_METRIC_KEYS) {
+          if (changed.has(metric)) {
+            const raw = this._raw(metric);
+            const val = raw !== null && raw !== 'unknown' && raw !== 'unavailable' ? Number(raw) : NaN;
+            if (Number.isFinite(val)) {
+              const { plausible: [lowest, highest], positiveMin } = STATS_METRICS[metric];
+              if (val >= lowest && val <= highest) {
+                const ext = this._statsExtremes[metric] = this._statsExtremes[metric] || { min: null, max: null };
+                if (ext.max === null || val > ext.max) { ext.max = val; extremesChanged = true; }
+                if ((!positiveMin || val > 0) && (ext.min === null || val < ext.min)) { ext.min = val; extremesChanged = true; }
+              }
+            }
+          }
+        }
+        if (extremesChanged) {
+          this._applyStatsExtremes();
+        }
       }
       if (this._activeTab === 'home') this._updateHome(changed);
       if (this._activeTab === 'params') {
