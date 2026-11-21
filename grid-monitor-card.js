@@ -823,6 +823,7 @@
       this._historyReturnRange = 'hour';
       this._chartPointers = new Map();
       this._chartPan = null;
+      this._chartTouchScrubbing = null;
       this._chartMetric = 'power';
       this._history = [];
       this._historyKey = '';
@@ -859,6 +860,12 @@
       this.shadowRoot.addEventListener('pointerdown', (event) => this._chartPointerDown(event));
       this.shadowRoot.addEventListener('pointermove', (event) => {
         if (this._chartPan) { this._chartPointerMove(event); return; }
+        if (this._chartTouchScrubbing === event.pointerId) {
+          if (this._chartPointers.has(event.pointerId)) this._chartPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+          this._chartScrubAtClientX(event.clientX);
+          event.preventDefault?.();
+          return;
+        }
         if (event.pointerType === 'mouse' && event.target?.closest?.('[data-role="chart-plot"]')) this._chartHover(event);
       });
       this.shadowRoot.addEventListener('pointerup', (event) => this._chartPointerEnd(event));
@@ -919,9 +926,9 @@
       this._entityOverrides = { ...(config.entities || {}) };
       this._config = { ...config, entities, name: config.name || null, esp_power_mode: powerMode };
       this._statsStart = this._readStatsStart();
-      if (Number.isFinite(this._statsStart) && !this._statsStartApplied) {
-        this._historyRange = 'since';
-        this._historyReturnRange = 'since';
+      if (this._historyRange === 'since') {
+        this._historyRange = 'day';
+        this._historyReturnRange = 'day';
       }
       this._statsStartApplied = true;
       this._stateSnapshot = this._captureStateSnapshot();
@@ -1430,8 +1437,7 @@
 
     _chart() {
       const labels = ['hour', 'day', 'week', 'month'];
-      const sinceButton = !Number.isFinite(this._statsStart) ? '' : `<button class="period-button since ${this._historyRange === 'since' ? 'active' : ''}" data-period="since" aria-pressed="${this._historyRange === 'since'}">${this._escape(this._t('since'))}</button>`;
-      const buttons = labels.map((period) => `<button class="period-button ${this._historyRange === period ? 'active' : ''}" data-period="${period}" aria-pressed="${this._historyRange === period}">${this._escape(this._t(period))}</button>`).join('') + sinceButton;
+      const buttons = labels.map((period) => `<button class="period-button ${this._historyRange === period ? 'active' : ''}" data-period="${period}" aria-pressed="${this._historyRange === period}">${this._escape(this._t(period))}</button>`).join('');
       const metricButtons = Object.keys(CHART_METRICS).map((metric) => `<button class="period-button ${this._chartMetric === metric ? 'active' : ''}" data-metric="${metric}" aria-pressed="${this._chartMetric === metric}">${this._escape(this._t(metric))}</button>`).join('');
       return `<section class="card chart-card detailed-chart"><div class="chart-head"><h2><span class="chart-icon">${this._svg('chart')}</span>${this._escape(this._t('chart_title'))}</h2><div class="periods" role="group" aria-label="${this._escape(this._t('chart_title'))}">${metricButtons}</div><div class="periods" role="group" aria-label="${this._escape(this._t('hour'))}">${buttons}</div><div class="chart-tools"><button class="chart-zoom-button" type="button" data-chart-zoom="out" aria-label="${this._escape(this._t('chart_zoom_out'))}" title="${this._escape(this._t('chart_zoom_out'))}">−</button><button class="chart-zoom-button" type="button" data-chart-zoom="in" aria-label="${this._escape(this._t('chart_zoom_in'))}" title="${this._escape(this._t('chart_zoom_in'))}">+</button>${this._chartDateRangeHtml()}</div></div><div class="chart-stats" data-role="chart-stats">${this._chartStatsHtml()}</div><div class="chart-plot" data-role="chart-plot">${this._chartSvg()}</div>${this._chartScrubberHtml()}${this._chartReadingsHtml()}</section>`;
     }
@@ -1523,8 +1529,10 @@
       this._voltageHistory = [];
       if (value !== null) {
         this._historyCustomRange = null;
-        this._historyRange = 'since';
-        this._historyReturnRange = 'since';
+        if (this._historyRange === 'since') {
+          this._historyRange = 'day';
+          this._historyReturnRange = 'day';
+        }
       } else {
         if (this._historyRange === 'since') this._historyRange = 'hour';
         if (this._historyReturnRange === 'since') this._historyReturnRange = 'hour';
@@ -1854,11 +1862,18 @@
       if (!plot || !this._chartPts.length) return;
       const pointerId = event.pointerId;
       const point = { x: event.clientX, y: event.clientY };
-      if (event.pointerType === 'touch') {
+      if (event.pointerType === 'touch' || event.pointerType === 'pen') {
         if (this._chartPointers.size >= 2) return;
         this._chartPointers.set(pointerId, point);
         try { plot.setPointerCapture(pointerId); } catch (_error) {}
-        if (this._chartPointers.size === 2) this._beginChartPan(plot, 'touch', [...this._chartPointers.keys()]);
+        if (this._chartPointers.size === 2) {
+          this._chartTouchScrubbing = null;
+          this._beginChartPan(plot, 'touch', [...this._chartPointers.keys()]);
+        } else if (this._chartPointers.size === 1) {
+          this._chartTouchScrubbing = pointerId;
+          this._chartScrubAtClientX(event.clientX);
+        }
+        event.preventDefault?.();
         return;
       }
       if (event.button !== 0) return;
@@ -1948,6 +1963,10 @@
 
     _chartPointerEnd(event) {
       const pan = this._chartPan;
+      if (this._chartTouchScrubbing === event.pointerId) {
+        this._chartTouchScrubbing = null;
+        if (this._scrubTime !== null) this._queueChartReadings(this._scrubTime, true);
+      }
       if (!this._chartPointers.has(event.pointerId)) return;
       if (pan?.pointerIds.includes(event.pointerId)) {
         this._chartPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
@@ -1960,12 +1979,17 @@
         this._finishChartPan();
       }
       this._chartPointers.delete(event.pointerId);
+      const plot = this.shadowRoot?.querySelector?.('[data-role="chart-plot"]');
+      if (plot) {
+        try { plot.releasePointerCapture(event.pointerId); } catch (_error) {}
+      }
     }
 
     _finishChartPan() {
       const pan = this._chartPan;
       if (!pan) return;
       this._chartPan = null;
+      this._chartTouchScrubbing = null;
       pan.plot.classList.remove('is-panning');
       if (!pan.live && Math.abs(pan.deltaX) < 8 && Math.abs((pan.currentDistance || 1) - (pan.startDistance || 1)) < 8) { this._refreshChart(); return; }
       const { start, end } = this._chartPanTarget(pan);
@@ -2298,15 +2322,25 @@
       return true;
     }
 
-    _chartHover(event) {
-      const chart = this.shadowRoot.querySelector('svg.chart');
+    _chartScrubAtClientX(clientX) {
+      const chart = this.shadowRoot?.querySelector?.('svg.chart');
       if (!chart || !this._chartPts.length) return;
       const rect = chart.getBoundingClientRect();
       if (!rect.width) return;
-      const x = (event.clientX - rect.left) * ((Number(chart.dataset.chartW) || rect.width) / rect.width);
+      const chartW = Number(chart.dataset.chartW) || rect.width;
+      const x0 = Number(chart.dataset.chartX0) || 0;
+      const x1 = Number(chart.dataset.chartX1) || chartW;
+      const x = (clientX - rect.left) * (chartW / rect.width);
+      const clampedX = Math.max(x0, Math.min(x1, x));
       let best = this._chartPts[0];
-      this._chartPts.forEach((point) => { if (Math.abs(point.x - x) < Math.abs(best.x - x)) best = point; });
+      this._chartPts.forEach((point) => {
+        if (Math.abs(point.x - clampedX) < Math.abs(best.x - clampedX)) best = point;
+      });
       this._selectChartPoint(best);
+    }
+
+    _chartHover(event) {
+      this._chartScrubAtClientX(event.clientX);
     }
 
     _queueChartReadings(timestamp, immediate = false) {
@@ -2383,6 +2417,7 @@
     }
 
     _clearChartScrub() {
+      this._chartTouchScrubbing = null;
       if (this._chartReadingsTimer !== null) window.clearTimeout(this._chartReadingsTimer);
       this._chartReadingsTimer = null;
       this._chartReadingsPendingTime = null;

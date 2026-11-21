@@ -512,7 +512,8 @@ card._chartScrubberHtml = () => '';
 card._chartReadingsHtml = () => '';
 const chartHtml = card._chart();
 assert.ok(!chartHtml.includes('10:00'), 'chart period button does not show start time');
-assert.ok(chartHtml.includes('Period'), 'chart period button displays generic period label');
+assert.ok(!chartHtml.includes('data-period="since"'), 'chart does not display period button next to month');
+assert.ok(!chartHtml.includes('Period'), 'chart does not display Period button outside settings');
 """
         result = subprocess.run(
             ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
@@ -523,6 +524,117 @@ assert.ok(chartHtml.includes('Period'), 'chart period button displays generic pe
         )
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
+
+    def test_single_touch_scrubs_chart_and_updates_slider_synchronously(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = {
+  window: { customCards: [] },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+};
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+
+// Setup state and mock DOM
+card._chartPointers = new Map();
+card._chartPan = null;
+card._chartTouchScrubbing = null;
+card._scrubTime = null;
+card._chartMetric = 'power';
+card._lang = () => 'uk';
+card._locale = () => 'uk-UA';
+card._t = (key) => key;
+card._formatChartTimestamp = (t) => String(t);
+card._formatChartReading = () => '';
+card._queueChartReadings = (t, immediate) => { card._queued = { t, immediate }; };
+card._renderChartPoint = (point) => { card._renderedPoint = point; };
+card._updateChartReadings = () => {};
+
+const slider = { value: '0', disabled: false };
+const label = { textContent: '' };
+const live = { disabled: true };
+let plot;
+const chartSvg = {
+  dataset: { chartStart: '1000', chartEnd: '2000', chartW: '1000', chartX0: '100', chartX1: '900', chartY0: '20', chartY1: '200' },
+  getBoundingClientRect: () => ({ left: 0, top: 0, width: 1000, height: 220 }),
+  querySelector: () => null,
+};
+plot = {
+  captured: [],
+  setPointerCapture: (id) => plot.captured.push(id),
+  releasePointerCapture: (id) => { plot.captured = plot.captured.filter(x => x !== id); },
+  closest: () => plot,
+  querySelector: (sel) => (sel === 'svg.chart' ? chartSvg : null),
+  classList: { add: () => {}, remove: () => {} },
+};
+card.shadowRoot = {
+  querySelector: (sel) => {
+    if (sel === 'svg.chart' || sel === '.chart') return chartSvg;
+    if (sel === '[data-role="chart-scrubber"]') return slider;
+    if (sel === '[data-role="chart-selected-time"]') return label;
+    if (sel === '[data-chart-live]') return live;
+    if (sel === '[data-role="chart-plot"]') return plot;
+    return null;
+  },
+};
+
+card._chartPts = [
+  { x: 100, y: 100, v: 50, t: 1000 },
+  { x: 500, y: 80, v: 200, t: 1500 },
+  { x: 900, y: 60, v: 500, t: 2000 },
+];
+
+// 1. Single touch pointerdown initiates scrubbing and captures pointer
+card._chartPointerDown({
+  pointerId: 1,
+  pointerType: 'touch',
+  clientX: 500,
+  clientY: 100,
+  target: plot,
+});
+assert.equal(card._chartTouchScrubbing, 1, 'single touch sets _chartTouchScrubbing');
+assert.equal(card._chartPan, null, 'single touch does not start chart pan');
+assert.deepEqual(plot.captured, [1], 'pointer capture was requested on plot');
+assert.equal(card._scrubTime, 1500, 'scrubs to nearest point at clientX');
+assert.equal(slider.value, '500', 'slider synchronously updates to 50%');
+
+// 2. Single touch move updates scrub time and slider position
+card._chartScrubAtClientX(900);
+assert.equal(card._scrubTime, 2000, 'scrubs to end point');
+assert.equal(slider.value, '1000', 'slider synchronously updates to 100%');
+
+// 3. Pointer end releases touch scrub and queues immediate readings load
+card._chartPointerEnd({
+  pointerId: 1,
+  clientX: 900,
+  clientY: 100,
+});
+assert.equal(card._chartTouchScrubbing, null, 'touch scrubbing is cleared on pointer end');
+assert.deepEqual(card._queued, { t: 2000, immediate: true }, 'readings load queued immediately on touch release');
+
+// 4. Two touches start pan instead of touch scrub
+card._chartPointers = new Map();
+card._chartPan = null;
+card._chartTouchScrubbing = null;
+card._chartPointerDown({ pointerId: 10, pointerType: 'touch', clientX: 300, clientY: 100, target: plot });
+assert.equal(card._chartTouchScrubbing, 10, 'first touch initiates scrub');
+card._chartPointerDown({ pointerId: 11, pointerType: 'touch', clientX: 700, clientY: 100, target: plot });
+assert.equal(card._chartTouchScrubbing, null, 'second touch cancels single touch scrub');
+assert.ok(card._chartPan !== null, 'second touch starts 2-finger pan');
+"""
+        result = subprocess.run(
+            ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
+            capture_output=True,
+            text=True,
+            check=False,
+            env={**os.environ, "TZ": "UTC"},
+        )
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
 if __name__ == "__main__":
     unittest.main()
