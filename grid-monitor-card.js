@@ -973,6 +973,11 @@
       this._chartPointerPlots = new Map();
       this._chartZoomDrag = null;
       this._chartPan = null;
+      this._chartRefreshPending = false;
+      this._energyChartRefreshPending = false;
+      this._chartFullRenderPending = false;
+      this._statsExtremesApplyPending = false;
+      this._chartGestureChangedKeys = new Set();
       this._chartZoomWindow = null;
       this._chartTouchScrubbing = null;
       this._chartMetric = 'power';
@@ -1348,7 +1353,13 @@
         this._updateScheduled = false;
         const pending = this._pendingChangedKeys;
         this._pendingChangedKeys = new Set();
-        if (pending.size && this._hasRendered) this._updateChanged(pending);
+        if (!pending.size || !this._hasRendered) return;
+        if (this._chartZoomDrag || this._chartPan) {
+          if (!this._chartGestureChangedKeys) this._chartGestureChangedKeys = new Set();
+          pending.forEach((key) => this._chartGestureChangedKeys.add(key));
+          return;
+        }
+        this._updateChanged(pending);
       };
       if (typeof window.requestAnimationFrame === 'function') window.requestAnimationFrame(flush);
       else window.setTimeout(flush, 0);
@@ -2111,7 +2122,7 @@
     }
 
     _ensureStatsExtremes() {
-      if (!this._hass || !this._config || !Number.isFinite(this._statsStart) || !this._isActive()) return;
+      if (this._chartZoomDrag || this._chartPan || !this._hass || !this._config || !Number.isFinite(this._statsStart) || !this._isActive()) return;
       const token = this._statsExtremesCacheToken();
       if (this._statsExtremesLoading && this._statsExtremesToken === token) return;
       if (token === this._statsExtremesKey && Date.now() - this._statsExtremesAt < 60000) return;
@@ -2199,6 +2210,11 @@
     }
 
     _applyStatsExtremes() {
+      if (this._chartZoomDrag || this._chartPan) {
+        this._statsExtremesApplyPending = true;
+        return;
+      }
+      this._statsExtremesApplyPending = false;
       this._updateValueBindings(new Set(Object.keys(STATS_OVERRIDES)));
       if (this._activeTab === 'params') this._updateRange();
     }
@@ -2521,7 +2537,7 @@
       this._setCustomChartRange(start, end, scope);
     }
 
-    _setCustomChartRange(start, end, scope = 'params') {
+    _setCustomChartRange(start, end, scope = 'params', deferChartRefresh = false) {
       if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return;
       if (scope === 'energy') {
         if (this._energyHistoryRange !== 'custom') this._energyReturnRange = this._energyHistoryRange;
@@ -2530,8 +2546,11 @@
         this._updateChartDateRangeControls('energy');
         this._closeChartDateRangePopover();
         this._clearEnergyHistory();
-        this._refreshEnergyCharts();
-        this._ensureEnergyHistory();
+        if (deferChartRefresh) this._energyChartRefreshPending = true;
+        else {
+          this._refreshEnergyCharts();
+          this._ensureEnergyHistory();
+        }
         return;
       }
       this._resetChartZoomSelection();
@@ -2545,7 +2564,7 @@
       this._clearChartScrub();
       this._updateChartDateRangeControls();
       this._closeChartDateRangePopover();
-      this._reloadChartHistory();
+      this._reloadChartHistory(deferChartRefresh);
     }
 
     _zoomChart(direction) {
@@ -2630,21 +2649,24 @@
       const endEdge = find('endEdge', '[data-chart-zoom-end-edge]');
       setAttributeIfChanged(endEdge, 'x1', endX.toFixed(2));
       setAttributeIfChanged(endEdge, 'x2', endX.toFixed(2));
+      const deferNonVisual = Boolean(drag && !forceLabels);
       const updateHandle = (side, x, timestamp, min, max) => {
         const handle = find(`${side}Handle`, `[data-chart-zoom-handle="${side}"]`);
         setAttributeIfChanged(handle, 'transform', `translate(${x.toFixed(2)} 0)`);
-        setAttributeIfChanged(handle, 'aria-valuemin', Math.round(min));
-        setAttributeIfChanged(handle, 'aria-valuemax', Math.round(max));
-        setAttributeIfChanged(handle, 'aria-valuenow', Math.round(timestamp));
+        if (!deferNonVisual) {
+          setAttributeIfChanged(handle, 'aria-valuemin', Math.round(min));
+          setAttributeIfChanged(handle, 'aria-valuemax', Math.round(max));
+          setAttributeIfChanged(handle, 'aria-valuenow', Math.round(timestamp));
+        }
       };
       updateHandle('start', startX, selection.start, bounds.start, selection.end - 1000);
       updateHandle('end', endX, selection.end, selection.start + 1000, bounds.end);
-      const actions = nodes ? null : this.shadowRoot.querySelector('[data-chart-zoom-actions]');
-      const startLabel = nodes ? nodes.startLabel : actions?.querySelector('[data-chart-zoom-start-label]');
-      const endLabel = nodes ? nodes.endLabel : actions?.querySelector('[data-chart-zoom-end-label]');
-      const applyButton = nodes ? nodes.applyButton : actions?.querySelector('[data-chart-zoom-apply]');
-      const now = Date.now();
-      const updateLabels = !drag || forceLabels || now - (drag.labelsAt || 0) >= 100;
+      const actions = nodes || deferNonVisual ? null : this.shadowRoot.querySelector('[data-chart-zoom-actions]');
+      const startLabel = nodes ? nodes.startLabel : deferNonVisual ? null : actions?.querySelector('[data-chart-zoom-start-label]');
+      const endLabel = nodes ? nodes.endLabel : deferNonVisual ? null : actions?.querySelector('[data-chart-zoom-end-label]');
+      const applyButton = nodes ? nodes.applyButton : deferNonVisual ? null : actions?.querySelector('[data-chart-zoom-apply]');
+      const now = deferNonVisual ? 0 : Date.now();
+      const updateLabels = !deferNonVisual && (!drag || forceLabels || now - (drag.labelsAt || 0) >= 100);
       if (updateLabels) {
         const startText = this._formatChartTimestamp(selection.start);
         const endText = this._formatChartTimestamp(selection.end);
@@ -2652,8 +2674,10 @@
         if (endLabel && endLabel.textContent !== endText) endLabel.textContent = endText;
         if (drag) drag.labelsAt = now;
       }
-      const fullRange = selection.start <= bounds.start + 999 && selection.end >= bounds.end - 999;
-      if (applyButton && applyButton.disabled !== fullRange) applyButton.disabled = fullRange;
+      if (!deferNonVisual) {
+        const fullRange = selection.start <= bounds.start + 999 && selection.end >= bounds.end - 999;
+        if (applyButton && applyButton.disabled !== fullRange) applyButton.disabled = fullRange;
+      }
     }
 
     _queueChartZoomSelectionMove(event) {
@@ -2993,13 +3017,15 @@
       if (!rect.width || !plotWidth || points.length !== pointerIds.length) return;
       const startX = points.reduce((sum, current) => sum + current.x, 0) / points.length;
       const scope = plot.hasAttribute?.('data-energy-plot') || plot.dataset?.energyPlot !== undefined ? 'energy' : 'params';
+      const dataGroup = chart.querySelector('[data-role="chart-data"]');
       this._chartPan = {
-        plot, scope, pointerType, pointerIds, startX, deltaX: 0,
+        plot, chart, dataGroup, scope, pointerType, pointerIds, startX, deltaX: 0,
+        x0, x1, previewNow: Date.now(), frame: null, frameKind: null, lastTransform: null,
         rangeMs: tEnd - tStart, plotWidth,
         startDistance: pointerType === 'touch' ? this._chartPointerDistance(points) : 1,
         currentDistance: pointerType === 'touch' ? this._chartPointerDistance(points) : 1,
-        tStart, tEnd, live: false, committed: false, fetching: false, blockedUntil: 0,
-        buf: scope === 'params' ? { start: tStart, end: this._historyAt || Date.now(), items: Array.isArray(this._history) ? this._history.slice() : [] } : null,
+        tStart, tEnd, live: false, committed: false,
+        buf: scope === 'params' ? { start: tStart, end: this._historyAt || Date.now(), items: this._history } : null,
       };
       plot.classList.add('is-panning');
     }
@@ -3008,19 +3034,52 @@
       const pan = this._chartPan;
       if (!pan || !pan.pointerIds.includes(event.pointerId)) return;
       this._chartPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      this._queueChartPanPreview(pan);
+      event.preventDefault?.();
+    }
+
+    _queueChartPanPreview(pan) {
+      if (!pan || this._chartPan !== pan || pan.frame !== null) return;
+      const preview = () => {
+        pan.frame = null;
+        pan.frameKind = null;
+        if (this._chartPan === pan) this._updateChartPanFromPointers(pan, true);
+      };
+      if (typeof window.requestAnimationFrame === 'function') {
+        pan.frameKind = 'raf';
+        pan.frame = window.requestAnimationFrame(preview);
+      } else {
+        pan.frameKind = 'timeout';
+        pan.frame = window.setTimeout(preview, 16);
+      }
+    }
+
+    _cancelChartPanPreviewFrame(pan) {
+      if (!pan || pan.frame === null || pan.frame === undefined) return;
+      if (pan.frameKind === 'raf' && typeof window.cancelAnimationFrame === 'function') window.cancelAnimationFrame(pan.frame);
+      else window.clearTimeout(pan.frame);
+      pan.frame = null;
+      pan.frameKind = null;
+    }
+
+    _updateChartPanFromPointers(pan, preview = false) {
+      if (!pan || this._chartPan !== pan) return;
       const points = pan.pointerIds.map((id) => this._chartPointers.get(id)).filter(Boolean);
       if (points.length !== pan.pointerIds.length) return;
       const currentX = points.reduce((sum, point) => sum + point.x, 0) / points.length;
       pan.deltaX = currentX - pan.startX;
       pan.currentDistance = pan.pointerType === 'touch' ? this._chartPointerDistance(points) : 1;
-      this._panLive(pan);
-      event.preventDefault?.();
+      const gestureChanged = pan.pointerType === 'touch'
+        ? Math.abs((pan.currentDistance || 1) - (pan.startDistance || 1)) >= 8
+        : Math.abs(pan.deltaX) >= 8;
+      if (!pan.live && !gestureChanged) return;
+      pan.live = true;
+      if (preview) this._chartPanPreview(pan);
     }
 
-    _chartPanTarget(pan) {
+    _chartPanTarget(pan, now = Date.now()) {
       const minRange = 1000;
       const maxRange = 366 * 24 * 3600e3;
-      const now = Date.now();
       const floor = Number.isFinite(this._statsStart) ? this._statsStart : now - maxRange;
       const maxAvailableRange = Math.max(minRange, Math.min(maxRange, now - floor));
       const scale = pan.pointerType === 'touch' && pan.currentDistance > 0 ? pan.startDistance / pan.currentDistance : 1;
@@ -3031,29 +3090,20 @@
       return { start, end: start + nextRange };
     }
 
-    // Preview the time range by moving the chart data group under the pointer.
+    // Preview by transforming cached SVG data only; axis labels and history are recalculated after release.
     _chartPanPreview(pan = this._chartPan) {
       if (!pan?.plot?.isConnected) return;
-      const chart = pan.plot.querySelector('svg.chart, svg.energy-bars');
-      const group = chart?.querySelector('[data-role="chart-data"]');
-      if (!chart || !group) return;
-      const x0 = Number(chart.dataset.chartX0) || 0;
-      const x1 = Number(chart.dataset.chartX1) || 0;
-      const { start, end } = this._chartPanTarget(pan);
+      const group = pan.dataGroup || pan.chart?.querySelector?.('[data-role="chart-data"]');
+      if (!group) return;
+      const { start, end } = this._chartPanTarget(pan, pan.previewNow || Date.now());
       const range = end - start;
-      if (!(range > 0) || !(x1 > x0)) return;
+      if (!(range > 0) || !(pan.x1 > pan.x0)) return;
       const k = pan.rangeMs / range;
-      const tx = x0 * (1 - k) + ((pan.tStart - start) / range) * (x1 - x0);
-      group.setAttribute('transform', `matrix(${k.toFixed(5)} 0 0 1 ${tx.toFixed(2)} 0)`);
-      if (pan.scope !== 'energy') {
-        const longRange = this._historyRange === 'week' || this._historyRange === 'month' || range > 24 * 3600e3;
-        const secondPrecision = range < 60e3;
-        chart.querySelectorAll('[data-time-tick]').forEach((label) => {
-          const time = new Date(start + range * Number(label.dataset.timeTick) / 4);
-          label.textContent = longRange
-            ? time.toLocaleDateString(this._locale(), { day: '2-digit', month: '2-digit' })
-            : time.toLocaleTimeString(this._locale(), { hour: '2-digit', minute: '2-digit', ...(secondPrecision ? { second: '2-digit' } : {}), hour12: false });
-        });
+      const tx = pan.x0 * (1 - k) + ((pan.tStart - start) / range) * (pan.x1 - pan.x0);
+      const transform = `matrix(${k.toFixed(5)} 0 0 1 ${tx.toFixed(2)} 0)`;
+      if (transform !== pan.lastTransform) {
+        group.setAttribute('transform', transform);
+        pan.lastTransform = transform;
       }
     }
 
@@ -3063,6 +3113,7 @@
         this._chartZoomSelectionMove(event);
         this._chartZoomDrag = null;
         try { zoomDrag.plot.releasePointerCapture(event.pointerId); } catch (_error) {}
+        this._flushDeferredChartUpdates();
         return;
       }
       const pan = this._chartPan;
@@ -3075,9 +3126,8 @@
         this._chartPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
         const points = pan.pointerIds.map((id) => this._chartPointers.get(id)).filter(Boolean);
         if (points.length === pan.pointerIds.length) {
-          const currentX = points.reduce((sum, point) => sum + point.x, 0) / points.length;
-          pan.deltaX = currentX - pan.startX;
-          pan.currentDistance = pan.pointerType === 'touch' ? this._chartPointerDistance(points) : 1;
+          this._cancelChartPanPreviewFrame(pan);
+          this._updateChartPanFromPointers(pan, false);
         }
         this._finishChartPan();
       }
@@ -3085,32 +3135,29 @@
       this._chartPointers.delete(event.pointerId);
       this._chartPointerPlots?.delete(event.pointerId);
       try { pointerPlot?.releasePointerCapture(event.pointerId); } catch (_error) {}
+      this._flushDeferredChartUpdates();
     }
 
     _finishChartPan() {
       const pan = this._chartPan;
       if (!pan) return;
+      this._cancelChartPanPreviewFrame(pan);
       this._chartPan = null;
       this._chartTouchScrubbing = null;
       pan.plot.classList.remove('is-panning');
       const pinchChanged = Math.abs((pan.currentDistance || 1) - (pan.startDistance || 1)) >= 8;
-      if (!pan.live && !pinchChanged) {
-        if (pan.scope === 'energy') this._refreshEnergyCharts();
-        else this._refreshChart();
-        return;
-      }
+      if (!pan.live && !pinchChanged) return;
       const { start, end } = this._chartPanTarget(pan);
       if (pan.scope === 'energy') {
-        this._setCustomChartRange(start, end, 'energy');
+        this._setCustomChartRange(start, end, 'energy', true);
         return;
       }
       if (this._panCovers(pan, start, end)) {
         this._panCommit(pan, start, end);
-        this._refreshChart();
-        this._ensureHistory();
+        this._chartRefreshPending = true;
         return;
       }
-      this._setCustomChartRange(start, end);
+      this._setCustomChartRange(start, end, 'params', true);
     }
 
     _chartHistoryKey() {
@@ -3146,57 +3193,7 @@
       }
     }
 
-    // Redraws the chart with real data for the range under the fingers on every move.
-    _panLive(pan) {
-      if (!pan.live) {
-        const gestureChanged = pan.pointerType === 'touch'
-          ? Math.abs((pan.currentDistance || 1) - (pan.startDistance || 1)) >= 8
-          : Math.abs(pan.deltaX) >= 8;
-        if (!gestureChanged) return;
-        pan.live = true;
-      }
-      if (pan.scope === 'energy') { this._chartPanPreview(pan); return; }
-      const { start, end } = this._chartPanTarget(pan);
-      const range = end - start;
-      if (!(range > 0)) return;
-      this._panEnsureBuffer(pan, start - range * 0.5, end);
-      if (pan.buf.end <= start || pan.buf.start >= end) { this._chartPanPreview(pan); return; }
-      this._panCommit(pan, start, end);
-      pan.startX += pan.deltaX;
-      pan.deltaX = 0;
-      pan.startDistance = pan.currentDistance;
-      pan.tStart = start;
-      pan.tEnd = end;
-      pan.rangeMs = range;
-      this._refreshChart();
-    }
-
-    // Loads the missing edge of the buffer (older history, or newest samples) while the gesture continues.
-    _panEnsureBuffer(pan, wantStart, wantEnd) {
-      const hass = this._hass;
-      if (!pan?.buf || pan.fetching || Date.now() < pan.blockedUntil || typeof hass?.callApi !== 'function') return;
-      const now = Date.now();
-      const buf = pan.buf;
-      const floor = Number.isFinite(this._statsStart) ? this._statsStart : now - 366 * 24 * 3600e3;
-      let from; let to; let side;
-      if (Math.max(wantStart, floor) < buf.start - 1000) { from = Math.max(wantStart, floor); to = buf.start; side = 'left'; }
-      else if (wantEnd > buf.end + 60e3 && now - buf.end > 60e3) { from = buf.end; to = now; side = 'right'; }
-      else return;
-      const metricKey = this._chartMetric || 'power';
-      const path = `history/period/${encodeURIComponent(new Date(from).toISOString())}?filter_entity_id=${encodeURIComponent(this._entity(metricKey))}&end_time=${encodeURIComponent(new Date(to).toISOString())}&minimal_response&no_attributes`;
-      pan.fetching = true;
-      Promise.resolve().then(() => hass.callApi('GET', path)).then((response) => {
-        if (this._chartPan !== pan) return;
-        const merged = [...this._parseHistoryResponse(response, metricKey), ...buf.items].sort((a, b) => a.time - b.time);
-        buf.items = merged.filter((item, index) => index === 0 || item.time.getTime() !== merged[index - 1].time.getTime());
-        if (side === 'left') buf.start = from; else buf.end = to;
-      }).catch(() => { pan.blockedUntil = Date.now() + 2500; }).finally(() => {
-        pan.fetching = false;
-        if (this._chartPan === pan) this._panLive(pan);
-      });
-    }
-
-    _reloadChartHistory() {
+    _reloadChartHistory(deferChartRefresh = false) {
       this._historyRequest += 1;
       this._historyLoading = false;
       this._historyKey = '';
@@ -3205,8 +3202,11 @@
       this._voltageHistoryLoading = false;
       this._voltageHistoryKey = '';
       this._voltageHistory = [];
-      this._refreshChart();
-      this._ensureHistory();
+      if (deferChartRefresh) this._chartRefreshPending = true;
+      else {
+        this._refreshChart();
+        this._ensureHistory();
+      }
     }
 
     _chartData(history = this._history, metricKey = this._chartMetric || 'power', options = {}) {
@@ -3757,7 +3757,7 @@
     }
 
     _ensureHistory() {
-      if (!this._hass || !this._config || this._activeTab !== 'params' || this._chartPan || !this._isActive()) return;
+      if (this._chartZoomDrag || this._chartPan || !this._hass || !this._config || this._activeTab !== 'params' || !this._isActive()) return;
       const metricKey = this._chartMetric || 'power';
       const key = `${this._historyRange}${this._historyWindowToken()}:${metricKey}:${this._entity(metricKey)}`;
       if (key !== this._historyKey || Date.now() - this._historyAt >= 60000) this._loadHistory(key);
@@ -3805,7 +3805,7 @@
     }
 
     _ensureEnergyHistory() {
-      if (!this._hass || !this._config || this._activeTab !== 'energy' || !this._isActive()) return;
+      if (this._chartZoomDrag || this._chartPan || !this._hass || !this._config || this._activeTab !== 'energy' || !this._isActive()) return;
       for (const metricKey of ['energy_total', 'cost_total']) {
         const key = this._energyHistoryCacheKey(metricKey);
         if (key !== this._energyHistoryKeys[metricKey]) {
@@ -3890,6 +3890,11 @@
     }
 
     _refreshEnergyCharts() {
+      if (this._chartZoomDrag || this._chartPan) {
+        this._energyChartRefreshPending = true;
+        return;
+      }
+      this._energyChartRefreshPending = false;
       const metricKey = this._energyChartMetric || 'energy_total';
       const plot = this.shadowRoot.querySelector('[data-energy-plot]');
       if (plot) {
@@ -3924,7 +3929,7 @@
     }
 
     _ensureVoltageHistory() {
-      if (!this._hass || !this._config || this._activeTab !== 'params' || !this._isActive()) return;
+      if (this._chartZoomDrag || this._chartPan || !this._hass || !this._config || this._activeTab !== 'params' || !this._isActive()) return;
       if ((this._chartMetric || 'power') === 'voltage') { this._syncVoltageHistoryFromChart(); return; }
       const key = this._voltageHistoryCacheKey();
       if (key === this._voltageHistoryKey && Date.now() - this._voltageHistoryAt < 60000) return;
@@ -4032,10 +4037,37 @@
       }
     }
 
+    _flushDeferredChartUpdates() {
+      if (this._chartZoomDrag || this._chartPan) return;
+      if (this._chartFullRenderPending) {
+        this._chartFullRenderPending = false;
+        this._chartRefreshPending = false;
+        this._energyChartRefreshPending = false;
+        this._chartGestureChangedKeys?.clear();
+        this._render();
+      } else {
+        if (this._chartGestureChangedKeys?.size) {
+          const changed = this._chartGestureChangedKeys;
+          this._chartGestureChangedKeys = new Set();
+          this._updateChanged(changed);
+        }
+        if (this._statsExtremesApplyPending) this._applyStatsExtremes();
+        if (this._chartRefreshPending) this._refreshChart();
+        if (this._energyChartRefreshPending) this._refreshEnergyCharts();
+      }
+      this._ensureHistory();
+      this._ensureEnergyHistory();
+      this._ensureStatsExtremes();
+    }
+
     _refreshChart() {
+      if (this._chartZoomDrag || this._chartPan) {
+        this._chartRefreshPending = true;
+        return;
+      }
+      this._chartRefreshPending = false;
       const plot = this.shadowRoot.querySelector('[data-role="chart-plot"]');
       if (plot) plot.innerHTML = this._chartSvg();
-      if (plot && this._chartPan) { this._chartPan.plot = plot; plot.classList.add('is-panning'); this._chartPanPreview(this._chartPan); }
       const stats = this.shadowRoot.querySelector('[data-role="chart-stats"]');
       if (stats) stats.innerHTML = this._chartStatsHtml();
       if (!this._restoreChartScrub()) this._updateChartCurrent();
@@ -4428,6 +4460,11 @@
 
     _render() {
       if (!this._config || !this._hass) return;
+      if (this._chartZoomDrag || this._chartPan) {
+        this._chartFullRenderPending = true;
+        return;
+      }
+      this._chartFullRenderPending = false;
       if (this._dialogResolver) {
         this._renderPending = true;
         return;
@@ -4703,8 +4740,11 @@
       }
       if (this._activeTab === 'home') this._updateHome(changed);
       if (this._activeTab === 'params') {
-        this._updateRange();
-        if (changed.has(this._chartMetric || 'power')) this._refreshChart();
+        if (this._chartZoomDrag || this._chartPan) this._chartRefreshPending = true;
+        else {
+          this._updateRange();
+          if (changed.has(this._chartMetric || 'power')) this._refreshChart();
+        }
       }
       if (changed.has('two_zone') && (this._activeTab === 'energy' || this._activeTab === 'settings')) {
         const view = this.shadowRoot.querySelector('.view');

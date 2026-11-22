@@ -542,6 +542,27 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertNotIn("_refreshChart(", zoom_move)
         self.assertNotIn("_render(", zoom_move)
 
+    def test_chart_pan_move_only_previews_and_defers_history_refresh(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        pointer_move = card.split("    _chartPointerMove(event)", 1)[1].split("    _queueChartPanPreview(pan)", 1)[0]
+        preview = card.split("    _chartPanPreview(pan = this._chartPan)", 1)[1].split("    _chartPointerEnd(event)", 1)[0]
+        self.assertIn("this._queueChartPanPreview(pan)", pointer_move)
+        self.assertNotIn("_refreshChart(", pointer_move)
+        self.assertNotIn("_panEnsureBuffer", card)
+        self.assertNotIn("toLocale", preview)
+        self.assertIn("group.setAttribute('transform', transform)", preview)
+        self.assertIn("this._flushDeferredChartUpdates()", card)
+        self.assertIn("this._chartGestureChangedKeys.add(key)", card)
+
+    def test_pan_release_queues_one_final_chart_update(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        finish = card.split("    _finishChartPan() {", 1)[1].split("    _chartHistoryKey() {", 1)[0]
+        self.assertIn("this._chartRefreshPending = true", finish)
+        self.assertIn("this._setCustomChartRange(start, end, 'energy', true)", finish)
+        self.assertIn("this._setCustomChartRange(start, end, 'params', true)", finish)
+        self.assertNotIn("_refreshChart(", finish)
+        self.assertNotIn("_refreshEnergyCharts(", finish)
+
     def test_chart_pan_strip_is_visible_on_both_chart_types(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
         self.assertEqual(card.count("this._chartPanAxisHtml(x0, x1, panStripY, panStripHeight)"), 2)
