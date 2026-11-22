@@ -470,10 +470,10 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("house-scene", card)
         for night in ("house-night-scene", "houseSky", "houseWindowWarm", "Crescent Moon", "Stars"):
             self.assertNotIn(night, card)
-        self.assertIn("poleWood", card)
-        self.assertIn("house-wire-pulse", card)
-        self.assertIn("houseWireFlow", card)
-        self.assertIn(".shell.eco .house-wire-pulse{animation:none!important}", card)
+        # House is a raster scene with lighting overlays driven by ESP/PZEM availability
+        for token in ("HOUSE_IMAGE", "house-street-off", "house-room-off", "house-glass-off", "interior-off", "exterior-off", "_houseLighting"):
+            self.assertIn(token, card)
+        self.assertIn(".shell.eco .house-smoke,.shell.eco .house-canopy{animation:none!important}", card)
 
 
     def test_params_and_energy_detail_blocks_have_icons(self):
