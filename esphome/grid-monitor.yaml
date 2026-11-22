@@ -671,6 +671,15 @@ text_sensor:
 
 # Скидання всіх добових мін/макс: використовується опівночі та кнопкою в Home Assistant
 script:
+  # Лічильники переривань пишуться у flash одразу після події, а не раз на 5 хв:
+  # ESP може перезавантажитись у момент відключення, і накопичене не має пропасти.
+  - id: flush_outage_counters
+    mode: restart
+    then:
+      - delay: 1s   # globals записуються у буфер на наступному циклі loop
+      - lambda: |-
+          global_preferences->sync();
+
   - id: reset_daily_stats
     then:
       - lambda: |-
@@ -737,6 +746,7 @@ interval:
             id(v_state) = 0;  // скидаємо просідання/перенапругу: без вимірювань стан не відомий
             id(outage_start_ms) = id(last_pzem_ms);
             id(outage_count)++;
+            id(flush_outage_counters).execute();
             id(sensor_outage_count).publish_state(id(outage_count));
             id(sensor_current_outage_duration).publish_state((millis() - id(outage_start_ms)) / 1000.0f);
             id(bin_pzem_online).publish_state(false);
@@ -746,6 +756,7 @@ interval:
             uint32_t d = (millis() - id(outage_start_ms)) / 1000;
             id(last_outage_s) = d;
             id(outage_total_s) += d;
+            id(flush_outage_counters).execute();
             id(sensor_current_outage_duration).publish_state(0.0f);
             id(sensor_last_outage_duration).publish_state(d);
             id(sensor_total_outage_time).publish_state(id(outage_total_s) / 3600.0f);
