@@ -559,17 +559,17 @@ sensor:
     state_class: total_increasing
     accuracy_decimals: 0
     icon: mdi:power-plug-off
-    update_interval: 15s
+    update_interval: 2s
     lambda: |-
       return id(outage_count);
   - platform: template
     name: "Last PZEM Offline Duration"
-    unit_of_measurement: min
-    accuracy_decimals: 1
+    unit_of_measurement: s
+    accuracy_decimals: 0
     icon: mdi:timer-sand
-    update_interval: 15s
+    update_interval: 2s
     lambda: |-
-      return id(last_outage_s) / 60.0f;
+      return id(last_outage_s);
   - platform: template
     name: "Total PZEM Offline Time"
     unit_of_measurement: h
@@ -582,13 +582,13 @@ sensor:
 
   - platform: template
     name: "Current PZEM Offline Duration"
-    unit_of_measurement: min
-    accuracy_decimals: 1
+    unit_of_measurement: s
+    accuracy_decimals: 0
     icon: mdi:timer-play
-    update_interval: 15s
+    update_interval: 2s
     lambda: |-
       if (!id(outage_active)) return 0.0f;
-      return (millis() - id(outage_start_ms)) / 60000.0f;
+      return (millis() - id(outage_start_ms)) / 1000.0f;
 
   # ---------- Діагностика ESP ----------
   - platform: wifi_signal

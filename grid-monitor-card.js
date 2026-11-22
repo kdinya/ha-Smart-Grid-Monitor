@@ -948,6 +948,8 @@
       this._energyHistory = { energy_total: [], cost_total: [] };
       this._energyHistoryKeys = { energy_total: '', cost_total: '' };
       this._energyHistoryAt = { energy_total: 0, cost_total: 0 };
+      this._energyHistoryBufferStart = { energy_total: 0, cost_total: 0 };
+      this._energyHistoryBufferEnd = { energy_total: 0, cost_total: 0 };
       this._energyHistoryLoading = { energy_total: false, cost_total: false };
       this._energyHistoryRequests = { energy_total: 0, cost_total: 0 };
       this._statsStart = null;
@@ -979,11 +981,15 @@
       this._statsExtremesApplyPending = false;
       this._chartGestureChangedKeys = new Set();
       this._chartZoomWindow = null;
+      this._chartZoomConfirmHandle = null;
+      this._chartZoomAnimation = null;
       this._chartTouchScrubbing = null;
       this._chartMetric = 'power';
       this._history = [];
       this._historyKey = '';
       this._historyAt = 0;
+      this._historyBufferStart = 0;
+      this._historyBufferEnd = 0;
       this._historyLoading = false;
       this._historyError = false;
       this._historyRequest = 0;
@@ -1491,7 +1497,19 @@
       }
       const unit = this._state(key)?.attributes?.unit_of_measurement || '';
       if (this._lang() !== 'uk') return unit;
-      return ({ V: 'В', A: 'А', W: 'Вт', Hz: 'Гц', kWh: 'кВт·год', VA: 'ВА', var: 'вар', UAH: 'грн', 'UAH/kWh': 'грн/кВт·год', 'UAH/h': 'грн/год', min: 'хв', h: 'год', dBm: 'дБм' })[unit] || unit;
+      return ({ V: 'В', A: 'А', W: 'Вт', Hz: 'Гц', kWh: 'кВт·год', VA: 'ВА', var: 'вар', UAH: 'грн', 'UAH/kWh': 'грн/кВт·год', 'UAH/h': 'грн/год', min: 'хв', s: 'с', h: 'год', dBm: 'дБм' })[unit] || unit;
+    }
+    _formatDuration(seconds) {
+      const total = Math.max(0, Math.floor(Number(seconds) || 0));
+      const days = Math.floor(total / 86400);
+      const hours = Math.floor((total % 86400) / 3600);
+      const minutes = Math.floor((total % 3600) / 60);
+      const secs = total % 60;
+      const units = this._lang() === 'uk' ? { d: 'д', h: 'год', m: 'хв', s: 'с' } : { d: 'd', h: 'h', m: 'min', s: 's' };
+      if (days) return `${days} ${units.d} ${hours} ${units.h}`;
+      if (hours) return `${hours} ${units.h} ${minutes} ${units.m}`;
+      if (minutes) return `${minutes} ${units.m} ${secs} ${units.s}`;
+      return `${secs} ${units.s}`;
     }
     _formatted(key, digits = 1) {
       if (LIVE_DISPLAY_KEYS.has(key) && this._effectiveEspStatus() === 'off') return this._t('unavailable');
@@ -1510,10 +1528,11 @@
         }
         return raw;
       }
-      if (key === 'uptime' && this._state(key)?.attributes?.unit_of_measurement === 's') {
-        const u = this._lang() === 'uk' ? { d: 'д', h: 'год', m: 'хв' } : { d: 'd', h: 'h', m: 'min' };
-        const days = Math.floor(n / 86400); const hours = Math.floor((n % 86400) / 3600); const minutes = Math.floor((n % 3600) / 60);
-        return days ? `${days} ${u.d} ${hours} ${u.h}` : hours ? `${hours} ${u.h} ${minutes} ${u.m}` : `${minutes} ${u.m}`;
+      if (key === 'uptime' && this._state(key)?.attributes?.unit_of_measurement === 's') return this._formatDuration(n);
+      if (['inverter_current_duration', 'last_inverter_duration', 'total_inverter_time'].includes(key)) {
+        const unit = this._state(key)?.attributes?.unit_of_measurement || (key === 'total_inverter_time' ? 'h' : 'min');
+        const seconds = n * (unit === 'h' ? 3600 : unit === 'min' ? 60 : 1);
+        return this._formatDuration(seconds);
       }
       const value = n.toLocaleString(this._locale(), { maximumFractionDigits: digits });
       const unit = this._unit(key) || (Number.isFinite(this._statsStart) && STATS_OVERRIDES[key] ? this._unit(STATS_OVERRIDES[key][0]) : '');
@@ -1792,7 +1811,7 @@
       const buttons = labels.map((period) => `<button class="period-button ${this._historyRange === period ? 'active' : ''}" data-period="${period}" aria-pressed="${this._historyRange === period}">${this._escape(this._t(period))}</button>`).join('');
       const metricButtons = ['power', 'voltage'].map((metric) => `<button class="period-button ${this._chartMetric === metric ? 'active' : ''}" data-metric="${metric}" aria-pressed="${this._chartMetric === metric}">${this._escape(this._t(metric))}</button>`).join('');
       const chartSvg = this._chartSvg();
-      return `<section class="card chart-card detailed-chart"><div class="chart-head"><h2><span class="chart-icon">${this._svg('chart')}</span>${this._escape(this._t('chart_title'))}</h2><div class="periods chart-metric-periods" role="group" aria-label="${this._escape(this._t('chart_title'))}">${metricButtons}</div><div class="periods chart-range-periods" role="group" aria-label="${this._escape(this._t('hour'))}">${buttons}${this._chartDateRangeHtml()}</div></div><div class="chart-stats" data-role="chart-stats">${this._chartStatsHtml()}</div><div class="chart-plot" data-role="chart-plot">${chartSvg}</div>${this._chartZoomActionsHtml()}${this._chartScrubberHtml()}${this._chartReadingsHtml()}</section>`;
+      return `<section class="card chart-card detailed-chart"><div class="chart-head"><h2><span class="chart-icon">${this._svg('chart')}</span>${this._escape(this._t('chart_title'))}</h2><div class="periods chart-metric-periods" role="group" aria-label="${this._escape(this._t('chart_title'))}">${metricButtons}</div><div class="periods chart-range-periods" role="group" aria-label="${this._escape(this._t('hour'))}">${buttons}${this._chartDateRangeHtml()}</div></div><div class="chart-stats" data-role="chart-stats">${this._chartStatsHtml()}</div><div class="chart-plot" data-role="chart-plot">${chartSvg}${this._chartZoomActionsHtml()}</div>${this._chartScrubberHtml()}${this._chartReadingsHtml()}</section>`;
     }
 
     _readStatsStart() {
@@ -2537,7 +2556,7 @@
       this._setCustomChartRange(start, end, scope);
     }
 
-    _setCustomChartRange(start, end, scope = 'params', deferChartRefresh = false) {
+    _setCustomChartRange(start, end, scope = 'params', deferChartRefresh = false, preserveHistory = false) {
       if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return;
       if (scope === 'energy') {
         if (this._energyHistoryRange !== 'custom') this._energyReturnRange = this._energyHistoryRange;
@@ -2545,7 +2564,15 @@
         this._energyHistoryRange = 'custom';
         this._updateChartDateRangeControls('energy');
         this._closeChartDateRangePopover();
-        this._clearEnergyHistory();
+        if (preserveHistory) {
+          this._energySelectedBar = null;
+          for (const metricKey of ['energy_total', 'cost_total']) {
+            this._energyHistoryRequests[metricKey] += 1;
+            this._energyHistoryLoading[metricKey] = false;
+            this._energyHistoryKeys[metricKey] = '';
+            this._energyHistoryAt[metricKey] = 0;
+          }
+        } else this._clearEnergyHistory();
         if (deferChartRefresh) this._energyChartRefreshPending = true;
         else {
           this._refreshEnergyCharts();
@@ -2564,7 +2591,7 @@
       this._clearChartScrub();
       this._updateChartDateRangeControls();
       this._closeChartDateRangePopover();
-      this._reloadChartHistory(deferChartRefresh);
+      this._reloadChartHistory(deferChartRefresh, preserveHistory);
     }
 
     _zoomChart(direction) {
@@ -2599,12 +2626,35 @@
     }
 
     _chartZoomActionsHtml() {
-      const bounds = this._chartZoomSelectionBounds();
+      return `<button type="button" class="chart-zoom-selection-button chart-zoom-confirm-button" data-chart-zoom-apply hidden>${this._escape(this._t('chart_zoom_apply'))}</button>`;
+    }
+
+    _updateChartZoomConfirmButton() {
+      const button = this.shadowRoot?.querySelector?.('[data-chart-zoom-apply]');
+      if (!button) return;
+      const handle = this._chartZoomConfirmHandle;
       const state = this._chartZoomWindow;
-      const start = Number(state?.start ?? bounds?.start);
-      const end = Number(state?.end ?? bounds?.end);
-      const disabled = !bounds || !Number.isFinite(start) || !Number.isFinite(end) || end - start < 1000 || start <= bounds.start + 999 && end >= bounds.end - 999;
-      return `<div class="chart-zoom-actions" data-chart-zoom-actions><div class="chart-zoom-summary"><span>${this._escape(this._t('chart_zoom_selection'))}</span><strong><time data-chart-zoom-start-label>${Number.isFinite(start) ? this._escape(this._formatChartTimestamp(start)) : ''}</time><i aria-hidden="true">→</i><time data-chart-zoom-end-label>${Number.isFinite(end) ? this._escape(this._formatChartTimestamp(end)) : ''}</time></strong></div><button type="button" class="chart-zoom-selection-button" data-chart-zoom-apply${disabled ? ' disabled' : ''}>${this._escape(this._t('chart_zoom_apply'))}</button></div>`;
+      const bounds = this._chartZoomSelectionBounds();
+      const chart = this.shadowRoot?.querySelector?.('[data-role="chart-plot"] svg.chart');
+      const plot = chart?.closest?.('[data-role="chart-plot"]');
+      const valid = !!handle && !!state?.dirty && !!bounds && Number.isFinite(state.start) && Number.isFinite(state.end)
+        && state.end - state.start >= 1000 && !(state.start <= bounds.start + 999 && state.end >= bounds.end - 999);
+      button.hidden = !valid;
+      button.disabled = !valid;
+      if (!valid || !chart || !plot) return;
+      const time = handle === 'start' ? state.start : state.end;
+      const range = bounds.end - bounds.start;
+      const x0 = Number(chart.dataset.chartX0) || 0;
+      const x1 = Number(chart.dataset.chartX1) || Number(chart.dataset.chartW) || 0;
+      const chartWidth = Number(chart.dataset.chartW) || 0;
+      const rect = chart.getBoundingClientRect?.();
+      const plotRect = plot.getBoundingClientRect?.();
+      if (!rect?.width || !plotRect) return;
+      const chartX = x0 + ((time - bounds.start) / range) * (x1 - x0);
+      const left = rect.left - plotRect.left + chartX * rect.width / chartWidth;
+      const maxLeft = Math.max(12, plot.clientWidth - (button.offsetWidth || 150) / 2 - 8);
+      button.style.left = `${Math.max((button.offsetWidth || 150) / 2 + 8, Math.min(maxLeft, left))}px`;
+      button.style.top = '2px';
     }
 
     _chartZoomSelectionBounds(chartOverride = null) {
@@ -2671,22 +2721,11 @@
       };
       updateHandle('start', startX, selection.start, bounds.start, selection.end - 1000);
       updateHandle('end', endX, selection.end, selection.start + 1000, bounds.end);
-      const actions = nodes || deferNonVisual ? null : this.shadowRoot.querySelector('[data-chart-zoom-actions]');
-      const startLabel = nodes ? nodes.startLabel : deferNonVisual ? null : actions?.querySelector('[data-chart-zoom-start-label]');
-      const endLabel = nodes ? nodes.endLabel : deferNonVisual ? null : actions?.querySelector('[data-chart-zoom-end-label]');
-      const applyButton = nodes ? nodes.applyButton : deferNonVisual ? null : actions?.querySelector('[data-chart-zoom-apply]');
-      const now = deferNonVisual ? 0 : Date.now();
-      const updateLabels = !deferNonVisual && (!drag || forceLabels || now - (drag.labelsAt || 0) >= 100);
-      if (updateLabels) {
-        const startText = this._formatChartTimestamp(selection.start);
-        const endText = this._formatChartTimestamp(selection.end);
-        if (startLabel && startLabel.textContent !== startText) startLabel.textContent = startText;
-        if (endLabel && endLabel.textContent !== endText) endLabel.textContent = endText;
-        if (drag) drag.labelsAt = now;
-      }
+      const applyButton = nodes ? nodes.applyButton : deferNonVisual ? null : this.shadowRoot.querySelector('[data-chart-zoom-apply]');
       if (!deferNonVisual) {
         const fullRange = selection.start <= bounds.start + 999 && selection.end >= bounds.end - 999;
         if (applyButton && applyButton.disabled !== fullRange) applyButton.disabled = fullRange;
+        if (!drag) this._updateChartZoomConfirmButton();
       }
     }
 
@@ -2755,14 +2794,78 @@
 
     _applyChartZoomSelection() {
       const bounds = this._chartZoomSelectionBounds();
-      const start = Number(this._chartZoomWindow?.start);
-      const end = Number(this._chartZoomWindow?.end);
+      const start = Math.max(bounds?.start ?? 0, Number(this._chartZoomWindow?.start));
+      const end = Math.min(bounds?.end ?? 0, Number(this._chartZoomWindow?.end));
       if (!bounds || !Number.isFinite(start) || !Number.isFinite(end) || end - start < 1000) return;
-      this._setCustomChartRange(Math.max(bounds.start, start), Math.min(bounds.end, end), 'params');
+      const chart = this.shadowRoot?.querySelector?.('[data-role="chart-plot"] svg.chart');
+      const dataGroup = chart?.querySelector?.('[data-role="chart-data"]');
+      const oldRange = bounds.end - bounds.start;
+      const nextRange = end - start;
+      const x0 = Number(chart?.dataset?.chartX0) || 0;
+      const x1 = Number(chart?.dataset?.chartX1) || Number(chart?.dataset?.chartW) || 0;
+      const scale = oldRange / nextRange;
+      const tx = x0 * (1 - scale) + ((bounds.start - start) / nextRange) * (x1 - x0);
+      const transform = `matrix(${scale.toFixed(5)}, 0, 0, 1, ${tx.toFixed(2)}, 0)`;
+      this._resetChartZoomSelection();
+      if (typeof dataGroup?.animate !== 'function') {
+        this._setCustomChartRange(start, end, 'params', false, true);
+        return;
+      }
+      try {
+        dataGroup.style.transformBox = 'view-box';
+        dataGroup.style.transformOrigin = '0 0';
+        const animation = dataGroup.animate(
+          [{ transform: 'matrix(1, 0, 0, 1, 0, 0)' }, { transform }],
+          { duration: 260, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'forwards' },
+        );
+        this._chartZoomAnimation = animation;
+        animation.onfinish = () => {
+          if (this._chartZoomAnimation !== animation) return;
+          animation.cancel();
+          this._chartZoomAnimation = null;
+          this._commitChartZoomRange(start, end);
+        };
+        animation.oncancel = () => {
+          if (this._chartZoomAnimation === animation) this._chartZoomAnimation = null;
+        };
+      } catch (_error) {
+        this._chartZoomAnimation = null;
+        this._commitChartZoomRange(start, end);
+      }
+    }
+
+    _commitChartZoomRange(start, end) {
+      if (Number.isFinite(this._statsStart)) {
+        start = Math.max(start, this._statsStart);
+        if (end <= start) end = Math.min(Date.now(), start + 60e3);
+      }
+      if (this._historyRange !== 'custom') this._historyReturnRange = this._historyRange;
+      this._historyCustomRange = { start, end };
+      this._historyRange = 'custom';
+      this._historyRequest += 1;
+      this._historyLoading = false;
+      this._historyKey = '';
+      this._historyError = false;
+      this._voltageHistoryRequest += 1;
+      this._voltageHistoryLoading = false;
+      this._voltageHistoryKey = '';
+      this._clearChartScrub();
+      this._updateChartDateRangeControls();
+      this._closeChartDateRangePopover();
+      if (this._chartFullRenderPending || this._chartRefreshPending || this._energyChartRefreshPending) {
+        this._flushDeferredChartUpdates();
+      } else {
+        this._refreshChart();
+        this._ensureHistory();
+        this._ensureVoltageHistory();
+      }
     }
 
     _resetChartZoomSelection() {
+      this._chartZoomConfirmHandle = null;
       if (this._chartZoomWindow) this._chartZoomWindow.dirty = false;
+      const button = this.shadowRoot?.querySelector?.('[data-chart-zoom-apply]');
+      if (button) button.hidden = true;
     }
 
     _chartScrubberHtml() {
@@ -2929,6 +3032,15 @@
       return `:custom:${Math.round(this._historyCustomRange.start)}:${Math.round(this._historyCustomRange.end)}`;
     }
 
+    _historyPrefetchBounds(bounds = this._historyBounds()) {
+      const start = Number(bounds?.start);
+      const end = Number(bounds?.end);
+      if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return bounds;
+      const range = Math.max(1000, end - start);
+      const floor = Number.isFinite(this._statsStart) ? Math.min(this._statsStart, start) : 0;
+      return { start: Math.max(floor, start - range), end };
+    }
+
     _chartPanShiftForDelta(deltaX, rangeMs, plotWidth) {
       if (![deltaX, rangeMs, plotWidth].every(Number.isFinite) || rangeMs <= 0 || plotWidth <= 0) return 0;
       return Math.round((deltaX * rangeMs) / plotWidth);
@@ -2950,6 +3062,7 @@
     }
 
     _chartPointerDown(event) {
+      if (event.target?.closest?.('[data-chart-zoom-apply]')) return;
       const handle = event.target?.closest?.('[data-chart-zoom-handle]');
       if (handle) {
         const plot = handle.closest?.('[data-role="chart-plot"]');
@@ -2961,7 +3074,9 @@
         const x0 = Number(chart.dataset.chartX0) || 0;
         const x1 = Number(chart.dataset.chartX1) || chartWidth;
         if (x1 <= x0) return;
-        const actions = this.shadowRoot.querySelector('[data-chart-zoom-actions]');
+        this._chartZoomConfirmHandle = null;
+        const confirmButton = this.shadowRoot.querySelector('[data-chart-zoom-apply]');
+        if (confirmButton) confirmButton.hidden = true;
         this._chartZoomDrag = {
           plot, chart, handle: handle.dataset.chartZoomHandle, pointerId: event.pointerId,
           rectLeft: rect.left, rectWidth: rect.width, chartWidth, x0, x1, bounds,
@@ -2972,9 +3087,7 @@
             endEdge: chart.querySelector('[data-chart-zoom-end-edge]'),
             startHandle: chart.querySelector('[data-chart-zoom-handle="start"]'),
             endHandle: chart.querySelector('[data-chart-zoom-handle="end"]'),
-            startLabel: actions?.querySelector('[data-chart-zoom-start-label]'),
-            endLabel: actions?.querySelector('[data-chart-zoom-end-label]'),
-            applyButton: actions?.querySelector('[data-chart-zoom-apply]'),
+            applyButton: plot.querySelector('[data-chart-zoom-apply]'),
           },
         };
         this._setChartGestureActive(plot, true);
@@ -3037,14 +3150,21 @@
       const startX = points.reduce((sum, current) => sum + current.x, 0) / points.length;
       const scope = plot.hasAttribute?.('data-energy-plot') || plot.dataset?.energyPlot !== undefined ? 'energy' : 'params';
       const dataGroup = chart.querySelector('[data-role="chart-data"]');
+      const energyMetric = this._energyChartMetric || 'energy_total';
+      const bufferedHistory = scope === 'energy' ? this._energyHistory?.[energyMetric] : this._history;
+      const bufferedStart = scope === 'energy' ? this._energyHistoryBufferStart?.[energyMetric] : this._historyBufferStart;
+      const bufferedEnd = scope === 'energy' ? this._energyHistoryBufferEnd?.[energyMetric] : this._historyBufferEnd;
       this._chartPan = {
-        plot, chart, dataGroup, scope, pointerType, pointerIds, startX, deltaX: 0,
+        plot, chart, dataGroup, scope, energyMetric, pointerType, pointerIds, startX, deltaX: 0,
         x0, x1, previewNow: Date.now(), frame: null, frameKind: null, lastTransform: null,
         rangeMs: tEnd - tStart, plotWidth,
         startDistance: pointerType === 'touch' ? this._chartPointerDistance(points) : 1,
         currentDistance: pointerType === 'touch' ? this._chartPointerDistance(points) : 1,
         tStart, tEnd, live: false, committed: false,
-        buf: scope === 'params' ? { start: tStart, end: this._historyAt || Date.now(), items: this._history } : null,
+        buf: Array.isArray(bufferedHistory) && bufferedHistory.length ? {
+          start: Number(bufferedStart) || Math.min(tStart, bufferedHistory[0]?.time?.getTime?.() || tStart),
+          end: Math.max(Number(bufferedEnd) || tEnd, tEnd), items: bufferedHistory,
+        } : null,
       };
       this._setChartGestureActive(plot, true);
       plot.classList.add('is-panning');
@@ -3101,13 +3221,18 @@
     _chartPanTarget(pan, now = Date.now()) {
       const minRange = 1000;
       const maxRange = 366 * 24 * 3600e3;
-      const floor = Number.isFinite(this._statsStart) ? this._statsStart : now - maxRange;
+      let floor = Number.isFinite(this._statsStart) ? this._statsStart : now - maxRange;
       const maxAvailableRange = Math.max(minRange, Math.min(maxRange, now - floor));
       const scale = pan.pointerType === 'touch' && pan.currentDistance > 0 ? pan.startDistance / pan.currentDistance : 1;
       const nextRange = Math.max(minRange, Math.min(maxAvailableRange, pan.rangeMs * scale));
       const shift = pan.pointerType === 'touch' ? 0 : this._chartPanShiftForDelta(pan.deltaX, pan.rangeMs, pan.plotWidth);
-      const latestStart = now - nextRange;
-      const start = Math.max(floor, Math.min(latestStart, (pan.tStart + pan.tEnd) / 2 - shift - nextRange / 2));
+      let latestStart = now - nextRange;
+      let start = Math.max(floor, Math.min(latestStart, (pan.tStart + pan.tEnd) / 2 - shift - nextRange / 2));
+      if (pan.pointerType === 'axis' && pan.buf && pan.buf.end - pan.buf.start >= nextRange) {
+        floor = Math.max(floor, pan.buf.start);
+        latestStart = Math.min(latestStart, pan.buf.end - nextRange);
+        start = Math.max(floor, Math.min(latestStart, start));
+      }
       return { start, end: start + nextRange };
     }
 
@@ -3134,6 +3259,8 @@
         this._chartZoomSelectionMove(event);
         this._setChartGestureActive(zoomDrag.plot, false);
         this._chartZoomDrag = null;
+        this._chartZoomConfirmHandle = this._chartZoomWindow?.dirty ? zoomDrag.handle : null;
+        this._updateChartZoomConfirmButton();
         try { zoomDrag.plot.releasePointerCapture(event.pointerId); } catch (_error) {}
         this._flushDeferredChartUpdates();
         return;
@@ -3158,6 +3285,13 @@
       this._chartPointerPlots?.delete(event.pointerId);
       try { pointerPlot?.releasePointerCapture(event.pointerId); } catch (_error) {}
       this._flushDeferredChartUpdates();
+      if (pan?.committed) {
+        if (pan.scope === 'energy') this._ensureEnergyHistory();
+        else {
+          this._ensureHistory();
+          this._ensureVoltageHistory();
+        }
+      }
     }
 
     _finishChartPan() {
@@ -3171,16 +3305,14 @@
       const pinchChanged = Math.abs((pan.currentDistance || 1) - (pan.startDistance || 1)) >= 8;
       if (!pan.live && !pinchChanged) return;
       const { start, end } = this._chartPanTarget(pan);
-      if (pan.scope === 'energy') {
-        this._setCustomChartRange(start, end, 'energy', true);
-        return;
-      }
       if (this._panCovers(pan, start, end)) {
         this._panCommit(pan, start, end);
-        this._chartRefreshPending = true;
+        if (pan.scope === 'energy') this._energyChartRefreshPending = true;
+        else this._chartRefreshPending = true;
         return;
       }
-      this._setCustomChartRange(start, end, 'params', true);
+      this._setCustomChartRange(start, end, pan.scope, true, true);
+      pan.committed = true;
     }
 
     _chartHistoryKey() {
@@ -3192,39 +3324,52 @@
       return !!pan.buf && pan.buf.start <= start + 1000 && pan.buf.end >= end - 120e3;
     }
 
-    // Applies the range under the fingers using data that is already buffered, without reloading history.
+    // Commit a range from cached points, then fetch one more visible-width of history off-screen.
     _panCommit(pan, start, end) {
-      if (this._historyRange !== 'custom') this._historyReturnRange = this._historyRange;
-      this._historyRequest += 1;
-      this._historyLoading = false;
-      this._voltageHistoryRequest += 1;
-      this._voltageHistoryLoading = false;
+      if (pan.scope === 'energy') {
+        if (this._energyHistoryRange !== 'custom') this._energyReturnRange = this._energyHistoryRange;
+        this._energyCustomRange = { start, end };
+        this._energyHistoryRange = 'custom';
+        this._energyHistory[pan.energyMetric] = pan.buf.items;
+        this._energyHistoryKeys[pan.energyMetric] = '';
+        this._energyHistoryAt[pan.energyMetric] = 0;
+      } else {
+        if (this._historyRange !== 'custom') this._historyReturnRange = this._historyRange;
+        this._historyRequest += 1;
+        this._historyLoading = false;
+        this._voltageHistoryRequest += 1;
+        this._voltageHistoryLoading = false;
+        this._historyCustomRange = { start, end };
+        this._historyRange = 'custom';
+        this._history = pan.buf.items;
+        this._historyError = false;
+        this._historyKey = '';
+        this._historyAt = pan.buf.end;
+        this._syncVoltageHistoryFromChart();
+      }
       this._resetChartZoomSelection();
-      this._historyCustomRange = { start, end };
-      this._historyRange = 'custom';
-      this._history = pan.buf.items;
-      this._historyError = false;
-      this._historyKey = this._chartHistoryKey();
-      this._historyAt = pan.buf.end;
-      this._syncVoltageHistoryFromChart();
       if (!pan.committed) {
         pan.committed = true;
         this._clearChartScrub();
-        this._updateChartDateRangeControls();
-        const picker = this.shadowRoot.querySelector('.chart-date-range');
+        this._updateChartDateRangeControls(pan.scope);
+        const picker = this.shadowRoot.querySelector(`.chart-date-range[data-chart-scope="${pan.scope}"]`);
         if (picker) picker.open = false;
       }
     }
 
-    _reloadChartHistory(deferChartRefresh = false) {
+    _reloadChartHistory(deferChartRefresh = false, preserveHistory = false) {
       this._historyRequest += 1;
       this._historyLoading = false;
       this._historyKey = '';
-      this._history = [];
+      if (!preserveHistory) {
+        this._history = [];
+        this._historyBufferStart = 0;
+        this._historyBufferEnd = 0;
+      }
       this._voltageHistoryRequest += 1;
       this._voltageHistoryLoading = false;
       this._voltageHistoryKey = '';
-      this._voltageHistory = [];
+      if (!preserveHistory) this._voltageHistory = [];
       if (deferChartRefresh) this._chartRefreshPending = true;
       else {
         this._refreshChart();
@@ -3376,8 +3521,17 @@
       const Y = (v) => y1 - ((Math.max(scale.lo, Math.min(scale.max, v)) - scale.lo) / (scale.max - scale.lo)) * (y1 - y0);
       const pts = series.map((point) => ({ x: X(point.t), y: Y(point.v), v: point.v, t: point.t }));
       if (!isEnergy) this._chartPts = pts;
-      const line = this._smoothPath(pts, y0, y1);
-      const area = `${line} L${pts[pts.length - 1].x.toFixed(1)} ${y1} L${pts[0].x.toFixed(1)} ${y1} Z`;
+      const bufferStart = !isEnergy ? Math.min(tStart, Number(this._historyBufferStart) || tStart) : tStart;
+      const bufferEnd = !isEnergy ? Math.max(tEnd, Number(this._historyBufferEnd) || tEnd) : tEnd;
+      const bufferSeries = !isEnergy && bufferStart < tStart
+        ? this._bucketHistory(bufferStart, bufferEnd, Math.min(288, Math.ceil((bufferEnd - bufferStart) / rangeMs * (width < 520 ? 48 : 96))), history)
+        : series;
+      const pathPts = bufferSeries.map((point) => ({
+        x: x0 + ((point.t - tStart) / rangeMs) * (x1 - x0),
+        y: Y(point.v),
+      }));
+      const line = this._smoothPath(pathPts, y0, y1);
+      const area = `${line} L${pathPts[pathPts.length - 1].x.toFixed(1)} ${y1} L${pathPts[0].x.toFixed(1)} ${y1} Z`;
       const horizontal = Array.from({ length: scale.count + 1 }, (_, index) => {
         const tickValue = scale.lo + index * scale.step;
         const y = Y(tickValue);
@@ -3410,7 +3564,7 @@
       if (!Number.isFinite(bounds?.start) || !Number.isFinite(bounds?.end) || bounds.end <= bounds.start || !Array.isArray(history) || history.length < 2) return [];
       const daily = range === 'week' || range === 'month' || range === 'custom' && bounds.end - bounds.start > 24 * 3600e3;
       const bins = [];
-      if (range === 'hour') {
+      if (range === 'hour' && bounds.end - bounds.start <= 3600e3 + 1000) {
         const startDate = new Date(bounds.start);
         const endDate = new Date(bounds.end);
         const timeFormat = { hour: '2-digit', minute: '2-digit', hour12: false };
@@ -3430,6 +3584,8 @@
             boundary.setHours(0, 0, 0, 0);
             boundary.setDate(boundary.getDate() + 1);
             next = boundary.getTime();
+          } else if (range === 'hour') {
+            next = cursor + 3600e3;
           } else {
             const boundary = new Date(cursor);
             boundary.setMinutes(0, 0, 0);
@@ -3548,11 +3704,18 @@
       }
       const range = this._energyHistoryRange;
       const bounds = this._energyHistoryBounds();
-      const bars = this._energyHistoryBars(history, bounds, range);
-      if (!bars.length) return `<div class="chart-empty">${this._escape(this._t('no_history'))}</div>`;
+      const visibleBars = this._energyHistoryBars(history, bounds, range);
+      if (!visibleBars.length) return `<div class="chart-empty">${this._escape(this._t('no_history'))}</div>`;
+      const bufferStart = Math.min(bounds.start, Number(this._energyHistoryBufferStart?.[metricKey]) || bounds.start);
+      const bufferEnd = Math.max(bounds.end, Number(this._energyHistoryBufferEnd?.[metricKey]) || bounds.end);
+      const bufferedBars = bufferStart < bounds.start
+        ? this._energyHistoryBars(history, { start: bufferStart, end: bufferEnd }, range).filter((bar) => bar.end <= bounds.start || bar.start >= bounds.end)
+        : [];
+      const bars = [...bufferedBars, ...visibleBars];
+      const visibleIndexByStart = new Map(visibleBars.map((bar, index) => [bar.start, index]));
       const metric = CHART_METRICS[metricKey];
       const unit = metric.unit(this._lang(), this._currencyCode());
-      const maximum = Math.max(0, ...bars.filter((bar) => !bar.unavailable).map((bar) => bar.value));
+      const maximum = Math.max(0, ...visibleBars.filter((bar) => !bar.unavailable).map((bar) => bar.value));
       const scale = this._energyBarScale(maximum, metricKey);
       const width = Math.max(280, Math.round(this._chartW || 985));
       const narrow = width < 520;
@@ -3564,8 +3727,9 @@
       const panStripY = height - panStripHeight;
       const y1 = panStripY - 30;
       const plotWidth = x1 - x0;
-      const slot = plotWidth / bars.length;
-      const barWidth = Math.max(2, Math.min(24, slot * 0.68));
+      const visibleRange = Math.max(1, bounds.end - bounds.start);
+      const slotFor = (bar) => plotWidth * Math.max(1, bar.end - bar.start) / visibleRange;
+      const barWidthFor = (bar) => Math.max(2, Math.min(24, slotFor(bar) * 0.68));
       const Y = (value) => y1 - (Math.max(0, Math.min(scale.max, value)) / scale.max) * (y1 - y0);
       const horizontal = Array.from({ length: scale.count + 1 }, (_, index) => {
         const tick = index * scale.step;
@@ -3573,28 +3737,32 @@
         const text = tick.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits });
         return `<path d="M${x0} ${y.toFixed(1)}H${x1}"/><text x="${x0 - 10}" y="${(y + 4).toFixed(1)}" text-anchor="end">${this._escape(text)}${index === scale.count ? ` ${this._escape(unit)}` : ''}</text>`;
       }).join('');
-      const labelStep = Math.max(1, Math.ceil(bars.length / (narrow ? 6 : 12)));
-      const vertical = bars.map((bar, index) => {
-        const center = x0 + (index + 0.5) * slot;
-        const show = index === 0 || index === bars.length - 1 || index % labelStep === 0;
+      const labelStep = Math.max(1, Math.ceil(visibleBars.length / (narrow ? 6 : 12)));
+      const vertical = bars.map((bar) => {
+        const center = x0 + ((bar.start + bar.end) / 2 - bounds.start) / visibleRange * plotWidth;
+        const visibleIndex = visibleIndexByStart.get(bar.start);
+        const show = visibleIndex === 0 || visibleIndex === visibleBars.length - 1 || Number.isInteger(visibleIndex) && visibleIndex % labelStep === 0;
         return show ? `<text class="chart-axis-label" x="${center.toFixed(1)}" y="${panStripY - 8}" text-anchor="middle">${this._escape(bar.label)}</text>` : '';
       }).join('');
       const fill = metricKey === 'cost_total' ? '#f5b94c' : '#16b5ff';
-      const rects = bars.map((bar, index) => {
-        const center = x0 + (index + 0.5) * slot;
+      const rects = bars.map((bar) => {
+        const center = x0 + ((bar.start + bar.end) / 2 - bounds.start) / visibleRange * plotWidth;
+        const barWidth = barWidthFor(bar);
         if (bar.unavailable) return `<text class="energy-bar-unavailable" x="${center.toFixed(1)}" y="${(y1 - 7).toFixed(1)}" text-anchor="middle" role="img" aria-label="${this._escape(this._energyTelemetryUnavailable()?.message || this._t('source_unknown'))}">—</text>`;
-        const x = x0 + index * slot + (slot - barWidth) / 2;
+        const x = center - barWidth / 2;
         const y = Y(bar.value);
         const rectHeight = Math.max(1, y1 - y);
         const value = bar.value.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits });
         const aria = `${bar.fullLabel}: ${value} ${unit}`;
+        const visibleIndex = visibleIndexByStart.get(bar.start);
         const selected = this._energySelectedBar?.metricKey === metricKey && this._energySelectedBar.start === bar.start;
-        return `<rect class="energy-bar${selected ? ' selected' : ''}" x="${x.toFixed(1)}" y="${(y1 - rectHeight).toFixed(1)}" width="${barWidth.toFixed(1)}" height="${rectHeight.toFixed(1)}" rx="3" fill="${fill}" role="button" tabindex="0" aria-pressed="${selected}" data-energy-bar="${index}" data-energy-start="${bar.start}" data-energy-value="${bar.value}" aria-label="${this._escape(aria)}"><title>${this._escape(aria)}</title></rect>`;
+        const interactive = Number.isInteger(visibleIndex);
+        return `<rect class="energy-bar${selected ? ' selected' : ''}" x="${x.toFixed(1)}" y="${(y1 - rectHeight).toFixed(1)}" width="${barWidth.toFixed(1)}" height="${rectHeight.toFixed(1)}" rx="3" fill="${fill}"${interactive ? ` role="button" tabindex="0" aria-pressed="${selected}" data-energy-bar="${visibleIndex}" data-energy-start="${bar.start}" data-energy-value="${bar.value}" aria-label="${this._escape(aria)}"` : ''}><title>${this._escape(aria)}</title></rect>`;
       }).join('');
       const title = metricKey === 'energy_total' ? this._t('energy_chart_title') : this._t('cost_chart_title');
       const clipId = this._id(`energy-${metricKey}-plot-clip`);
       const plotClip = `<clipPath id="${clipId}"><rect x="${x0}" y="0" width="${plotWidth}" height="${height}"/></clipPath>`;
-      return `<svg class="energy-bars" data-chart-scope="energy" data-chart-start="${bounds.start}" data-chart-end="${bounds.end}" data-chart-w="${width}" data-chart-h="${height}" data-chart-x0="${x0}" data-chart-x1="${x1}" data-chart-y0="${y0}" data-chart-y1="${y1}" data-energy-bar-count="${bars.length}" data-energy-start="${bounds.start}" data-energy-end="${bounds.end}" viewBox="0 0 ${width} ${height}" role="group" aria-label="${this._escape(title)}" style="width:100%;height:auto;display:block;overflow:visible"><defs>${plotClip}</defs><g class="chart-grid">${horizontal}</g><g class="chart-data energy-bars-data" data-role="chart-data" clip-path="url(#${clipId})">${vertical}${rects}</g>${this._chartPanAxisHtml(x0, x1, panStripY, panStripHeight)}</svg>`;
+      return `<svg class="energy-bars" data-chart-scope="energy" data-chart-start="${bounds.start}" data-chart-end="${bounds.end}" data-chart-w="${width}" data-chart-h="${height}" data-chart-x0="${x0}" data-chart-x1="${x1}" data-chart-y0="${y0}" data-chart-y1="${y1}" data-energy-bar-count="${visibleBars.length}" data-energy-start="${bounds.start}" data-energy-end="${bounds.end}" viewBox="0 0 ${width} ${height}" role="group" aria-label="${this._escape(title)}" style="width:100%;height:auto;display:block;overflow:visible"><defs>${plotClip}</defs><g class="chart-grid">${horizontal}</g><g class="chart-data energy-bars-data" data-role="chart-data" clip-path="url(#${clipId})">${vertical}${rects}</g>${this._chartPanAxisHtml(x0, x1, panStripY, panStripHeight)}</svg>`;
     }
 
     _setChartMarker(chart, x, y, text, sub = '') {
@@ -3843,6 +4011,8 @@
         this._energyHistory[metricKey] = [];
         this._energyHistoryKeys[metricKey] = '';
         this._energyHistoryAt[metricKey] = 0;
+        if (this._energyHistoryBufferStart) this._energyHistoryBufferStart[metricKey] = 0;
+        if (this._energyHistoryBufferEnd) this._energyHistoryBufferEnd[metricKey] = 0;
       }
     }
 
@@ -3850,14 +4020,14 @@
       if (this._chartZoomDrag || this._chartPan || !this._hass || !this._config || this._activeTab !== 'energy' || !this._isActive()) return;
       for (const metricKey of ['energy_total', 'cost_total']) {
         const key = this._energyHistoryCacheKey(metricKey);
-        if (key !== this._energyHistoryKeys[metricKey]) {
+        const keyChanged = key !== this._energyHistoryKeys[metricKey];
+        if (keyChanged) {
           this._energyHistoryRequests[metricKey] += 1;
           this._energyHistoryLoading[metricKey] = false;
-          this._energyHistory[metricKey] = [];
           this._energyHistoryKeys[metricKey] = key;
           this._energyHistoryAt[metricKey] = 0;
         }
-        if (!this._energyHistoryLoading[metricKey] && Date.now() - this._energyHistoryAt[metricKey] >= 60000) this._loadEnergyHistory(metricKey, key);
+        if (!this._energyHistoryLoading[metricKey] && (keyChanged || Date.now() - this._energyHistoryAt[metricKey] >= 60000)) this._loadEnergyHistory(metricKey, key);
       }
     }
 
@@ -3909,8 +4079,12 @@
       const request = ++this._energyHistoryRequests[metricKey];
       const hass = this._hass;
       const bounds = this._energyHistoryBounds();
-      const start = new Date(Math.max(0, bounds.start - 24 * 3600e3));
-      const end = new Date(bounds.end);
+      const prefetchRange = Math.max(24 * 3600e3, bounds.end - bounds.start);
+      const bufferStart = Math.max(Number.isFinite(this._statsStart) ? this._statsStart : 0, bounds.start - prefetchRange);
+      const bufferBounds = { start: bufferStart, end: bounds.end };
+      const start = new Date(Math.max(0, bufferBounds.start));
+      const end = new Date(bufferBounds.end);
+      const previousHistory = this._energyHistory[metricKey];
       this._energyHistoryLoading[metricKey] = true;
       this._refreshEnergyCharts();
       try {
@@ -3918,9 +4092,11 @@
         const path = `history/period/${encodeURIComponent(start.toISOString())}?filter_entity_id=${encodeURIComponent(this._entity(metricKey))}&end_time=${encodeURIComponent(end.toISOString())}&minimal_response&no_attributes`;
         const response = await hass.callApi('GET', path);
         if (request !== this._energyHistoryRequests[metricKey]) return;
-        this._energyHistory[metricKey] = this._parseCumulativeHistory(response, metricKey, bounds, this._num(metricKey));
+        this._energyHistory[metricKey] = this._parseCumulativeHistory(response, metricKey, bufferBounds, this._num(metricKey));
+        this._energyHistoryBufferStart[metricKey] = bufferBounds.start;
+        this._energyHistoryBufferEnd[metricKey] = bufferBounds.end;
       } catch (_error) {
-        if (request === this._energyHistoryRequests[metricKey]) this._energyHistory[metricKey] = [];
+        if (request === this._energyHistoryRequests[metricKey] && !previousHistory?.length) this._energyHistory[metricKey] = [];
       } finally {
         if (request === this._energyHistoryRequests[metricKey]) {
           this._energyHistoryKeys[metricKey] = key;
@@ -4018,8 +4194,10 @@
       const range = this._historyRange;
       const metricKey = this._chartMetric || 'power';
       const bounds = this._historyBounds(range);
-      const start = new Date(bounds.start);
-      const end = new Date(bounds.end);
+      const fetchBounds = this._historyPrefetchBounds(bounds);
+      const start = new Date(fetchBounds.start);
+      const end = new Date(fetchBounds.end);
+      const previousHistory = this._history;
       this._refreshChart();
       try {
         if (typeof hass.callApi !== 'function') throw new Error('History API unavailable');
@@ -4028,12 +4206,14 @@
         const response = await hass.callApi('GET', path);
         if (request !== this._historyRequest) return;
         this._history = this._parseHistoryResponse(response, metricKey);
+        this._historyBufferStart = fetchBounds.start;
+        this._historyBufferEnd = fetchBounds.end;
         this._historyKey = key;
         this._historyAt = Date.now();
         if (metricKey === 'voltage') this._syncVoltageHistoryFromChart();
       } catch (_error) {
         if (request === this._historyRequest) {
-          this._history = [];
+          if (!previousHistory?.length) this._history = [];
           this._historyError = true;
           this._historyKey = key;
           this._historyAt = Date.now();
@@ -4080,7 +4260,7 @@
     }
 
     _flushDeferredChartUpdates() {
-      if (this._chartZoomDrag || this._chartPan) return;
+      if (this._chartZoomDrag || this._chartPan || this._chartZoomAnimation) return;
       if (this._chartFullRenderPending) {
         this._chartFullRenderPending = false;
         this._chartRefreshPending = false;
@@ -4103,7 +4283,7 @@
     }
 
     _refreshChart() {
-      if (this._chartZoomDrag || this._chartPan) {
+      if (this._chartZoomDrag || this._chartPan || this._chartZoomAnimation) {
         this._chartRefreshPending = true;
         return;
       }
@@ -4116,6 +4296,7 @@
       this._updateChartScrubber();
       this._updateChartReadings();
       this._updateChartZoomSelection();
+      this._updateChartZoomConfirmButton();
       if (this._activeTab === 'params') this._updateRange();
     }
 
@@ -4502,7 +4683,7 @@
 
     _render() {
       if (!this._config || !this._hass) return;
-      if (this._chartZoomDrag || this._chartPan) {
+      if (this._chartZoomDrag || this._chartPan || this._chartZoomAnimation) {
         this._chartFullRenderPending = true;
         return;
       }
@@ -4527,6 +4708,7 @@
       this._hasRendered = true;
       this._renderedLanguage = this._lang();
       this._updateScrollTopVisibility();
+      this._updateChartZoomConfirmButton();
       this._queueChartMeasure();
     }
 
@@ -4562,7 +4744,9 @@
         }
         state.dirty = true;
         this._chartZoomWindow = state;
+        this._chartZoomConfirmHandle = handle.dataset.chartZoomHandle;
         this._updateChartZoomSelection();
+        this._updateChartZoomConfirmButton();
         event.preventDefault?.();
         return;
       }
@@ -4664,6 +4848,7 @@
       if (target.dataset.historyDelete !== undefined) { this._deletePanelHistory(target.dataset.historyDelete); return; }
       if (target.dataset.metric) {
         if (this._chartMetric === target.dataset.metric) return;
+        this._resetChartZoomSelection();
         this._clearChartScrub();
         this._historyRequest += 1;
         this._historyLoading = false;
@@ -5550,12 +5735,10 @@
         .banner-system-note{color:#b6cec9;font-size:12px;line-height:1.3}
         .banner.inverter .banner-system strong,.banner.pzem-offline .banner-system strong{color:#fff1d0!important}
         .banner.alarm .banner-system strong,.banner.offline .banner-system strong{color:#ffe0e5!important}
-        .chart-zoom-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:7px 2px 0;padding:8px 10px;border:1px solid #213c58;border-radius:11px;background:#0d1d2f}
-        .chart-zoom-summary{display:grid;gap:3px;min-width:0;color:#99b5d2;font-size:11px}
-        .chart-zoom-summary strong{display:flex;align-items:center;gap:7px;min-width:0;color:#d9e9fa;font-size:11px;font-weight:600;font-variant-numeric:tabular-nums}
-        .chart-zoom-summary time{overflow-wrap:anywhere}
-        .chart-zoom-summary i{flex:none;color:#43c2ff;font-style:normal}
-        .chart-zoom-selection-button{flex:none;min-height:34px;padding:0 12px;border:1px solid #128dc3;border-radius:9px;background:linear-gradient(135deg,#087bbc,#07528a);color:#fff;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+        .chart-zoom-selection-button{flex:none;min-height:32px;padding:0 11px;border:1px solid #128dc3;border-radius:9px;background:linear-gradient(135deg,#087bbc,#07528a);color:#fff;font:inherit;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 5px 16px #00101dcc}
+        .chart-zoom-confirm-button{position:absolute;z-index:3;transform:translateX(-50%);white-space:nowrap;animation:chart-zoom-confirm-in .16s ease-out both}
+        .chart-zoom-confirm-button[hidden]{display:none!important}
+        @keyframes chart-zoom-confirm-in{from{opacity:0;translate:0 4px}to{opacity:1;translate:0 0}}
         .chart-zoom-selection-button:disabled{opacity:.42;filter:saturate(.55);cursor:not-allowed}
         .chart-zoom-selection-band{fill:#20baff18;stroke:#20baff70;stroke-width:1;pointer-events:none}
         .chart-zoom-selection-edge{stroke:#46c8ff;stroke-width:1.5;stroke-dasharray:4 3;pointer-events:none}
@@ -5568,8 +5751,7 @@
         .chart-plot{touch-action:none;user-select:none;-webkit-user-select:none;cursor:crosshair}
         .chart-plot.is-panning{cursor:grabbing}
         @container (max-width:760px){
-          .chart-zoom-actions{align-items:stretch;flex-direction:column;padding:8px}
-          .chart-zoom-selection-button{width:100%}
+          .chart-zoom-confirm-button{min-height:30px;padding:0 9px;font-size:11px}
           .chart-tools{width:100%;margin-left:0;justify-content:flex-end}
           .chart-date-range{flex:1 1 auto;min-width:0;position:relative}
           .chart-date-range>[data-chart-date-toggle]{width:100%;padding:8px 4px;font-size:12px}

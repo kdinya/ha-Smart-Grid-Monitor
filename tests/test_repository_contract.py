@@ -50,6 +50,18 @@ class RepositoryContractTests(unittest.TestCase):
             with self.subTest(path=relative):
                 yaml.load((ROOT / relative).read_text(encoding="utf-8"), Loader=ESPHomeSafeLoader)
 
+    def test_pzem_outage_count_and_duration_update_in_seconds(self):
+        firmware = yaml.load((ROOT / "esphome/grid-monitor.yaml").read_text(encoding="utf-8"), Loader=ESPHomeSafeLoader)
+        sensors = {sensor.get("name"): sensor for sensor in firmware["sensor"] if isinstance(sensor, dict) and sensor.get("platform") == "template"}
+        self.assertEqual(sensors["PZEM Offline Events"]["update_interval"], "2s")
+        for name in ("Current PZEM Offline Duration", "Last PZEM Offline Duration"):
+            self.assertEqual(sensors[name]["unit_of_measurement"], "s")
+            self.assertEqual(sensors[name]["accuracy_decimals"], 0)
+            self.assertEqual(sensors[name]["update_interval"], "2s")
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        self.assertIn("if (key === 'uptime' && this._state(key)?.attributes?.unit_of_measurement === 's') return this._formatDuration(n)", card)
+        self.assertIn("'inverter_current_duration', 'last_inverter_duration', 'total_inverter_time'", card)
+
     def test_wide_home_layout_places_tabs_beside_voltage_panel(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
         home = card.split("    _home() {", 1)[1].split("    _id(name)", 1)[0]
@@ -113,7 +125,7 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("this._energyBarSvg(metricKey, this._energyHistory[metricKey]", chart)
         self.assertIn("_energyHistoryBars(history, bounds, range)", card)
         self.assertIn("class=\"energy-bars\" data-chart-scope=\"energy\" data-chart-start=\"${bounds.start}\"", card)
-        self.assertIn("data-energy-bar-count=\"${bars.length}\"", card)
+        self.assertIn("data-energy-bar-count=\"${visibleBars.length}\"", card)
         self.assertIn("energy_total: { digits: 3, plausible: [0, 1e7], unit: () => 'kWh' }", card)
         self.assertIn("cost_total: { digits: 2, plausible: [0, 1e9], unit: (lang, currency = 'UAH') => (currency === 'UAH' && lang === 'uk' ? 'грн' : currency) }", card)
 
@@ -558,8 +570,9 @@ class RepositoryContractTests(unittest.TestCase):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
         finish = card.split("    _finishChartPan() {", 1)[1].split("    _chartHistoryKey() {", 1)[0]
         self.assertIn("this._chartRefreshPending = true", finish)
-        self.assertIn("this._setCustomChartRange(start, end, 'energy', true)", finish)
-        self.assertIn("this._setCustomChartRange(start, end, 'params', true)", finish)
+        self.assertIn("this._setCustomChartRange(start, end, pan.scope, true, true)", finish)
+        self.assertIn("this._energyChartRefreshPending = true", finish)
+        self.assertIn("this._chartRefreshPending = true", finish)
         self.assertNotIn("_refreshChart(", finish)
         self.assertNotIn("_refreshEnergyCharts(", finish)
 

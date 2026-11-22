@@ -1729,7 +1729,7 @@ assert.equal(card._energyChartRefreshPending, false);
         result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False)
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
-    def test_zoom_handle_drag_defers_labels_and_accessibility_updates_until_release(self):
+    def test_zoom_handle_drag_updates_handle_without_showing_a_confirm_button_mid_drag(self):
         script = r"""
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -1739,32 +1739,48 @@ const context = { window: { customCards: [] }, HTMLElement: class HTMLElement {}
 vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
 const Card = registry.get('grid-monitor-card');
 const card = Object.create(Card.prototype);
-let formats = 0;
-card._formatChartTimestamp = (value) => { formats += 1; return String(value); };
 const node = () => {
   const attrs = new Map();
-  return { attrs, textContent: '', disabled: true,
+  return { attrs, textContent: '', disabled: true, hidden: true,
     getAttribute(name) { return attrs.has(name) ? attrs.get(name) : null; },
     setAttribute(name, value) { attrs.set(name, String(value)); } };
 };
-const chart = { dataset: { chartY0: '20', chartY1: '180' } };
-const nodes = {
-  band: node(), startEdge: node(), endEdge: node(), startHandle: node(), endHandle: node(),
-  startLabel: node(), endLabel: node(), applyButton: node(),
-};
-const drag = { chart, bounds: { start: 1000, end: 61000 }, x0: 100, x1: 900, nodes, labelsAt: 0 };
+const nodes = { band: node(), startEdge: node(), endEdge: node(), startHandle: node(), endHandle: node(), applyButton: node() };
+const drag = { chart: { dataset: { chartY0: '20', chartY1: '180' } }, bounds: { start: 1000, end: 61000 }, x0: 100, x1: 900, nodes };
 card._chartZoomWindow = { start: 11000, end: 21000, dirty: true };
 card._updateChartZoomSelection(drag, false);
-assert.equal(formats, 0, 'active drag does not format locale labels');
-assert.equal(nodes.startHandle.getAttribute('transform'), 'translate(233.33 0)', 'handle position still previews immediately');
+assert.equal(nodes.startHandle.getAttribute('transform'), 'translate(233.33 0)', 'handle position previews immediately');
 assert.equal(nodes.startHandle.getAttribute('aria-valuenow'), null, 'ARIA timestamps wait until release');
-assert.equal(nodes.startLabel.textContent, '', 'visible timestamp labels wait until release');
-assert.equal(nodes.applyButton.disabled, true, 'button state is not recalculated mid-drag');
-card._updateChartZoomSelection(drag, true);
-assert.equal(formats, 2, 'release formats both labels once');
-assert.equal(nodes.startHandle.getAttribute('aria-valuenow'), '11000');
-assert.equal(nodes.startLabel.textContent, '11000');
-assert.equal(nodes.applyButton.disabled, false, 'release recalculates the apply state');
+assert.equal(nodes.applyButton.hidden, true, 'confirmation remains hidden during the drag');
+assert.equal(nodes.applyButton.disabled, true, 'button state remains untouched during the drag');
+"""
+        result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_zoom_confirm_button_only_appears_after_release_over_last_handle(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = { window: { customCards: [] }, HTMLElement: class HTMLElement {}, customElements: { define: (name, value) => registry.set(name, value) } };
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+const button = { hidden: true, disabled: true, offsetWidth: 100, style: {} };
+const plot = { clientWidth: 400, getBoundingClientRect: () => ({ left: 10 }) };
+const chart = { dataset: { chartX0: '20', chartX1: '380', chartW: '400' }, getBoundingClientRect: () => ({ left: 10, width: 400 }), closest: () => plot };
+card.shadowRoot = { querySelector: (selector) => selector === '[data-chart-zoom-apply]' ? button : chart };
+card._chartZoomSelectionBounds = () => ({ start: 1000, end: 61000 });
+card._chartZoomWindow = { start: 11000, end: 51000, dirty: true };
+card._chartZoomConfirmHandle = 'end';
+card._updateChartZoomConfirmButton();
+assert.equal(button.hidden, false, 'confirmation appears after release');
+assert.equal(button.disabled, false, 'confirmation can be applied');
+assert.equal(button.style.left, '320px', 'confirmation is anchored over the last moved handle');
+card._chartZoomConfirmHandle = null;
+card._updateChartZoomConfirmButton();
+assert.equal(button.hidden, true, 'button hides when no handle is waiting for confirmation');
 """
         result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False)
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
@@ -1793,6 +1809,84 @@ assert.equal(energy.end - energy.start, 86400000, 'energy pan keeps the visible 
 assert.equal((energy.start + energy.end) / 2, (energyStart + energyEnd) / 2 + 4320000, 'leftward drag reveals newer energy history');
 const oneSecond = card._chartPanTarget({ pointerType: 'axis', rangeMs: 1000, deltaX: -30, plotWidth: 300, tStart: now - 10000, tEnd: now - 9000 });
 assert.equal(oneSecond.end - oneSecond.start, 1000, 'one-second range remains one second while panning');
+"""
+        result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False, env={**os.environ, "TZ": "UTC"})
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_duration_formatting_keeps_pzem_offline_time_readable(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = { window: { customCards: [] }, HTMLElement: class HTMLElement {}, customElements: { define: (name, value) => registry.set(name, value) } };
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+card._lang = () => 'uk';
+assert.equal(card._formatDuration(42), '42 с', 'short outages include seconds');
+assert.equal(card._formatDuration(3725), '1 год 2 хв', 'longer outages are shown in hours and minutes');
+assert.equal(card._formatDuration(90061), '1 д 1 год', 'multi-day durations stay compact');
+"""
+        result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_parameter_history_prefetches_one_visible_window_before_the_chart(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = { window: { customCards: [] }, HTMLElement: class HTMLElement {}, customElements: { define: (name, value) => registry.set(name, value) } };
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+const start = 1700000000000;
+const bounds = { start, end: start + 3600000 };
+const fetch = card._historyPrefetchBounds(bounds);
+assert.equal(fetch.start, start - 3600000, 'prefetch is one chart-width earlier');
+assert.equal(fetch.end, bounds.end, 'prefetch does not extend beyond the current end');
+card._statsStart = start - 1800000;
+const clamped = card._historyPrefetchBounds(bounds);
+assert.equal(clamped.start, start - 1800000, 'statistics start remains the lower limit');
+assert.equal(clamped.end, bounds.end);
+"""
+        result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_energy_chart_renders_buffered_bars_but_only_visible_bars_are_interactive(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = { window: { customCards: [] }, HTMLElement: class HTMLElement {}, customElements: { define: (name, value) => registry.set(name, value) } };
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+const start = Date.parse('2026-10-01T12:00:00Z');
+const end = start + 3600000;
+card._energyHistoryRange = 'hour';
+card._energyHistoryBounds = () => ({ start, end });
+card._energyHistoryBufferStart = { energy_total: start - 2 * 3600000 };
+card._energyHistoryBufferEnd = { energy_total: end };
+card._chartW = 480;
+card._locale = () => 'en-US';
+card._lang = () => 'en';
+card._currencyCode = () => 'UAH';
+card._state = () => ({ attributes: { unit_of_measurement: 'kWh' } });
+card._t = () => 'Electricity consumption';
+card._escape = (value) => String(value);
+card._id = (name) => `id-${name}`;
+const svg = card._energyBarSvg('energy_total', [
+  { time: new Date(start - 2 * 3600000), value: 0 },
+  { time: new Date(start - 3600000), value: 1 },
+  { time: new Date(start), value: 2 },
+  { time: new Date(end), value: 3 },
+], false);
+assert.match(svg, /data-energy-bar-count="1"/, 'the chart reports its one visible bar');
+assert.equal((svg.match(/<rect class="energy-bar/g) || []).length, 3, 'two cached bars are drawn before the visible bar');
+assert.equal((svg.match(/data-energy-bar="/g) || []).length, 1, 'only the visible bar responds to selection');
 """
         result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False, env={**os.environ, "TZ": "UTC"})
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
@@ -1840,7 +1934,8 @@ card._chartReadingsHtml = () => '';
 
 const html = card._chart();
 assert.ok(!html.includes('data-chart-zoom="in"'), 'chart does not render old plus/minus zoom buttons');
-assert.ok(html.includes('data-chart-zoom-actions'), 'parameters chart renders one compact apply row');
+assert.ok(html.includes('data-chart-zoom-apply') && html.includes('chart-zoom-confirm-button'), 'parameters chart renders a hidden confirmation button over the plot');
+assert.ok(!html.includes('data-chart-zoom-actions'), 'the persistent apply row is removed');
 assert.ok(!html.includes('<input type="range" data-chart-zoom-start') && !html.includes('<input type="range" data-chart-zoom-end'), 'no separate range sliders are rendered');
 assert.ok(!html.includes('data-chart-history-navigator'), 'no separate history navigator is rendered');
 const markers = card._chartZoomSelectionSvg(1000, 61000, 100, 900, 20, 190);
