@@ -171,7 +171,8 @@ class RepositoryContractTests(unittest.TestCase):
         # Both the parameters and the energy picker use the statistics start as the lower bound.
         self.assertNotIn("!isEnergy && Number.isFinite(this._statsStart) ? ` min=", card)
         html = card[card.index("_chartDateRangeHtml(scope = 'params') {"):card.index("_closeChartDateRangePopover(panel = null) {")]
-        self.assertIn("this._chartDateRangeMin()", html)
+        calendar_limits = card[card.index("_chartCalendarLimits(scope, field) {"):card.index("_chartCalendarContentHtml(scope, field, monthKey) {")]
+        self.assertIn("this._chartDateRangeMin()", calendar_limits)
         apply_range = card[card.index("_applyChartDateRange(scope = 'params') {"):card.index("_setCustomChartRange(start, end")]
         # An earlier moment is moved to the start instead of producing a warning.
         self.assertIn("this._clampChartDateInput(startInput)", apply_range)
@@ -345,7 +346,9 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("metricKey === 'power' ? plottedPoints.filter((point) => point.v > 0) : plottedPoints", card)
         self.assertIn("this._historyBounds(range)", card)
         self.assertIn("_chartDateRangeHtml()", card)
-        self.assertIn('type="date" ${startKey}', card)
+        self.assertIn('type="hidden" ${key}', card)
+        self.assertIn('class="chart-calendar-day', card)
+        self.assertIn('data-chart-calendar-open', card)
         self.assertIn("isEnergy ? 'data-energy-chart-date-start' : 'data-chart-date-start'", card)
         self.assertNotIn("data-chart-zoom=\"in\"", card)
         self.assertIn("chart_date_range", card)

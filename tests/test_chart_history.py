@@ -1408,10 +1408,10 @@ card._energyHistoryBounds = () => ({ start: Date.parse('2026-11-20T00:00:00Z'), 
 
 // 1. HTML generation: date inputs, min/max constraints
 const html = card._chartDateRangeHtml('params');
-assert.ok(html.includes('type="date"'), 'uses date-only inputs without hours/minutes');
-assert.ok(!html.includes('type="datetime-local"'), 'does not use datetime-local');
-assert.ok(html.includes('min="'), 'includes min attribute from statsStart');
-assert.ok(html.includes('max="'), 'includes max attribute for today');
+assert.ok(html.includes('type="hidden"'), 'date values are stored behind custom calendar buttons');
+assert.ok(html.includes('data-chart-calendar'), 'renders the custom month calendar container');
+assert.ok(html.includes('data-chart-calendar-open') && html.includes('data-chart-field="start"') && html.includes('data-chart-field="end"'), 'both range endpoints open the styled calendar');
+assert.ok(!html.includes('type="datetime-local"'), 'date picker does not use native browser date-time controls');
 
 // 2. Single day range application (same start and end date -> 24h span)
 let appliedStart = null, appliedEnd = null, appliedScope = null;
@@ -1451,6 +1451,77 @@ assert.ok(appliedStart >= card._statsStart, 'start is clamped to statsStart');
             text=True,
             check=False,
             env={**os.environ, "TZ": "UTC"},
+        )
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+
+    def test_month_calendar_dims_days_before_selected_start_for_both_chart_scopes(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = { window: { customCards: [] }, HTMLElement: class HTMLElement {}, customElements: { define: (name, value) => registry.set(name, value) } };
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+card._locale = () => 'uk-UA';
+card._t = (key) => ({ chart_calendar_previous: 'Попередній місяць', chart_calendar_next: 'Наступний місяць' })[key] || key;
+card._escape = (value) => String(value);
+card._chartDateRangeMin = () => '2026-11-01';
+card._chartDateRangeMax = () => '2026-11-22';
+card._formatDateInput = (timestamp) => new Date(timestamp).toISOString().slice(0, 10);
+const start = { value: '2026-11-10' };
+const end = { value: '2026-11-18' };
+card.shadowRoot = { querySelector: (selector) => {
+  if (selector === '[data-chart-date-start]' || selector === '[data-energy-chart-date-start]') return start;
+  if (selector === '[data-chart-date-end]' || selector === '[data-energy-chart-date-end]') return end;
+  return null;
+} };
+for (const scope of ['params', 'energy']) {
+  const html = card._chartCalendarContentHtml(scope, 'end', '2026-11');
+  const dayBeforeStart = html.match(new RegExp(`<button[^>]*data-chart-calendar-day="2026-11-09"[^>]*>`))?.[0] || '';
+  const startDay = html.match(new RegExp(`<button[^>]*data-chart-calendar-day="2026-11-10"[^>]*>`))?.[0] || '';
+  assert.ok(dayBeforeStart.includes('aria-disabled="true"'), `${scope}: date before chosen start is disabled and dimmed`);
+  assert.ok(!startDay.includes('aria-disabled="true"'), `${scope}: selected start date remains selectable as end`);
+}
+"""
+        result = subprocess.run(
+            ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
+            capture_output=True,
+            text=True,
+            check=False,
+            env={**os.environ, "TZ": "UTC"},
+        )
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_touching_outside_the_open_calendar_closes_it(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = { window: { customCards: [] }, HTMLElement: class HTMLElement {}, customElements: { define: (name, value) => registry.set(name, value) } };
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+let calendarClosed = 0, rangeClosed = 0;
+const calendar = { contains: (target) => target.insideCalendar };
+card.shadowRoot = { querySelector: () => calendar };
+card._closeChartCalendar = () => { calendarClosed += 1; };
+card._closeChartDateRangePopover = () => { rangeClosed += 1; };
+card._handleChartDatePointerDown({ target: { insideCalendar: false, closest: (selector) => selector === '.chart-date-range' ? {} : null } });
+assert.equal(calendarClosed, 1);
+assert.equal(rangeClosed, 0, 'touch elsewhere in the range controls closes only the month calendar');
+card._handleChartDatePointerDown({ target: { insideCalendar: false, closest: () => null } });
+assert.equal(calendarClosed, 2);
+assert.equal(rangeClosed, 1, 'touch elsewhere on the card closes the calendar and its period popover');
+"""
+        result = subprocess.run(
+            ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
+            capture_output=True,
+            text=True,
+            check=False,
         )
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
