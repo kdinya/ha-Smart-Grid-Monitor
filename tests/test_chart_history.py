@@ -2420,25 +2420,21 @@ def run_clarity(body):
 
 
 class LongRangeClarityTests(unittest.TestCase):
-    def test_long_voltage_ranges_draw_one_averaged_point_per_clean_bucket(self):
+    def test_voltage_uses_the_same_detailed_bucketing_for_every_range(self):
         result = run_clarity(r"""
 // Noisy voltage around 230 V for four hours, sampled every minute.
 const history = [];
 for (let minute = 0; minute < 240; minute += 1) history.push(at(minute, 230 + (minute % 2 ? 3 : -3)));
 const start = history[0].time.getTime();
 const end = start + 240 * 60e3;
-const detailed = card._bucketHistory(start, end, 8, history);
-const smooth = card._bucketHistory(start, end, 8, history, { smooth: true });
-assert.ok(detailed.length > smooth.length, 'detailed keeps extremes of every bucket');
-assert.equal(smooth.length, 8, 'one point per bucket');
-smooth.forEach((point) => assert.ok(Math.abs(point.v - 230) < 0.2, `bucket mean is the trend, got ${point.v}`));
-assert.equal(card._chartSmooth('voltage', 4 * 3600e3), true);
-assert.equal(card._chartSmooth('voltage', 3600e3), false, 'the hour view keeps its detail');
-assert.equal(card._chartSmooth('power', 24 * 3600e3), false, 'power keeps spikes');
+const series = card._bucketHistory(start, end, 8, history);
+assert.ok(series.length > 8, 'every bucket keeps its extremes, as in the hour view');
+assert.ok(series.some((point) => point.v === 227) && series.some((point) => point.v === 233), 'real extremes stay visible');
+assert.equal(card._chartSmooth, undefined, 'there is no separate smoothing mode for long ranges');
 """)
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
-    def test_long_voltage_ranges_keep_outages_as_sharp_steps_without_pulling_the_average_down(self):
+    def test_voltage_outages_stay_sharp_steps_in_detailed_buckets(self):
         result = run_clarity(r"""
 const history = [];
 for (let minute = 0; minute < 60; minute += 1) history.push(at(minute, 230));
@@ -2447,13 +2443,9 @@ history.push(at(80, 231));
 for (let minute = 81; minute < 120; minute += 1) history.push(at(minute, 231));
 const start = history[0].time.getTime();
 const end = start + 120 * 60e3;
-const series = card._bucketHistory(start, end, 4, history, { smooth: true });
-const drop = series.filter((point) => point.v === 0);
-assert.ok(drop.length >= 1, 'the outage is still drawn at 0');
+const series = card._bucketHistory(start, end, 4, history);
 const stepTime = start + 60 * 60e3;
 assert.ok(series.some((point) => point.t === stepTime && point.v === 230) && series.some((point) => point.t === stepTime && point.v === 0), 'vertical drop at the outage start');
-const clean = series.filter((point) => point.v > 0);
-clean.forEach((point) => assert.ok(point.v >= 230 && point.v <= 231, `no point is pulled down by the outage: ${point.v}`));
 """)
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
