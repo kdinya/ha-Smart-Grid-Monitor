@@ -2620,6 +2620,7 @@
       const chart = drag?.chart || this.shadowRoot?.querySelector?.('[data-role="chart-plot"] svg.chart');
       const bounds = drag?.bounds || this._chartZoomSelectionBounds(chart);
       if (!chart || !bounds || bounds.end - bounds.start < 1000) return;
+      const deferNonVisual = Boolean(drag && !forceLabels);
       const state = this._chartZoomWindow;
       if (!state || !state.dirty) this._chartZoomWindow = { start: bounds.start, end: bounds.end, dirty: false };
       const selection = this._chartZoomWindow;
@@ -2641,15 +2642,24 @@
       const band = find('band', '[data-chart-zoom-band]');
       setAttributeIfChanged(band, 'x', startX.toFixed(2));
       setAttributeIfChanged(band, 'width', Math.max(0, endX - startX).toFixed(2));
-      setAttributeIfChanged(band, 'y', y0);
-      setAttributeIfChanged(band, 'height', y1 - y0);
+      if (!deferNonVisual) {
+        setAttributeIfChanged(band, 'y', y0);
+        setAttributeIfChanged(band, 'height', y1 - y0);
+      }
       const startEdge = find('startEdge', '[data-chart-zoom-start-edge]');
       setAttributeIfChanged(startEdge, 'x1', startX.toFixed(2));
       setAttributeIfChanged(startEdge, 'x2', startX.toFixed(2));
+      if (!deferNonVisual) {
+        setAttributeIfChanged(startEdge, 'y1', y0);
+        setAttributeIfChanged(startEdge, 'y2', y1);
+      }
       const endEdge = find('endEdge', '[data-chart-zoom-end-edge]');
       setAttributeIfChanged(endEdge, 'x1', endX.toFixed(2));
       setAttributeIfChanged(endEdge, 'x2', endX.toFixed(2));
-      const deferNonVisual = Boolean(drag && !forceLabels);
+      if (!deferNonVisual) {
+        setAttributeIfChanged(endEdge, 'y1', y0);
+        setAttributeIfChanged(endEdge, 'y2', y1);
+      }
       const updateHandle = (side, x, timestamp, min, max) => {
         const handle = find(`${side}Handle`, `[data-chart-zoom-handle="${side}"]`);
         setAttributeIfChanged(handle, 'transform', `translate(${x.toFixed(2)} 0)`);
@@ -2715,6 +2725,13 @@
       drag.pendingX = event.clientX;
       this._applyChartZoomSelectionMove(drag, event.clientX, true);
       event.preventDefault?.();
+    }
+
+    _setChartGestureActive(plot, active) {
+      if (!plot?.classList) return;
+      if (typeof plot.classList.toggle === 'function') plot.classList.toggle('chart-gesture-active', Boolean(active));
+      else if (active) plot.classList.add?.('chart-gesture-active');
+      else plot.classList.remove?.('chart-gesture-active');
     }
 
     _applyChartZoomSelectionMove(drag, clientX, forceLabels = false) {
@@ -2959,6 +2976,7 @@
             applyButton: actions?.querySelector('[data-chart-zoom-apply]'),
           },
         };
+        this._setChartGestureActive(plot, true);
         try { plot.setPointerCapture(event.pointerId); } catch (_error) {}
         event.preventDefault?.();
         return;
@@ -3027,6 +3045,7 @@
         tStart, tEnd, live: false, committed: false,
         buf: scope === 'params' ? { start: tStart, end: this._historyAt || Date.now(), items: this._history } : null,
       };
+      this._setChartGestureActive(plot, true);
       plot.classList.add('is-panning');
     }
 
@@ -3111,6 +3130,7 @@
       const zoomDrag = this._chartZoomDrag;
       if (zoomDrag?.pointerId === event.pointerId) {
         this._chartZoomSelectionMove(event);
+        this._setChartGestureActive(zoomDrag.plot, false);
         this._chartZoomDrag = null;
         try { zoomDrag.plot.releasePointerCapture(event.pointerId); } catch (_error) {}
         this._flushDeferredChartUpdates();
@@ -3142,6 +3162,7 @@
       const pan = this._chartPan;
       if (!pan) return;
       this._cancelChartPanPreviewFrame(pan);
+      this._setChartGestureActive(pan.plot, false);
       this._chartPan = null;
       this._chartTouchScrubbing = null;
       pan.plot.classList.remove('is-panning');
@@ -5056,7 +5077,7 @@
         .tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:6px;gap:5px;margin-bottom:18px;background:linear-gradient(100deg,#15263b,#1b2c44)}.tabs-side{display:none}.tab{border:0;background:transparent;color:#a9bedc;padding:13px 8px;border-radius:17px;font:inherit;font-size:clamp(13px,1.5cqw,18px);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:11px;transition:background .18s,color .18s}.tab .tab-icon{font-size:24px;color:inherit}.tab .icon{width:25px;height:25px}.tab.active{background:linear-gradient(110deg,#078be9,#0875d5);color:white;box-shadow:0 5px 20px #008dff40}.tab:focus-visible,.period-button:focus-visible,.action-button:focus-visible,.save-button:focus-visible,.switch-button:focus-visible{outline:2px solid #8ce1ff;outline-offset:2px}
         .main-grid{display:grid;grid-template-columns:1.03fr 1fr;gap:14px}.voltage{min-height:385px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px;position:relative;overflow:hidden}.voltage.alarm{border-color:#ff526d99}.voltage.inverter{border-color:#ffb51b99}.voltage.pzem-offline{border-color:#ffb51b99}.voltage-gauge{width:min(100%,490px);height:auto;overflow:visible}.voltage-value{font-size:70px;font-weight:800;letter-spacing:-2px;fill:#f7fbff}.voltage-unit{font-size:43px;letter-spacing:0}.voltage-label{font-size:25px;fill:#b3c8e4}.state-indicator{display:flex;align-items:center;gap:11px;color:var(--green);font-size:24px;font-weight:800;margin-top:-3px}.state-indicator.inverter{color:var(--amber)}.state-indicator.pzem-offline{color:var(--amber)}.state-indicator.alarm,.state-indicator.offline{color:var(--red)}.state-indicator.unknown{color:var(--muted)}.check-mark{width:32px;height:32px;border-radius:50%;background:var(--green);color:#052116;display:grid;place-items:center;box-shadow:0 0 18px #35ed9166}.check-mark .icon{width:23px;height:23px}.state-indicator.inverter .check-mark{background:var(--amber);color:#392400}.state-indicator.pzem-offline .check-mark{background:var(--amber);color:#392400}.state-indicator.alarm .check-mark,.state-indicator.offline .check-mark{background:var(--red);color:#390711}.state-indicator.unknown .check-mark{background:#53677e;color:#d6e5f6}
         .metrics{display:grid;grid-template-columns:1fr 1fr;gap:14px}.metric{min-height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;text-align:center}.metric-icon{font-size:48px;line-height:1.15;color:var(--blue);text-shadow:0 0 15px #009dff66}.metric-icon .icon{width:52px;height:52px}.metric.current .metric-icon{color:var(--cyan)}.metric.frequency .metric-icon{color:#08d6e7}.metric.pf .metric-icon{color:var(--purple)}.metric-value{font-size:clamp(30px,4cqw,53px);font-weight:800;letter-spacing:-1.5px;margin:4px 0;overflow-wrap:anywhere}.metric-value .unit{font-size:.62em;letter-spacing:0;white-space:nowrap}.metric-label{color:#b2c6e1;font-size:19px}
-        .chart-card{margin-top:14px;padding:17px 20px 12px}.chart-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px}.chart-head h2{font-size:24px;margin:0;display:flex;align-items:center;gap:12px}.chart-icon{color:var(--blue);font-size:28px}.chart-icon .icon{width:30px;height:30px}.periods{margin-left:auto;display:flex;background:#1a2b42;border-radius:15px;padding:4px;gap:3px}.period-button{border:0;background:transparent;color:#b4c7e0;padding:8px 15px;border-radius:12px;font:inherit;font-size:15px;cursor:pointer}.period-button.active{background:#078de9;color:white;box-shadow:0 3px 12px #008fff55}.chart{width:100%;height:auto;display:block;overflow:visible}.chart-grid{fill:none;stroke:#29415c;stroke-width:1}.chart-grid text{fill:#b7c9df;stroke:none;font-size:14px}.chart-glow{fill:none;stroke:#0aaaff;stroke-width:8;opacity:.55}.chart-line{fill:none;stroke:#16b5ff;stroke-width:3.5;stroke-linejoin:round;stroke-linecap:round}.chart-dot{fill:#18baff;filter:drop-shadow(0 0 7px #18baff)}.chart-tag{fill:#0d2035;stroke:#08aaff}.chart-tag-text{fill:#fff!important;font-size:15px!important;font-weight:bold}.chart-empty{height:205px;display:grid;place-items:center;color:#91a8c3;font-size:14px;text-align:center;padding:20px}
+        .chart-card{margin-top:14px;padding:17px 20px 12px}.chart-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px}.chart-head h2{font-size:24px;margin:0;display:flex;align-items:center;gap:12px}.chart-icon{color:var(--blue);font-size:28px}.chart-icon .icon{width:30px;height:30px}.periods{margin-left:auto;display:flex;background:#1a2b42;border-radius:15px;padding:4px;gap:3px}.period-button{border:0;background:transparent;color:#b4c7e0;padding:8px 15px;border-radius:12px;font:inherit;font-size:15px;cursor:pointer}.period-button.active{background:#078de9;color:white;box-shadow:0 3px 12px #008fff55}.chart{width:100%;height:auto;display:block;overflow:visible}.chart-grid{fill:none;stroke:#29415c;stroke-width:1}.chart-grid text{fill:#b7c9df;stroke:none;font-size:14px}.chart-glow{fill:none;stroke:#0aaaff;stroke-width:8;opacity:.55}.chart-line{fill:none;stroke:#16b5ff;stroke-width:3.5;stroke-linejoin:round;stroke-linecap:round}.chart-dot{fill:#18baff;filter:drop-shadow(0 0 7px #18baff)}.chart-tag{fill:#0d2035;stroke:#08aaff}.chart-tag-text{fill:#fff!important;font-size:15px!important;font-weight:bold}.chart-empty{height:205px;display:grid;place-items:center;color:#91a8c3;font-size:14px;text-align:center;padding:20px}.chart-gesture-active{touch-action:none;contain:layout paint}.chart-gesture-active .chart-data{will-change:transform}.chart-gesture-active .chart-glow,.chart-gesture-active .chart-dot,.chart-gesture-active .chart-tag{filter:none!important}.chart-gesture-active .chart-glow{visibility:hidden}.chart-gesture-active .chart-dot,.chart-gesture-active .chart-tag{animation:none!important}.chart-gesture-active *{transition:none!important}
         .info{padding:17px 12px;min-height:128px;display:flex;align-items:center;justify-content:center;gap:12px;min-width:0}.info .symbol{font-size:38px;flex:none;color:var(--green);filter:drop-shadow(0 0 10px #35ed9166)}.info .symbol .icon{width:42px;height:42px}.info .symbol.blue{color:#91b8e9}.info .symbol.amber{color:var(--amber)}.info .small{color:#b6c9e2;font-size:16px}.info strong{display:block;font-size:20px;margin-top:5px;overflow-wrap:anywhere}.info .good{color:var(--green)}.info .cost-line{margin-top:3px}
         .banner{margin-top:14px;padding:18px 24px;min-height:88px;display:flex;align-items:center;gap:18px;border:1px solid #39d77e;background:linear-gradient(90deg,#0c302a,#0c2631 68%,#102b42);box-shadow:0 0 24px #28d87920}.banner.inverter{border-color:#ffb51b;background:linear-gradient(90deg,#382711,#18283a 80%);box-shadow:0 0 24px #ffb51b20}.banner.pzem-offline{border-color:#ffb51b;background:linear-gradient(90deg,#382711,#18283a 80%);box-shadow:0 0 24px #ffb51b20}.banner.alarm,.banner.offline{border-color:#ff526d;background:linear-gradient(90deg,#3a1420,#18283a 80%);box-shadow:0 0 24px #ff526d20}.banner.unknown{border-color:#53677e;background:linear-gradient(90deg,#1a2939,#101e30)}.banner-check{width:48px;height:48px;border-radius:50%;background:var(--green);color:#052116;display:grid;place-items:center;flex:none;box-shadow:0 0 18px #35ed9166}.banner-check .icon{width:36px;height:36px}.banner.inverter .banner-check{background:var(--amber);color:#392400}.banner.pzem-offline .banner-check{background:var(--amber);color:#392400}.banner.alarm .banner-check,.banner.offline .banner-check{background:var(--red);color:#390711}.banner.unknown .banner-check{background:#53677e;color:#d6e5f6}.banner strong{color:#4df29a;font-size:clamp(17px,2cqw,24px)}.banner.inverter strong{color:#ffd078}.banner.pzem-offline strong{color:#ffd078}.banner.alarm strong,.banner.offline strong{color:#ff8a9a}.banner.unknown strong{color:#b4c7df}.house-art{margin-left:auto;width:130px;max-width:22%;flex:none;filter:drop-shadow(0 0 11px #1b8fff)}.house-art svg{display:block;width:100%;height:auto}
         .detail-panel{padding:22px;margin-top:2px}.detail-panel h2{margin:0 0 18px;font-size:25px}.detail-panel h2.subheading{margin:24px 0 14px;font-size:19px}.detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.detail{padding:16px;border-radius:16px;background:#13243a;border:1px solid #2b4562;min-width:0}.detail>span,.detail label>span{display:block;color:#9fb5d1;font-size:14px;margin-bottom:7px}.detail b{font-size:22px;overflow-wrap:anywhere}.setting{display:flex;align-items:end;gap:10px}.setting label{flex:1;min-width:0}.setting-input{display:flex;align-items:center;gap:8px}.setting-input input{width:100%;min-width:0;background:#091727;border:1px solid #37526f;border-radius:9px;color:var(--text);padding:10px;font:inherit;font-size:18px}.setting-input small{color:#9fb5d1;white-space:nowrap}.save-button,.switch-button,.action-button{border:1px solid #278ed0;background:#092645;color:#d7efff;border-radius:10px;padding:9px 12px;font:inherit;cursor:pointer}.save-button:hover,.switch-button:hover,.action-button:hover{background:#0c3962}.save-button:disabled,.switch-button:disabled,.action-button:disabled{opacity:.45;cursor:not-allowed}.switch-setting{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.switch-setting>span{color:#9fb5d1;font-size:14px}.switch-setting>strong{font-size:16px}.switch-button{grid-column:1/-1;display:flex;align-items:center;gap:8px;justify-content:center}.switch-button .icon{width:20px;height:20px}.switch-button.on{border-color:#35ed91;color:#35ed91}.action-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.action-button{min-height:68px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;font-size:13px;border-color:#2b8ed0}.action-button span{font-size:22px;color:#45bdff}.action-button .icon{width:25px;height:25px}.footer{display:flex;justify-content:space-between;gap:10px;margin:14px 2px 0;color:#6885a2;font-size:11px}.footer span:last-child{max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
