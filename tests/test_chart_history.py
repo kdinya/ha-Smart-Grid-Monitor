@@ -2536,3 +2536,39 @@ assert.ok(Math.abs(reset.at(-1).value - 0.4) < 1e-9, `reset keeps the new value,
 """
         result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False, env={**os.environ, "TZ": "UTC"})
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+
+class ChartScrubTests(unittest.TestCase):
+    def test_marker_position_is_interpolated_between_chart_points(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), {
+  window: { customCards: [] },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+});
+const card = Object.create(registry.get('grid-monitor-card').prototype);
+card._chartPts = [
+  { x: 100, y: 200, v: 400, t: 1000 },
+  { x: 200, y: 100, v: 500, t: 2000 },
+  { x: 200, y: 50, v: 600, t: 2000 },
+  { x: 300, y: 50, v: 600, t: 3000 },
+];
+const mid = card._chartPointAtX(150);
+assert.deepEqual({ x: mid.x, y: mid.y, v: mid.v, t: mid.t }, { x: 150, y: 150, v: 450, t: 1500 });
+const quarter = card._chartPointAtX(125);
+assert.equal(quarter.t, 1250);
+assert.equal(card._chartPointAtX(50), card._chartPts[0], 'before the data the first point is used');
+assert.equal(card._chartPointAtX(400), card._chartPts[3], 'after the data the last point is used');
+// A vertical step keeps both of its values at the same x.
+assert.equal(card._chartPointAtX(200).t, 2000);
+// Moving 1 px always moves the marker, unlike snapping to the nearest point.
+const xs = new Set();
+for (let x = 100; x <= 110; x += 1) xs.add(card._chartPointAtX(x).x);
+assert.equal(xs.size, 11);
+"""
+        result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)

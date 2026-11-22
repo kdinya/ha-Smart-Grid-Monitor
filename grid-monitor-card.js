@@ -3166,6 +3166,7 @@
           event.preventDefault?.();
         } else if (!isEnergy && this._chartPts.length) {
           this._chartTouchScrubbing = pointerId;
+          this._setChartGestureActive(plot, true);
           this._chartScrubContext(true);
           this._chartScrubAtClientX(event.clientX);
           event.preventDefault?.();
@@ -3183,6 +3184,7 @@
         event.preventDefault?.();
       } else if (!isEnergy && this._chartPts.length) {
         this._chartTouchScrubbing = pointerId;
+        this._setChartGestureActive(plot, true);
         this._chartScrubContext(true);
         this._chartScrubAtClientX(event.clientX);
         event.preventDefault?.();
@@ -3332,6 +3334,7 @@
       const pan = this._chartPan;
       if (this._chartTouchScrubbing === event.pointerId) {
         this._chartTouchScrubbing = null;
+        this._setChartGestureActive(this.shadowRoot.querySelector('[data-role="chart-plot"]'), false);
         this._flushChartScrubFrame();
         this._scrubCtx = null;
         if (this._scrubTime !== null) this._queueChartReadings(this._scrubTime, true);
@@ -3955,16 +3958,26 @@
     }
 
     _chartScrubberInput(value) {
-      const data = this._chartTimeBounds();
       const position = Number(value);
-      if (!data || !Number.isFinite(position) || !this._chartPts.length) return;
-      const timestamp = data.tStart + (data.rangeMs * Math.max(0, Math.min(1000, position)) / 1000);
-      this._selectChartPoint(this._nearestChartPoint(timestamp));
+      const ctx = this._chartScrubContext();
+      if (!ctx || !Number.isFinite(position)) return;
+      const fraction = Math.max(0, Math.min(1000, position)) / 1000;
+      const point = this._chartPointAtX(ctx.x0 + fraction * (ctx.x1 - ctx.x0));
+      if (point) this._applyChartScrub(point, ctx);
     }
 
     _restoreChartScrub() {
       if (this._scrubTime === null) return false;
-      const point = this._nearestChartPoint(this._scrubTime);
+      const bounds = this._chartTimeBounds();
+      const chart = this.shadowRoot?.querySelector('svg.chart');
+      const x0 = Number(chart?.dataset.chartX0);
+      const x1 = Number(chart?.dataset.chartX1);
+      let point = null;
+      if (bounds?.rangeMs > 0 && Number.isFinite(x0) && Number.isFinite(x1)) {
+        const x = x0 + ((this._scrubTime - bounds.tStart) / bounds.rangeMs) * (x1 - x0);
+        point = this._chartPointAtX(Math.max(x0, Math.min(x1, x)));
+      }
+      point = point || this._nearestChartPoint(this._scrubTime);
       if (!point) return false;
       this._renderChartPoint(point);
       this._updateChartScrubber();
@@ -4050,16 +4063,37 @@
       return Math.abs(pts[lo].x - x) <= Math.abs(pts[hi].x - x) ? pts[lo] : pts[hi];
     }
 
+    // The marker follows the finger continuously: position, time and value are interpolated between the
+    // neighbouring chart points instead of snapping to the nearest one.
+    _chartPointAtX(x) {
+      const pts = this._chartPts;
+      if (!pts.length) return null;
+      if (x <= pts[0].x) return pts[0];
+      const last = pts[pts.length - 1];
+      if (x >= last.x) return last;
+      let lo = 0;
+      let hi = pts.length - 1;
+      while (hi - lo > 1) {
+        const mid = (lo + hi) >> 1;
+        if (pts[mid].x <= x) lo = mid; else hi = mid;
+      }
+      const a = pts[lo];
+      const b = pts[hi];
+      if (b.x === a.x) return a;
+      const f = (x - a.x) / (b.x - a.x);
+      return { x, y: a.y + (b.y - a.y) * f, v: a.v + (b.v - a.v) * f, t: Math.round(a.t + (b.t - a.t) * f) };
+    }
+
     _chartScrubAtClientX(clientX) {
       const ctx = this._chartScrubContext();
       if (!ctx || !Number.isFinite(clientX)) return;
       const x = (clientX - ctx.left) * (ctx.chartW / ctx.width);
-      const point = this._nearestChartPointByX(Math.max(ctx.x0, Math.min(ctx.x1, x)));
+      const point = this._chartPointAtX(Math.max(ctx.x0, Math.min(ctx.x1, x)));
       if (point) this._applyChartScrub(point, ctx);
     }
 
     _applyChartScrub(point, ctx) {
-      if (ctx.lastPoint === point && this._scrubTime === point.t) return;
+      if (ctx.lastPoint && ctx.lastPoint.x === point.x && this._scrubTime === point.t) return;
       const changed = this._scrubTime !== point.t;
       ctx.lastPoint = point;
       this._scrubTime = point.t;
@@ -4221,6 +4255,7 @@
 
     _clearChartScrub() {
       this._chartTouchScrubbing = null;
+      this._setChartGestureActive(this.shadowRoot?.querySelector?.('[data-role="chart-plot"]'), false);
       if (this._chartReadingsTimer !== null) window.clearTimeout(this._chartReadingsTimer);
       this._chartReadingsTimer = null;
       this._chartReadingsPendingTime = null;
