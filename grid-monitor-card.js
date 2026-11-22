@@ -4792,7 +4792,7 @@
         .metric .metric-info-button,.detail .metric-info-button{position:absolute;top:8px;right:8px;z-index:3;width:28px;height:28px;display:grid;place-items:center;padding:0;border:1px solid #64caff88;border-radius:50%;background:linear-gradient(145deg,#0d5791,#082340);color:#c5efff;font-family:inherit;font-size:15px;font-weight:800;line-height:1;cursor:pointer;box-shadow:0 0 12px #009dff26}
         .metric .metric-info-button:hover,.detail .metric-info-button:hover{background:linear-gradient(145deg,#0e78bf,#0a3961);color:#fff;border-color:#8edcff}
         .metric .metric-info-button:focus-visible,.detail .metric-info-button:focus-visible{outline:2px solid #bcecff;outline-offset:2px}
-        .detail.metric-info-card>span{padding-right:34px}
+        .detail.metric-info-card>span{padding-right:34px}.detail.metric-info-card>.detail-icon{padding:0}
 
         @container (min-width:761px){.metric{min-height:0;padding:12px 10px}.metric-icon{font-size:40px}.metric-icon .icon{width:40px;height:40px}.metric-value{font-size:clamp(30px,3.4cqw,46px);margin:0}.metric-range{margin-top:6px}}
         .metric-range{display:flex;justify-content:center;flex-wrap:wrap;gap:2px 16px;margin-top:8px;color:#9fb7d6;font-size:14px}.metric-range b{color:#e6f0ff;font-size:15px;font-weight:700;margin-left:4px}
