@@ -1406,7 +1406,6 @@
       this._updateStatusClasses();
       this._updateValueBindings(LIVE_DISPLAY_KEYS);
       this._updateHome(LIVE_MEASUREMENT_KEYS);
-      if (this._activeTab === 'home') this._updateHomeStatus();
       if (this._activeTab === 'params') this._updateRange();
       if (this._activeTab === 'settings') this._updateDeviceStatus();
     }
@@ -1543,9 +1542,6 @@
       const voltageUnit = voltage === null ? '' : this._unit('voltage') || (this._lang() === 'uk' ? 'В' : 'V');
       const [markerX, markerY] = gaugeMarker(progress);
       const gaugeDot = `<circle class="gauge-dot" data-role="gauge-dot" fill="url(#${this._id('knob')})" cx="${markerX.toFixed(1)}" cy="${markerY.toFixed(1)}" r="9" visibility="${voltage === null ? 'hidden' : 'visible'}"/>`;
-      const mainsText = status.esp === 'off' ? this._t('no_voltage') : status.pzemOnline ? this._t('pzem_online') : status.pzemOffline ? this._t('pzem_offline') : this._t('detecting');
-      const sourceText = status.source;
-      const voltageQuality = this._formatted('voltage_status');
       const espPower = this._espPowerStatus();
       const energy = this._formatted('energy_today', 2);
       const cost = this._formatted('cost_today', 2);
@@ -1573,6 +1569,7 @@
               ${gaugeDot}
               <text x="250" y="266" text-anchor="middle" class="voltage-value${voltage === null ? ' empty' : ''}" data-role="voltage-text"><tspan data-role="voltage-number">${this._escape(voltageNumber)}</tspan> <tspan class="voltage-unit" data-role="voltage-unit">${this._escape(voltageUnit)}</tspan></text>
               <text x="250" y="298" text-anchor="middle" class="voltage-label">${this._escape(this._t('voltage'))}</text>
+              <text x="250" y="327" text-anchor="middle" class="gauge-usage" data-role="gauge-usage"><title>${this._escape(this._t('today_consumption'))}</title><tspan class="gauge-usage-energy" data-value-key="energy_today" data-value-digits="2">${this._escape(energy)}</tspan><tspan class="gauge-usage-cost" dx="12">≈ </tspan><tspan class="gauge-usage-cost" data-value-key="cost_today" data-value-digits="2">${this._escape(cost)}</tspan></text>
               <text x="${gaugePoint(GAUGE.start)[0].toFixed(0)}" y="334" text-anchor="middle" class="gauge-end">${GAUGE.min}</text>
               <text x="${gaugePoint(GAUGE.start + GAUGE.span)[0].toFixed(0)}" y="334" text-anchor="middle" class="gauge-end">${GAUGE.max}</text>
             </svg>
@@ -1587,12 +1584,6 @@
               ${this._heroMetric('power_factor', 'pf', 2)}
             </div>${this._statsNote()}
           </div>
-        </div>
-        <div class="bottom-status">
-          <div class="card info info-system"><span class="symbol green">${this._svg('plug')}</span><div><div class="small">${this._escape(this._t('pzem_link'))}</div><strong data-role="home-mains" class="${status.pzemOnline ? 'good' : ''}">${this._escape(mainsText)}</strong></div></div>
-          <div class="card info"><span class="symbol blue">${this._svg('plug')}</span><div><div class="small">${this._escape(this._t('source'))}</div><strong data-role="home-source">${this._escape(sourceText)}</strong></div></div>
-          <div class="card info"><span class="symbol green">${this._svg('shield')}</span><div><div class="small">${this._escape(this._t('voltage_state'))}</div><strong data-role="home-voltage-quality" class="${status.pzemOnline && !status.alarm && !status.qualityUnknown ? 'good' : status.alarm ? 'alarm' : ''}">${this._escape(voltageQuality)}</strong></div></div>
-          <div class="card info"><span class="symbol amber">${this._svg('coin')}</span><div><div class="small">${this._escape(this._t('today_consumption'))}</div><strong data-value-key="energy_today" data-value-digits="2">${this._escape(energy)}</strong><div class="small cost-line">≈ <span data-value-key="cost_today" data-value-digits="2">${this._escape(cost)}</span></div></div></div>
         </div>
         <div class="card banner ${status.stateClass}" data-role="home-banner"><span class="banner-check">${this._svg('check')}</span><div class="banner-main"><strong data-role="home-banner-label">${this._escape(status.banner)}</strong></div><div class="banner-system"><span class="banner-system-label">${this._escape(this._t('esp_power_connection'))}</span><strong data-role="esp-power-label">${this._escape(espPower.label)}</strong><span class="banner-system-note" data-role="esp-power-note">${this._escape(espPower.note)}</span></div><span class="house-art" aria-hidden="true">${this._houseArt()}</span></div>
       </section>`;
@@ -1717,45 +1708,34 @@
     }
     _houseArt() {
       return `
-        <svg viewBox="0 0 160 140" class="real-vector-art house-night-scene" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="0 22 160 116" class="real-vector-art house-scene" xmlns="http://www.w3.org/2000/svg">
           <defs>
-            <linearGradient id="houseSky" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#050e1c"/>
-              <stop offset="60%" stop-color="#0a1b32"/>
-              <stop offset="100%" stop-color="#0c2544"/>
-            </linearGradient>
             <linearGradient id="houseRoof" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="#223d63"/>
-              <stop offset="50%" stop-color="#142642"/>
-              <stop offset="100%" stop-color="#0a1526"/>
+              <stop offset="0%" stop-color="#6b7f9b"/>
+              <stop offset="100%" stop-color="#3f5068"/>
+            </linearGradient>
+            <linearGradient id="houseRoofSide" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#52627b"/>
+              <stop offset="100%" stop-color="#3a4960"/>
             </linearGradient>
             <linearGradient id="houseWallFront" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="#1b365d"/>
-              <stop offset="100%" stop-color="#0e213d"/>
+              <stop offset="0%" stop-color="#f1f4f8"/>
+              <stop offset="100%" stop-color="#d3dbe6"/>
             </linearGradient>
             <linearGradient id="houseWallSide" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stop-color="#122744"/>
-              <stop offset="100%" stop-color="#09172c"/>
+              <stop offset="0%" stop-color="#b9c4d3"/>
+              <stop offset="100%" stop-color="#a1aebf"/>
             </linearGradient>
-            <linearGradient id="houseWindowWarm" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#fff1aa"/>
-              <stop offset="50%" stop-color="#ffb834"/>
-              <stop offset="100%" stop-color="#ff7200"/>
+            <linearGradient id="houseGlass" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#e3f1fb"/>
+              <stop offset="100%" stop-color="#8fb9d9"/>
             </linearGradient>
             <linearGradient id="poleWood" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stop-color="#5a422d"/>
-              <stop offset="50%" stop-color="#3d2a1a"/>
-              <stop offset="100%" stop-color="#24170d"/>
+              <stop offset="0%" stop-color="#9a8068"/>
+              <stop offset="100%" stop-color="#6d5742"/>
             </linearGradient>
-            <filter id="houseWarmGlow" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="2.5" result="blur"/>
-              <feMerge>
-                <feMergeNode in="blur"/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
-            </filter>
-            <filter id="greenGlow" x="-40%" y="-40%" width="180%" height="180%">
-              <feGaussianBlur stdDeviation="2" result="blur"/>
+            <filter id="houseMeterGlow" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="1.6" result="blur"/>
               <feMerge>
                 <feMergeNode in="blur"/>
                 <feMergeNode in="SourceGraphic"/>
@@ -1763,98 +1743,62 @@
             </filter>
           </defs>
 
-          <!-- Night Sky Backdrop with Rounded Frame -->
-          <rect x="2" y="2" width="156" height="136" rx="14" fill="url(#houseSky)"/>
+          <!-- Soft ground and shadow -->
+          <ellipse cx="86" cy="124" rx="68" ry="8" fill="#000" opacity="0.2"/>
+          <path d="M6 120 Q50 112 88 116 Q126 112 156 120 Q126 130 88 130 Q46 130 6 120 Z" fill="#6f8c7a" opacity="0.55"/>
 
-          <!-- Stars -->
-          <g fill="#d9f0ff">
-            <circle cx="28" cy="16" r="0.75" opacity="0.8"/>
-            <circle cx="45" cy="26" r="0.6" opacity="0.6"/>
-            <circle cx="68" cy="14" r="0.8" opacity="0.9"/>
-            <circle cx="86" cy="22" r="0.5" opacity="0.5"/>
-            <circle cx="112" cy="15" r="0.7" opacity="0.75"/>
-            <circle cx="140" cy="28" r="0.6" opacity="0.6"/>
-            <circle cx="125" cy="38" r="0.5" opacity="0.5"/>
-          </g>
+          <!-- Garden path -->
+          <path d="M118 120 Q114 126 108 133 L97 133 Q105 126 110 120 Z" fill="#cfd6df" opacity="0.9"/>
 
-          <!-- Crescent Moon -->
-          <path d="M136 12 C131 14 128 19 128 25 C128 31 132 36 138 37 C133 38 125 35 125 24 C125 15 131 12 136 12 Z" fill="#fff5cc" filter="drop-shadow(0 0 3px #ffeaa3)"/>
-
-          <!-- Distant Horizon -->
-          <path d="M2 112 Q35 106 70 109 Q115 104 158 111 L158 138 L2 138 Z" fill="#08182b"/>
-
-          <!-- Ground Lawn -->
-          <path d="M2 118 Q45 114 85 117 Q125 115 158 120 L158 138 L2 138 Z" fill="#0b2038"/>
-          <ellipse cx="88" cy="130" rx="58" ry="7" fill="#040b15" opacity="0.7"/>
-
-          <!-- Garden Pathway to Entrance -->
-          <path d="M120 125 Q116 130 110 137 L100 137 Q108 129 113 125 Z" fill="#152b47" stroke="#25436c" stroke-width="0.5"/>
-
-          <!-- Garden Solar Path Lights -->
-          <g>
-            <line x1="96" y1="128" x2="96" y2="133" stroke="#4a6585" stroke-width="1"/>
-            <circle cx="96" cy="127" r="1.5" fill="#ffd97d" filter="drop-shadow(0 0 2px #ffc84a)"/>
-            <line x1="124" y1="129" x2="124" y2="134" stroke="#4a6585" stroke-width="1"/>
-            <circle cx="124" cy="128" r="1.5" fill="#ffd97d" filter="drop-shadow(0 0 2px #ffc84a)"/>
-          </g>
-
-          <!-- Modern House Structure -->
-          <!-- Left Wing Side Wall -->
+          <!-- Walls -->
           <polygon points="46,80 78,63 78,118 46,124" fill="url(#houseWallSide)"/>
+          <polygon points="78,63 134,84 134,120 78,118" fill="url(#houseWallFront)"/>
+          <polyline points="78,63 78,118" fill="none" stroke="#8d9bb0" stroke-width="0.6"/>
 
-          <!-- Front Main Facade -->
-          <polygon points="78,63 134,84 134,120 78,118" fill="url(#houseWallFront)" stroke="#2b4973" stroke-width="0.5"/>
+          <!-- Roof -->
+          <polygon points="90,34 42,76 78,59" fill="url(#houseRoofSide)"/>
+          <polygon points="90,34 78,59 136,80 142,50" fill="url(#houseRoof)"/>
+          <polyline points="90,34 142,50" fill="none" stroke="#a9b7ca" stroke-width="0.8" stroke-linecap="round"/>
 
-          <!-- Modern Pitched Roof -->
-          <polygon points="90,34 42,76 78,59" fill="#294873"/>
-          <polygon points="90,34 78,59 136,80 142,50" fill="url(#houseRoof)" stroke="#3f6ba3" stroke-width="0.6"/>
+          <!-- Solar panels -->
+          <polygon points="84,54 118,67 114,75 80,62" fill="#2d4262" stroke="#b7c9de" stroke-width="0.8"/>
+          <line x1="95" y1="58" x2="92" y2="66" stroke="#b7c9de" stroke-width="0.5"/>
+          <line x1="106" y1="63" x2="103" y2="71" stroke="#b7c9de" stroke-width="0.5"/>
 
-          <!-- Solar PV Panels on Roof -->
-          <polygon points="84,54 118,67 114,75 80,62" fill="#07172e" stroke="#12b5ff" stroke-width="0.9"/>
-          <line x1="95" y1="58" x2="92" y2="66" stroke="#12b5ff" stroke-width="0.6"/>
-          <line x1="106" y1="63" x2="103" y2="71" stroke="#12b5ff" stroke-width="0.6"/>
-          <line x1="82" y1="58" x2="116" y2="71" stroke="#12b5ff" stroke-width="0.5" opacity="0.7"/>
+          <!-- Windows -->
+          <polygon points="92,86 108,92 108,105 92,100" fill="url(#houseGlass)" stroke="#7d8da3" stroke-width="0.8"/>
+          <line x1="100" y1="89" x2="100" y2="103" stroke="#7d8da3" stroke-width="0.7"/>
+          <line x1="92" y1="94" x2="108" y2="99" stroke="#7d8da3" stroke-width="0.7"/>
+          <polygon points="52,90 68,82 68,102 52,107" fill="url(#houseGlass)" stroke="#6f7f96" stroke-width="0.8"/>
+          <line x1="60" y1="86" x2="60" y2="104" stroke="#6f7f96" stroke-width="0.7"/>
 
-          <!-- Warm Glowing Windows -->
-          <g filter="url(#houseWarmGlow)">
-            <polygon points="92,86 108,92 108,105 92,100" fill="url(#houseWindowWarm)"/>
-            <line x1="100" y1="89" x2="100" y2="103" stroke="#8a4b00" stroke-width="0.8"/>
-            <line x1="92" y1="94" x2="108" y2="99" stroke="#8a4b00" stroke-width="0.8"/>
+          <!-- Door with canopy -->
+          <polygon points="115,98 126,102 126,120 115,119" fill="#56657c" stroke="#7d8da3" stroke-width="0.6"/>
+          <circle cx="123" cy="111" r="0.9" fill="#e7edf5"/>
+          <polygon points="113,97 128,101 127,99 112,95" fill="#8393aa"/>
 
-            <polygon points="52,90 68,82 68,102 52,107" fill="url(#houseWindowWarm)"/>
-            <line x1="60" y1="86" x2="60" y2="104" stroke="#8a4b00" stroke-width="0.8"/>
-          </g>
+          <!-- Smart meter -->
+          <rect x="44" y="96" width="5" height="9" rx="1" fill="#eef2f7" stroke="#35ed91" stroke-width="0.7"/>
+          <circle cx="46.5" cy="99" r="1" fill="#35ed91" filter="url(#houseMeterGlow)"/>
 
-          <!-- Entrance Door with Canopy & Light -->
-          <polygon points="115,98 126,102 126,120 115,119" fill="#0d1b30" stroke="#19b3ff" stroke-width="0.8"/>
-          <circle cx="123" cy="111" r="0.9" fill="#ffb834"/>
-          <polygon points="113,97 128,101 127,99 112,95" fill="#355882"/>
-          <circle cx="120" cy="99" r="1.2" fill="#ffe58f" filter="drop-shadow(0 0 2px #ffc107)"/>
+          <!-- Utility pole -->
+          <polygon points="14,48 18,48 19,132 13,132" fill="url(#poleWood)"/>
+          <rect x="9" y="56" width="16" height="3" rx="0.5" fill="#6d5742" stroke="#8a7258" stroke-width="0.5"/>
+          <line x1="13" y1="62" x2="17" y2="59" stroke="#6d5742" stroke-width="1"/>
+          <rect x="10" y="52" width="2" height="4" rx="0.5" fill="#c9d6e4"/>
+          <rect x="22" y="52" width="2" height="4" rx="0.5" fill="#c9d6e4"/>
 
-          <!-- Smart Meter on House Wall -->
-          <rect x="44" y="96" width="5" height="9" rx="1" fill="#1b365d" stroke="#35ed91" stroke-width="0.7"/>
-          <circle cx="46.5" cy="99" r="1" fill="#35ed91" filter="url(#greenGlow)"/>
-
-          <!-- Wooden Utility Pole (Опора ЛЕП) -->
-          <g>
-            <polygon points="14,48 18,48 19,132 13,132" fill="url(#poleWood)"/>
-            <rect x="9" y="56" width="16" height="3" rx="0.5" fill="#301f12" stroke="#523924" stroke-width="0.5"/>
-            <line x1="13" y1="62" x2="17" y2="59" stroke="#1c120a" stroke-width="1"/>
-            <rect x="10" y="52" width="2" height="4" rx="0.5" fill="#8bc9eb"/>
-            <rect x="22" y="52" width="2" height="4" rx="0.5" fill="#8bc9eb"/>
-          </g>
-
-          <!-- Power Line Cable from Pole to House Meter -->
-          <path d="M 23 54 Q 32 76 45 97" fill="none" stroke="#1c3a5e" stroke-width="1.2" stroke-linecap="round"/>
+          <!-- Service wire -->
+          <path d="M 23 54 Q 32 76 45 97" fill="none" stroke="#8d9bb0" stroke-width="1.2" stroke-linecap="round"/>
           <path class="house-wire-pulse" d="M 23 54 Q 32 76 45 97" fill="none" stroke="#35ed91" stroke-width="1.1" stroke-linecap="round"/>
 
-          <!-- Bushes and Greenery -->
-          <g fill="#104332">
+          <!-- Greenery -->
+          <g fill="#4f7a64">
             <ellipse cx="40" cy="125" rx="7" ry="5"/>
             <ellipse cx="74" cy="120" rx="8" ry="6"/>
             <ellipse cx="138" cy="122" rx="9" ry="6"/>
           </g>
-          <g fill="#1b6348">
+          <g fill="#6f9d84">
             <ellipse cx="38" cy="124" rx="5" ry="3.5"/>
             <ellipse cx="73" cy="119" rx="6" ry="4.5"/>
             <ellipse cx="136" cy="121" rx="6" ry="4"/>
@@ -4319,8 +4263,7 @@
       if (changed.has('voltage') || changed.has('power') || changed.has('current')) this._updateHeaderTime();
       if (changed.has('mains') || changed.has('inverter') || changed.has('source_status') || changed.has('voltage_status') || changed.has('esp_status') || changed.has('voltage_alarm')) {
         this._updateStatusClasses();
-        if (this._activeTab === 'home') this._updateHomeStatus();
-      }
+        }
       if (Number.isFinite(this._statsStart) && this._statsExtremes && Date.now() >= this._statsStart) {
         let extremesChanged = false;
         for (const metric of STATS_METRIC_KEYS) {
@@ -4453,23 +4396,6 @@
       const value = Math.max(minimum, Math.min(maximum, current));
       const y = y1 - ((value - minimum) / (maximum - minimum)) * (y1 - y0);
       this._setChartMarker(chart, x1, y, `${current.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits })} ${metric.unit(this._lang(), this._currencyCode())}`);
-    }
-
-    _updateHomeStatus() {
-      const status = this._displayStatus();
-      const mainsText = status.esp === 'off' ? this._t('no_voltage') : status.pzemOnline ? this._t('pzem_online') : status.pzemOffline ? this._t('pzem_offline') : this._t('detecting');
-      const sourceText = status.source;
-      const voltageQuality = this._formatted('voltage_status');
-      const mains = this.shadowRoot.querySelector('[data-role="home-mains"]');
-      const source = this.shadowRoot.querySelector('[data-role="home-source"]');
-      const quality = this.shadowRoot.querySelector('[data-role="home-voltage-quality"]');
-      if (mains) { mains.textContent = mainsText; mains.classList.toggle('good', status.pzemOnline); }
-      if (source) source.textContent = sourceText;
-      if (quality) {
-        quality.textContent = voltageQuality;
-        quality.classList.toggle('good', status.pzemOnline && !status.alarm && !status.qualityUnknown);
-        quality.classList.toggle('alarm', status.alarm);
-      }
     }
 
     _updateTariffBars() {
@@ -4682,14 +4608,14 @@
         .main-grid{display:grid;grid-template-columns:1.03fr 1fr;gap:14px}.voltage{min-height:385px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px;position:relative;overflow:hidden}.voltage.alarm{border-color:#ff526d99}.voltage.inverter{border-color:#ffb51b99}.voltage.pzem-offline{border-color:#ffb51b99}.voltage-gauge{width:min(100%,490px);height:auto;overflow:visible}.voltage-value{font-size:70px;font-weight:800;letter-spacing:-2px;fill:#f7fbff}.voltage-unit{font-size:43px;letter-spacing:0}.voltage-label{font-size:25px;fill:#b3c8e4}.state-indicator{display:flex;align-items:center;gap:11px;color:var(--green);font-size:24px;font-weight:800;margin-top:-3px}.state-indicator.inverter{color:var(--amber)}.state-indicator.pzem-offline{color:var(--amber)}.state-indicator.alarm,.state-indicator.offline{color:var(--red)}.state-indicator.unknown{color:var(--muted)}.check-mark{width:32px;height:32px;border-radius:50%;background:var(--green);color:#052116;display:grid;place-items:center;box-shadow:0 0 18px #35ed9166}.check-mark .icon{width:23px;height:23px}.state-indicator.inverter .check-mark{background:var(--amber);color:#392400}.state-indicator.pzem-offline .check-mark{background:var(--amber);color:#392400}.state-indicator.alarm .check-mark,.state-indicator.offline .check-mark{background:var(--red);color:#390711}.state-indicator.unknown .check-mark{background:#53677e;color:#d6e5f6}
         .metrics{display:grid;grid-template-columns:1fr 1fr;gap:14px}.metric{min-height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;text-align:center}.metric-icon{font-size:48px;line-height:1.15;color:var(--blue);text-shadow:0 0 15px #009dff66}.metric-icon .icon{width:52px;height:52px}.metric.current .metric-icon{color:var(--cyan)}.metric.frequency .metric-icon{color:#08d6e7}.metric.pf .metric-icon{color:var(--purple)}.metric-value{font-size:clamp(30px,4cqw,53px);font-weight:800;letter-spacing:-1.5px;margin:4px 0;overflow-wrap:anywhere}.metric-value .unit{font-size:.62em;letter-spacing:0;white-space:nowrap}.metric-label{color:#b2c6e1;font-size:19px}
         .chart-card{margin-top:14px;padding:17px 20px 12px}.chart-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px}.chart-head h2{font-size:24px;margin:0;display:flex;align-items:center;gap:12px}.chart-icon{color:var(--blue);font-size:28px}.chart-icon .icon{width:30px;height:30px}.periods{margin-left:auto;display:flex;background:#1a2b42;border-radius:15px;padding:4px;gap:3px}.period-button{border:0;background:transparent;color:#b4c7e0;padding:8px 15px;border-radius:12px;font:inherit;font-size:15px;cursor:pointer}.period-button.active{background:#078de9;color:white;box-shadow:0 3px 12px #008fff55}.chart{width:100%;height:auto;display:block;overflow:visible}.chart-grid{fill:none;stroke:#29415c;stroke-width:1}.chart-grid text{fill:#b7c9df;stroke:none;font-size:14px}.chart-glow{fill:none;stroke:#0aaaff;stroke-width:8;opacity:.55}.chart-line{fill:none;stroke:#16b5ff;stroke-width:3.5;stroke-linejoin:round;stroke-linecap:round}.chart-dot{fill:#18baff;filter:drop-shadow(0 0 7px #18baff)}.chart-tag{fill:#0d2035;stroke:#08aaff}.chart-tag-text{fill:#fff!important;font-size:15px!important;font-weight:bold}.chart-empty{height:205px;display:grid;place-items:center;color:#91a8c3;font-size:14px;text-align:center;padding:20px}
-        .bottom-status{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:13px;margin-top:14px}.info{padding:17px 12px;min-height:128px;display:flex;align-items:center;justify-content:center;gap:12px;min-width:0}.info .symbol{font-size:38px;flex:none;color:var(--green);filter:drop-shadow(0 0 10px #35ed9166)}.info .symbol .icon{width:42px;height:42px}.info .symbol.blue{color:#91b8e9}.info .symbol.amber{color:var(--amber)}.info .small{color:#b6c9e2;font-size:16px}.info strong{display:block;font-size:20px;margin-top:5px;overflow-wrap:anywhere}.info .good{color:var(--green)}.info .cost-line{margin-top:3px}
+        .info{padding:17px 12px;min-height:128px;display:flex;align-items:center;justify-content:center;gap:12px;min-width:0}.info .symbol{font-size:38px;flex:none;color:var(--green);filter:drop-shadow(0 0 10px #35ed9166)}.info .symbol .icon{width:42px;height:42px}.info .symbol.blue{color:#91b8e9}.info .symbol.amber{color:var(--amber)}.info .small{color:#b6c9e2;font-size:16px}.info strong{display:block;font-size:20px;margin-top:5px;overflow-wrap:anywhere}.info .good{color:var(--green)}.info .cost-line{margin-top:3px}
         .banner{margin-top:14px;padding:18px 24px;min-height:88px;display:flex;align-items:center;gap:18px;border:1px solid #39d77e;background:linear-gradient(90deg,#0c302a,#0c2631 68%,#102b42);box-shadow:0 0 24px #28d87920}.banner.inverter{border-color:#ffb51b;background:linear-gradient(90deg,#382711,#18283a 80%);box-shadow:0 0 24px #ffb51b20}.banner.pzem-offline{border-color:#ffb51b;background:linear-gradient(90deg,#382711,#18283a 80%);box-shadow:0 0 24px #ffb51b20}.banner.alarm,.banner.offline{border-color:#ff526d;background:linear-gradient(90deg,#3a1420,#18283a 80%);box-shadow:0 0 24px #ff526d20}.banner.unknown{border-color:#53677e;background:linear-gradient(90deg,#1a2939,#101e30)}.banner-check{width:48px;height:48px;border-radius:50%;background:var(--green);color:#052116;display:grid;place-items:center;flex:none;box-shadow:0 0 18px #35ed9166}.banner-check .icon{width:36px;height:36px}.banner.inverter .banner-check{background:var(--amber);color:#392400}.banner.pzem-offline .banner-check{background:var(--amber);color:#392400}.banner.alarm .banner-check,.banner.offline .banner-check{background:var(--red);color:#390711}.banner.unknown .banner-check{background:#53677e;color:#d6e5f6}.banner strong{color:#4df29a;font-size:clamp(17px,2cqw,24px)}.banner.inverter strong{color:#ffd078}.banner.pzem-offline strong{color:#ffd078}.banner.alarm strong,.banner.offline strong{color:#ff8a9a}.banner.unknown strong{color:#b4c7df}.house-art{margin-left:auto;width:130px;max-width:22%;flex:none;filter:drop-shadow(0 0 11px #1b8fff)}.house-art svg{display:block;width:100%;height:auto}
         .detail-panel{padding:22px;margin-top:2px}.detail-panel h2{margin:0 0 18px;font-size:25px}.detail-panel h2.subheading{margin:24px 0 14px;font-size:19px}.detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.detail{padding:16px;border-radius:16px;background:#13243a;border:1px solid #2b4562;min-width:0}.detail>span,.detail label>span{display:block;color:#9fb5d1;font-size:14px;margin-bottom:7px}.detail b{font-size:22px;overflow-wrap:anywhere}.setting{display:flex;align-items:end;gap:10px}.setting label{flex:1;min-width:0}.setting-input{display:flex;align-items:center;gap:8px}.setting-input input{width:100%;min-width:0;background:#091727;border:1px solid #37526f;border-radius:9px;color:var(--text);padding:10px;font:inherit;font-size:18px}.setting-input small{color:#9fb5d1;white-space:nowrap}.save-button,.switch-button,.action-button{border:1px solid #278ed0;background:#092645;color:#d7efff;border-radius:10px;padding:9px 12px;font:inherit;cursor:pointer}.save-button:hover,.switch-button:hover,.action-button:hover{background:#0c3962}.save-button:disabled,.switch-button:disabled,.action-button:disabled{opacity:.45;cursor:not-allowed}.switch-setting{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.switch-setting>span{color:#9fb5d1;font-size:14px}.switch-setting>strong{font-size:16px}.switch-button{grid-column:1/-1;display:flex;align-items:center;gap:8px;justify-content:center}.switch-button .icon{width:20px;height:20px}.switch-button.on{border-color:#35ed91;color:#35ed91}.action-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.action-button{min-height:68px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;font-size:13px;border-color:#2b8ed0}.action-button span{font-size:22px;color:#45bdff}.action-button .icon{width:25px;height:25px}.footer{display:flex;justify-content:space-between;gap:10px;margin:14px 2px 0;color:#6885a2;font-size:11px}.footer span:last-child{max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
         .chart-head .periods+.periods{margin-left:0}.chart-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:4px 0 10px}.chart-stats>div{background:#13243a;border:1px solid #2b4562;border-radius:14px;padding:9px 12px;min-width:0}.chart-stats span{display:block;color:#9fb5d1;font-size:13px}.chart-stats b{display:block;font-size:19px;margin-top:3px;overflow-wrap:anywhere}.chart-stats small{display:block;margin-top:3px;color:#86a1c1;font-size:12px;line-height:1.25}
         .voltage-brand{display:flex;align-items:flex-start;gap:10px;align-self:flex-start;width:100%;min-width:0;max-width:100%;margin-bottom:0;flex-wrap:wrap}.voltage-brand .logo{flex:none}.voltage-brand .brand{flex:1 1 auto}.voltage-brand .brand h1{margin:0 0 2px;line-height:1.15;font-size:clamp(20px,2.6cqw,32px)}.voltage-brand .brand p{font-size:clamp(13px,1.5cqw,16px);line-height:1.2}.voltage-brand .home-status{flex:none;align-self:flex-start;gap:8px;margin-left:auto;max-width:100%}.voltage-brand .home-status .connection small{margin-top:2px}.voltage .voltage-gauge{margin:0}.main-right{display:flex;flex-direction:column;gap:10px;min-width:0}.main-right>.metrics{flex:1}
         @container (min-width:960px){.shell.home-active>.tabs-top{display:none}.shell:not(.home-active)>.tabs-top{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:45%;min-width:360px;max-width:560px;margin:0 0 14px auto;padding:8px;gap:6px}.shell:not(.home-active)>.tabs-top .tab{padding:15px 8px}.shell:not(.home-active)>.page-layout{display:block;margin-top:-40px}.shell:not(.home-active)>.page-layout>.tabs-side{display:none}.home-view .main-grid{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);grid-template-rows:auto;align-items:stretch}.home-view .main-grid>.voltage{grid-column:1;grid-row:1}.home-view .main-grid>.main-right{grid-column:2;grid-row:1}.home-view .main-right>.tabs-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:0;align-self:stretch;width:100%}}
         @container (max-width:959px){.home-view .main-grid{grid-template-columns:minmax(0,1fr);align-items:start}.home-view .main-right{display:contents}.home-view .main-right>.tabs-side{display:none}.home-view .main-grid>.voltage{grid-column:1;grid-row:1}.home-view .main-right>.metrics{grid-column:1;grid-row:2}.shell:not(.home-active)>.tabs-top{display:grid}.shell:not(.home-active)>.page-layout{display:block;margin-top:-40px}.shell:not(.home-active)>.page-layout>.tabs-side{display:none}}
-        @container (max-width:760px){.shell{padding:12px}.header{gap:11px;padding:5px 2px 14px}.logo{width:58px;height:58px;border-radius:17px}.logo .icon{width:38px;height:38px}.headright{gap:8px}.connection strong{font-size:14px}.connection small{font-size:10px}.tabs{margin-bottom:12px}.tab{gap:5px;padding:12px 3px;font-size:12px}.tab .tab-icon{font-size:19px}.tab .icon{width:20px;height:20px}.main-grid{grid-template-columns:1fr;gap:10px}.voltage{min-height:300px}.voltage-gauge{width:min(100%,420px)}.metrics{gap:10px}.metric{min-height:135px}.metric-icon .icon{width:38px;height:38px}.metric-label{font-size:15px}.chart-card{padding:13px 11px}.chart-head h2{font-size:19px}.periods{width:100%;margin:0}.period-button{flex:1;padding:8px 4px;font-size:13px}.bottom-status{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.info{min-height:100px;padding:12px 8px}.info .symbol .icon{width:30px;height:30px}.info .small{font-size:13px}.info strong{font-size:16px}.banner{padding:14px;min-height:70px}.banner-check{width:38px;height:38px}.banner-check .icon{width:28px;height:28px}.house-art{width:80px}.detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.detail-panel{padding:16px}.detail-panel h2{font-size:22px}.action-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+        @container (max-width:760px){.shell{padding:12px}.header{gap:11px;padding:5px 2px 14px}.logo{width:58px;height:58px;border-radius:17px}.logo .icon{width:38px;height:38px}.headright{gap:8px}.connection strong{font-size:14px}.connection small{font-size:10px}.tabs{margin-bottom:12px}.tab{gap:5px;padding:12px 3px;font-size:12px}.tab .tab-icon{font-size:19px}.tab .icon{width:20px;height:20px}.main-grid{grid-template-columns:1fr;gap:10px}.voltage{min-height:300px}.voltage-gauge{width:min(100%,420px)}.metrics{gap:10px}.metric{min-height:135px}.metric-icon .icon{width:38px;height:38px}.metric-label{font-size:15px}.chart-card{padding:13px 11px}.chart-head h2{font-size:19px}.periods{width:100%;margin:0}.period-button{flex:1;padding:8px 4px;font-size:13px}.info{min-height:100px;padding:12px 8px}.info .symbol .icon{width:30px;height:30px}.info .small{font-size:13px}.info strong{font-size:16px}.banner{padding:14px;min-height:70px}.banner-check{width:38px;height:38px}.banner-check .icon{width:28px;height:28px}.house-art{width:80px}.detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.detail-panel{padding:16px}.detail-panel h2{font-size:22px}.action-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
         @container (max-width:420px){.connection small{max-width:105px}.tab{font-size:11px}.tab .tab-icon{display:none}.metric{min-height:122px;padding:12px 8px}.metric-value{font-size:clamp(25px,8cqw,34px)}.info{gap:8px}.info .symbol .icon{width:26px;height:26px}.info .small{font-size:12px}.info strong{font-size:14px}.detail-grid{grid-template-columns:1fr}.setting{align-items:stretch}}
         /* Premium instrument finish: layered glass, metal highlights and soft depth. */
         :host{color-scheme:dark}.shell{position:relative;isolation:isolate;background:radial-gradient(ellipse at 12% 8%,#008bff25,transparent 32%),radial-gradient(ellipse at 88% 24%,#20e1b31a,transparent 30%),radial-gradient(ellipse at 50% 100%,#4351be20,transparent 42%),linear-gradient(145deg,#050b16,#091629 48%,#050b16);border-color:#70aee233;box-shadow:0 24px 60px #0009,inset 0 1px 0 #ffffff18,inset 0 -1px 0 #0008}
@@ -4702,7 +4628,7 @@
         .metric{background:linear-gradient(145deg,#1c3452,#091628);border-color:#70aee247;box-shadow:inset 0 1px 0 #ffffff20,0 14px 28px #0006,inset 0 -8px 17px #0005}.metric:before{content:"";position:absolute;right:-62px;top:-76px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,#00aeff40,transparent 70%);pointer-events:none}.metric-icon{filter:drop-shadow(0 5px 9px #00a6ff65)}.metric-value{text-shadow:0 3px 14px #0007}.info{background:linear-gradient(145deg,#1a314d,#081425);border-color:#69a4d944;box-shadow:inset 0 1px 0 #ffffff1d,0 12px 27px #0006,inset 0 -7px 16px #0005}.info .symbol{filter:drop-shadow(0 5px 8px #0006) drop-shadow(0 0 10px currentColor)}
         .chart-card{background:linear-gradient(145deg,#142b45f7,#071221fa);box-shadow:0 18px 36px #0007,inset 0 1px 0 #ffffff20,inset 0 -9px 20px #0005}.chart-line{filter:drop-shadow(0 0 3px #05baff)}.chart-tag{filter:drop-shadow(0 5px 8px #0008)}
         .banner{position:relative;overflow:hidden;background:linear-gradient(105deg,#07362bf7,#082830f7 55%,#082038f7);border-color:#43f5a0b3;box-shadow:0 0 0 1px #43f5a01a,0 0 30px #29dc8621,inset 0 1px 0 #ffffff2e,inset 0 -8px 20px #0005}.banner strong{text-shadow:0 2px 12px #24ff9d45}.banner .banner-check{box-shadow:0 0 0 6px #3fffa414,0 0 24px #3fffa078,inset 0 2px 4px #ffffff5c}.banner.inverter{background:linear-gradient(105deg,#403014f7,#222a32f7 58%,#10233af7)}.banner.pzem-offline{background:linear-gradient(105deg,#403014f7,#222a32f7 58%,#10233af7)}.banner.alarm,.banner.offline{background:linear-gradient(105deg,#401b27f7,#202336f7 62%,#171c2af7)}
-        .house-art{width:min(30%,210px);max-width:210px;filter:drop-shadow(0 8px 15px #000a) drop-shadow(0 0 15px #0082ff54);opacity:.98}.house-art svg{display:block;width:100%;height:auto}.house-wire-pulse{stroke-dasharray:4 6;animation:houseWireFlow 1.6s linear infinite}@keyframes houseWireFlow{from{stroke-dashoffset:20}to{stroke-dashoffset:0}}
+        .house-art{width:min(30%,210px);max-width:210px;filter:drop-shadow(0 8px 14px #0007);opacity:1}.house-art svg{display:block;width:100%;height:auto}.house-wire-pulse{stroke-dasharray:4 6;animation:houseWireFlow 1.6s linear infinite}@keyframes houseWireFlow{from{stroke-dashoffset:20}to{stroke-dashoffset:0}}
         .energy-hero{display:grid;grid-template-columns:1.08fr .92fr;gap:15px;margin:0 0 15px}.energy-visual{position:relative;isolation:isolate;min-height:170px;overflow:hidden;padding:20px;border-radius:19px;border:1px solid #70aee24f;box-shadow:inset 0 1px 0 #ffffff2c,0 16px 32px #0006,inset 0 -10px 20px #0004;display:flex;flex-direction:column;justify-content:center;align-items:flex-start}.energy-visual:before{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(circle at 82% 24%,#ffbd4a42,transparent 34%),linear-gradient(125deg,#193e68,#10213d 58%,#201d45)}.energy-load:before{background:radial-gradient(circle at 82% 24%,#19cdff40,transparent 35%),linear-gradient(125deg,#123f61,#10213d 60%,#122d50)}.energy-visual .eyebrow{color:#b4cbe6;font-size:12px;letter-spacing:.1em;text-transform:uppercase}.energy-visual .hero-number{position:relative;z-index:1;max-width:75%;margin:7px 0 3px;font-size:clamp(25px,4cqw,43px);line-height:1.12;font-weight:850;letter-spacing:-1px;text-shadow:0 4px 18px #0008;overflow-wrap:anywhere}.energy-visual small{position:relative;z-index:1;max-width:76%;color:#c1d4ea;font-size:13px}.energy-object{position:absolute;right:16px;bottom:10px;width:95px;height:95px;max-width:32%;max-height:80%;pointer-events:none;filter:drop-shadow(0 8px 14px #0008);opacity:.92;transition:transform .2s ease}.coin-object{transform:rotate(-3deg)}.plug-object{transform:rotate(4deg)}
         .energy-visual-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;margin-top:14px}.visual-card{padding:18px;border-radius:18px;background:linear-gradient(145deg,#1b334ff5,#0a1728fa);border:1px solid #69a4d944;box-shadow:inset 0 1px 0 #ffffff1e,0 11px 24px #0005}.visual-card h3{margin:0 0 15px;font-size:17px}.bar-list{display:grid;gap:14px}.bar-row{display:grid;grid-template-columns:64px minmax(36px,1fr) minmax(80px,auto);gap:11px;align-items:center;color:var(--muted);font-size:13px}.bar-row b{color:var(--text);font-size:14px;text-align:right}.bar-track{height:9px;border-radius:9px;overflow:hidden;background:#263c56;box-shadow:inset 0 2px 3px #0008}.bar-track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#078bff,#16d6e8);box-shadow:0 0 12px #0aaaff62;transition:width .55s ease}.bar-track i.night-rate{background:linear-gradient(90deg,#8057d8,#c07aff);box-shadow:0 0 12px #a875ff62}.rate-pulse{display:inline-flex;align-items:center;gap:7px;margin-top:13px;padding:6px 10px;border-radius:18px;background:#0b3440;border:1px solid #28bdc457;color:#69e6d4;font-size:12px;max-width:100%;flex-wrap:wrap}.rate-pulse .icon{width:17px;height:17px}.current-tariff{display:flex;flex-direction:column;justify-content:center;align-items:flex-start}.current-tariff .big-number{font-size:clamp(27px,3.5cqw,40px);overflow-wrap:anywhere}
         .settings-hero{display:flex;align-items:center;gap:15px;padding:14px 18px;margin:0 0 15px;border-radius:18px;background:linear-gradient(110deg,#163c5ff2,#17224bf2);border:1px solid #70aee24a;box-shadow:inset 0 1px 0 #ffffff27,0 14px 28px #0005}.chip-art{width:68px;height:68px;flex:none;filter:drop-shadow(0 6px 12px #0008) drop-shadow(0 0 10px #078fff35)}.device-copy{min-width:0}.device-copy strong{display:block;font-size:17px}.device-copy span{display:block;margin-top:4px;color:#a9bfdc;font-size:12px}.device-status{margin-left:auto;display:flex;align-items:center;gap:8px;white-space:nowrap;color:var(--muted);font-size:13px}.device-status i{width:10px;height:10px;border-radius:50%;background:#8597aa;box-shadow:0 0 8px #8597aa66}.device-status.online{color:var(--green)}.device-status.online i{background:var(--green);box-shadow:0 0 12px #35ed91a8}.device-status.offline{color:var(--red)}.device-status.offline i{background:var(--red);box-shadow:0 0 12px #ff526d88}.detail:hover,.visual-card:hover,.control:hover{border-color:#59bbef70;box-shadow:0 16px 32px #0007,0 0 24px #0099ff13}.tariff-state{position:relative}.tariff-led{position:absolute;right:14px;bottom:14px;width:8px;height:8px;border-radius:50%;background:#7e8ea2}.tariff-led.active{background:var(--green);box-shadow:0 0 12px #35ed91b0}
@@ -4738,6 +4664,8 @@
         .voltage-unit{font-size:40px;font-weight:700;fill:#dcecff}
         .voltage-label{font-size:22px;fill:#a9c2e2;letter-spacing:.3px}
         .gauge-end{font-size:14px;fill:#6f8db1;letter-spacing:.3px}
+        .gauge-usage{font-size:21px;font-weight:700;fill:#dcecff;letter-spacing:.2px}
+        .gauge-usage-cost{font-size:18px;font-weight:600;fill:#9fb7d6}
         .gauge-fill-glow{mix-blend-mode:screen}
         .dial-tick{stroke:#9db8cd;stroke-opacity:.6;stroke-width:1.6;stroke-linecap:round}
         .dial-tick.major{stroke-width:2.2;stroke-opacity:.72}
@@ -4778,7 +4706,6 @@
         .chart-tag-text{font-size:14px!important}
         .chart-tag-sub{fill:#9fb7d6;font-size:11.5px;stroke:none}
 
-        .bottom-status{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:16px}
         .info{min-height:0;padding:16px 16px;justify-content:flex-start;align-items:center;gap:14px;text-align:left}
         .info>div{min-width:0}
         .info .symbol{width:54px;height:54px;flex:none;display:grid;place-items:center;border-radius:17px;font-size:0;background:radial-gradient(circle at 30% 18%,#ffffff1f,#ffffff06);border:1px solid #ffffff1c;filter:none;box-shadow:0 8px 18px #0005,inset 0 1px 0 #ffffff1c}
@@ -4803,7 +4730,6 @@
         }
 
         @container (max-width:900px){
-          .bottom-status{grid-template-columns:repeat(2,minmax(0,1fr))}
         }
 
         @container (max-width:760px){
@@ -4812,7 +4738,6 @@
           .metrics{gap:12px}
           .metric{padding:16px 8px 14px}
           .metric-icon .icon{width:38px;height:38px}
-          .bottom-status{gap:10px}
           .info{padding:14px 12px}
           .chart-card{padding:14px 12px 10px}
         }
@@ -4833,7 +4758,6 @@
           .state-indicator{font-size:19px}
           .metric-value{font-size:clamp(26px,8.4cqw,36px)}
           .metric-label{font-size:14px}
-          .bottom-status{gap:9px}
           .info{flex-direction:column;align-items:flex-start;gap:10px;padding:14px 13px}
           .info .symbol{width:44px;height:44px;border-radius:14px}
           .info .symbol .icon{width:24px;height:24px}
@@ -4971,7 +4895,6 @@
           .metric-icon .icon{width:34px;height:34px}
           .metric-value{font-size:clamp(24px,7cqw,32px);gap:.16em}
           .metric-label{font-size:13px}
-          .bottom-status{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:12px}
           .info{min-height:106px;flex-direction:row;align-items:flex-start;justify-content:flex-start;gap:9px;padding:12px 10px;border-radius:18px}
           .info .symbol{width:36px;height:36px;border-radius:12px}
           .info .symbol .icon{width:21px;height:21px}
@@ -5068,7 +4991,6 @@
           .house-art{width:52px}
         }
         @container (max-width:360px){
-          .bottom-status{grid-template-columns:1fr}
           .detail-grid:not(.settings-grid){grid-template-columns:1fr}
           .banner .house-art{display:none}
           .tabs{gap:2px;padding:3px}
