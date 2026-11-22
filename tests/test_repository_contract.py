@@ -36,6 +36,12 @@ def _walk(value):
 
 
 class RepositoryContractTests(unittest.TestCase):
+    def test_outage_counters_are_flushed_to_flash_on_every_event(self):
+        firmware = (ROOT / "esphome" / "grid-monitor.yaml").read_text(encoding="utf-8")
+        self.assertIn("id: flush_outage_counters", firmware)
+        self.assertIn("global_preferences->sync();", firmware)
+        self.assertEqual(firmware.count("id(flush_outage_counters).execute();"), 2, "flush at outage start and at recovery")
+
     def test_hacs_manifest_is_valid_json(self):
         manifest = json.loads((ROOT / "hacs.json").read_text(encoding="utf-8"))
         self.assertTrue(manifest)
