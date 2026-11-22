@@ -166,24 +166,27 @@ class RepositoryContractTests(unittest.TestCase):
         # The status line reflects the real helper state on the first render, not only after a later update.
         self.assertIn('data-role="stats-start-sync">${this._escape(this._statsSyncText())}', card)
 
-    def test_period_picker_respects_statistics_start_and_highlights_custom_period(self):
+    def test_period_picker_opens_calendar_immediately_and_requires_two_dates(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
-        # Both the parameters and the energy picker use the statistics start as the lower bound.
+        # Both the parameters and energy calendars use the statistics start as their lower bound.
         self.assertNotIn("!isEnergy && Number.isFinite(this._statsStart) ? ` min=", card)
         html = card[card.index("_chartDateRangeHtml(scope = 'params') {"):card.index("_closeChartDateRangePopover(panel = null) {")]
-        calendar_limits = card[card.index("_chartCalendarLimits(scope, field) {"):card.index("_chartCalendarContentHtml(scope, field, monthKey) {")]
+        self.assertIn("data-chart-calendar hidden", html)
+        self.assertIn("data-chart-date-toggle", html)
+        self.assertIn("data-chart-date-apply data-chart-scope=\"${scope}\" disabled", html)
+        self.assertNotIn("data-chart-calendar-open", html)
+        calendar_limits = card[card.index("_chartCalendarLimits() {"):card.index("_chartCalendarContentHtml(scope, monthKey) {")]
         self.assertIn("this._chartDateRangeMin()", calendar_limits)
         apply_range = card[card.index("_applyChartDateRange(scope = 'params') {"):card.index("_setCustomChartRange(start, end")]
-        # An earlier moment is moved to the start instead of producing a warning.
+        self.assertIn("if (!startInput?.value || !endInput?.value) return", apply_range)
         self.assertIn("this._clampChartDateInput(startInput)", apply_range)
         self.assertIn("Math.max(start, this._statsStart)", apply_range)
         self.assertNotIn("chart_date_error_earlier", apply_range)
         self.assertIn("addEventListener('focusout'", card)
-        # Choosing a custom period highlights the picker button of that chart only.
+        self.assertIn("this._openChartDateCalendar(target.dataset.chartScope || 'params')", card)
+        # Applying a custom range highlights the picker button for that chart only.
         controls = card[card.index("_updateChartDateRangeControls(scope = 'params') {"):card.index("_applyChartDateRange(scope = 'params') {")]
-        self.assertIn("this._chartDateRangeMin()", controls)
         self.assertIn("this._syncChartPeriodHighlight(scope)", controls)
-        self.assertIn("data-chart-date-toggle][data-chart-scope=\"${scope}\"]", controls)
 
     def test_scroll_to_top_is_fixed_and_smooth_for_home_assistant_scroll_containers(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
@@ -348,7 +351,7 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("_chartDateRangeHtml()", card)
         self.assertIn('type="hidden" ${key}', card)
         self.assertIn('class="chart-calendar-day', card)
-        self.assertIn('data-chart-calendar-open', card)
+        self.assertIn('data-chart-date-apply data-chart-scope=\"${scope}\" disabled', card)
         self.assertIn("isEnergy ? 'data-energy-chart-date-start' : 'data-chart-date-start'", card)
         self.assertNotIn("data-chart-zoom=\"in\"", card)
         self.assertIn("chart_date_range", card)
