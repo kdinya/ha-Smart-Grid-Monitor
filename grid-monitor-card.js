@@ -3472,9 +3472,10 @@
 
     _chartScale(series, metricKey = this._chartMetric || 'power') {
       if (metricKey === 'voltage') {
-        const values = series.map((point) => point.v);
-        const low = Math.min(...values); const high = Math.max(...values);
-        if (low <= 0) return { lo: 0, ...this._niceScale(high) };
+        // Outage zeros are drawn on the bottom edge; the axis fits only real voltage so small swings stay visible.
+        const real = series.map((point) => point.v).filter((value) => value >= CHART_METRICS.voltage.plausible[0]);
+        if (!real.length) return { lo: 0, ...this._niceScale(Math.max(...series.map((point) => point.v), 0)) };
+        const low = Math.min(...real); const high = Math.max(...real);
         for (const step of [5, 10, 20, 25, 50]) {
           const lo = Math.floor((low - 2) / step) * step;
           const hi = Math.max(Math.ceil((high + 2) / step) * step, lo + step);
