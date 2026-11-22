@@ -895,8 +895,6 @@
 
 
   const DEFAULT_KEYS = Object.keys(DEFAULTS);
-  const VOLTAGE_AXIS_BELOW_V = 10;
-  const VOLTAGE_AXIS_ABOVE_V = 15;
   const STATS_REFRESH_OVERLAP_MS = 120e3;
 
   let CARD_SEQUENCE = 0;
@@ -3497,13 +3495,14 @@
         // Outage zeros are drawn on the bottom edge; the axis fits only real voltage so small swings stay visible.
         const real = series.map((point) => point.v).filter((value) => value >= CHART_METRICS.voltage.plausible[0]);
         if (!real.length) return { lo: 0, ...this._niceScale(Math.max(...series.map((point) => point.v), 0)) };
-        // Axis: 10 V below the real minimum and 15 V above the maximum (outage zeros ignored), so every swing fills the chart.
-        const low = Math.min(...real) - VOLTAGE_AXIS_BELOW_V;
-        const high = Math.max(...real) + VOLTAGE_AXIS_ABOVE_V;
-        const step = [5, 10, 20, 25, 50, 100].find((candidate) => (high - low) / candidate <= 6) || 100;
-        const ticks = [];
-        for (let tick = Math.ceil(low / step) * step; tick <= high + 1e-9; tick += step) ticks.push(tick);
-        return { lo: low, max: high, step, count: ticks.length - 1, ticks };
+        const low = Math.min(...real); const high = Math.max(...real);
+        for (const step of [5, 10, 20, 25, 50]) {
+          const lo = Math.floor((low - 2) / step) * step;
+          const hi = Math.max(Math.ceil((high + 2) / step) * step, lo + step);
+          if ((hi - lo) / step <= 4) return { lo, max: hi, step, count: (hi - lo) / step };
+        }
+        const step = 50; const lo = Math.floor((low - 2) / step) * step;
+        return { lo, max: lo + 4 * step, step, count: 4 };
       }
       return { lo: 0, ...this._niceScale(Math.max(...series.map((point) => point.v), 0)) };
     }
@@ -3659,10 +3658,10 @@
       }));
       const line = this._smoothPath(pathPts, y0, y1);
       const area = `${line} L${pathPts[pathPts.length - 1].x.toFixed(1)} ${y1} L${pathPts[0].x.toFixed(1)} ${y1} Z`;
-      const tickValues = scale.ticks || Array.from({ length: scale.count + 1 }, (_, index) => scale.lo + index * scale.step);
-      const horizontal = tickValues.map((tickValue, index) => {
+      const horizontal = Array.from({ length: scale.count + 1 }, (_, index) => {
+        const tickValue = scale.lo + index * scale.step;
         const y = Y(tickValue);
-        return `<path d="M${x0} ${y.toFixed(1)}H${x1}"/><text x="${x0 - 10}" y="${(y + 4).toFixed(1)}" text-anchor="end">${this._escape(tickValue.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits }))}${index === tickValues.length - 1 ? ` ${unit}` : ''}</text>`;
+        return `<path d="M${x0} ${y.toFixed(1)}H${x1}"/><text x="${x0 - 10}" y="${(y + 4).toFixed(1)}" text-anchor="end">${this._escape(tickValue.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits }))}${index === scale.count ? ` ${unit}` : ''}</text>`;
       }).join('');
       const longRange = range === 'week' || range === 'month' || (range === 'custom' || range === 'since') && rangeMs > 24 * 3600e3;
       const secondPrecision = range === 'custom' && rangeMs < 60e3;

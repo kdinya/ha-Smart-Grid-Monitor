@@ -2367,10 +2367,9 @@ const series = (values) => values.map((v, index) => ({ t: index, v }));
 
 // Outage zeros must not stretch the axis down to 0: small swings stay visible.
 const withOutage = card._chartScale(series([229, 0, 233, 231, 0, 227]), 'voltage');
-assert.equal(withOutage.lo, 217, 'axis starts 10 V below the real minimum (227)');
-assert.equal(withOutage.max, 248, 'axis ends 15 V above the real maximum (233)');
-assert.ok(withOutage.ticks.every((tick) => tick >= withOutage.lo && tick <= withOutage.max), 'ticks stay inside the axis');
-assert.ok(withOutage.ticks.length >= 2 && withOutage.ticks.length <= 7, 'a readable number of ticks');
+assert.ok(withOutage.lo >= 220, `axis starts near real voltage, got ${withOutage.lo}`);
+assert.ok(withOutage.max <= 240, `axis ends near real voltage, got ${withOutage.max}`);
+assert.ok(withOutage.lo < 227 && withOutage.max > 233, 'axis covers every real value');
 
 // Same axis as without the zeros.
 const withoutOutage = card._chartScale(series([229, 233, 231, 227]), 'voltage');
