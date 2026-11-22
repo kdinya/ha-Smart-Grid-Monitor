@@ -586,14 +586,24 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn('.chart-gesture-active .chart-zoom-handle{will-change:transform}', card)
         self.assertIn('.chart-gesture-active .chart-zoom-handle-mark{filter:none!important}', card)
 
-    def test_chart_pan_strip_is_visible_on_both_chart_types(self):
+    def test_chart_pan_strip_is_a_jog_roller_on_both_chart_types(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
-        self.assertEqual(card.count("this._chartPanAxisHtml(x0, x1, panStripY, panStripHeight)"), 2)
-        self.assertIn("chart-pan-hint", card)
-        self.assertIn("chart-pan-axis:hover", card)
-        self.assertIn("chart_pan_hint: 'Потягніть для прокручування'", card)
-        self.assertIn("chart_pan_hint: 'Drag to scroll'", card)
+        self.assertEqual(card.count("this._chartPanAxisHtml(x0, x1, panStripY, panStripHeight, "), 2)
+        for token in ("data-roller-pattern", "chart-roller-rim", "_setRollerPhase", "patternTransform"):
+            self.assertIn(token, card)
+        # The old text hint is gone; the roller itself shows that the strip can be dragged.
+        self.assertNotIn("chart-pan-hint", card)
+        self.assertNotIn("chart_pan_hint", card)
         self.assertGreaterEqual(card.count("const panStripHeight = 34;"), 2)
+
+    def test_one_finger_on_the_chart_only_moves_the_marker(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        # A horizontal one-finger drag over the plot is never turned into a pan any more.
+        self.assertNotIn("_beginChartPan(candPlot, 'drag'", card)
+        self.assertNotIn("_chartPointerCandidate = {", card)
+        # Marker moves are batched per animation frame and use per-gesture cached nodes.
+        for token in ("_queueChartScrub(event.clientX)", "_chartScrubContext(true)", "_nearestChartPointByX", "_flushChartScrubFrame()"):
+            self.assertIn(token, card)
 
     def test_detail_header_house_moves_right_and_scales_without_affecting_home_art(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
