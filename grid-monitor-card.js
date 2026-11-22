@@ -164,7 +164,7 @@
       params_title: 'Електричні параметри', range_title: 'Діапазон напруги на графіку', range_now: 'Зараз', energy_title: 'Енергія та вартість', settings_title: 'Налаштування та діагностика',
       apparent: 'Повна потужність', reactive: 'Реактивна потужність', phase: 'Кут фази', deviation: 'Відхилення напруги', average: 'Середня напруга за 5 хв', min_voltage: 'Мін. на графіку', max_voltage: 'Макс. на графіку', max_current: 'Максимальний струм сьогодні', peak_power: 'Пікова потужність сьогодні', voltage_state: 'Статус напруги',
       today: 'Сьогодні', energy_month: 'Споживання за місяць', energy_total: 'Загальна енергія PZEM', cost_today: 'Вартість сьогодні', cost_month: 'Вартість за місяць', cost_total: 'Загальна розрахована вартість', tariff: 'Поточний тариф', cost_rate: 'Вартість за годину', two_zone: 'Двозонний облік',
-      estimated_cost: 'Орієнтовна вартість', current_load: 'Поточне навантаження', tariff_compare: 'Порівняння тарифів', current_rate: 'Активний тариф', night: 'Ніч', device_name: 'Grid Monitor · ESP32-C3', device_description: 'Контролер ESPHome · PZEM-004T', diagnostics: 'Діагностика',
+      estimated_cost: 'Орієнтовна вартість', current_load: 'Поточне навантаження', night: 'Ніч', device_name: 'Grid Monitor · ESP32-C3', device_description: 'Контролер ESPHome · PZEM-004T', diagnostics: 'Діагностика',
       sag: 'Поріг просідання', swell: 'Поріг перенапруги', nominal: 'Номінальна напруга', tariff_day: 'Денний тариф', tariff_night: 'Нічний тариф', wifi: 'Сигнал Wi‑Fi', temperature: 'Температура ESP32', uptime: 'Час роботи ESP32', ip: 'IP-адреса', ssid: 'Wi‑Fi мережа',
       events: 'Переривання зв’язку з PZEM', inverter_events: 'Кількість переривань PZEM', current_duration: 'Поточний час без PZEM', last_duration: 'Остання тривалість без PZEM', total_duration: 'Загальний час без PZEM', sag_events: 'Просідання напруги', swell_events: 'Перенапруги', save: 'Зберегти', on: 'Увімкнено', off: 'Вимкнено',
             editor_title: 'Налаштування Smart Grid Monitor',
@@ -232,7 +232,7 @@
       params_title: 'Electrical parameters', range_title: 'Voltage range on chart', range_now: 'Now', energy_title: 'Energy and cost', settings_title: 'Settings and diagnostics',
       apparent: 'Apparent power', reactive: 'Reactive power', phase: 'Phase angle', deviation: 'Voltage deviation', average: '5-minute average voltage', min_voltage: 'Chart minimum', max_voltage: 'Chart maximum', max_current: 'Maximum current today', peak_power: 'Peak power today', voltage_state: 'Voltage status',
       today: 'Today', energy_month: 'Consumption this month', energy_total: 'Total PZEM energy', cost_today: 'Cost today', cost_month: 'Cost this month', cost_total: 'Total calculated cost', tariff: 'Current tariff', cost_rate: 'Cost per hour', two_zone: 'Two-zone tariff',
-      estimated_cost: 'Estimated cost', current_load: 'Current load', tariff_compare: 'Tariff comparison', current_rate: 'Active tariff', night: 'Night', device_name: 'Grid Monitor · ESP32-C3', device_description: 'ESPHome controller · PZEM-004T', diagnostics: 'Diagnostics',
+      estimated_cost: 'Estimated cost', current_load: 'Current load', night: 'Night', device_name: 'Grid Monitor · ESP32-C3', device_description: 'ESPHome controller · PZEM-004T', diagnostics: 'Diagnostics',
       sag: 'Sag threshold', swell: 'Swell threshold', nominal: 'Nominal voltage', tariff_day: 'Day tariff', tariff_night: 'Night tariff', wifi: 'Wi-Fi signal', temperature: 'ESP32 temperature', uptime: 'ESP32 uptime', ip: 'IP address', ssid: 'Wi-Fi network',
       events: 'PZEM communication outages', inverter_events: 'PZEM outage count', current_duration: 'Current time without PZEM', last_duration: 'Last PZEM outage duration', total_duration: 'Total time without PZEM', sag_events: 'Voltage sags', swell_events: 'Voltage swells', save: 'Save', on: 'On', off: 'Off',
             editor_title: 'Smart Grid Monitor Settings',
@@ -324,6 +324,19 @@
     gear: '<path d="M24 7v5m0 24v5M7 24h5m24 0h5M12 12l4 4m16 16 4 4m0-24-4 4m-16 16-4 4" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><circle cx="24" cy="24" r="12" fill="none" stroke="currentColor" stroke-width="4"/>',
     plug: '<path d="M17 7v12m14-12v12M12 19h24v3a12 12 0 0 1-12 12v8m0-8a12 12 0 0 1-12-12z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',
     arrow_up: '<path d="M24 7 9 22l3.2 3.2L21.7 16v25h4.6V16l9.5 9.2L39 22z" fill="currentColor"/>',
+    arrow_down: '<path d="M24 41 9 26l3.2-3.2L21.7 32V7h4.6v25l9.5-9.2L39 26z" fill="currentColor"/>',
+    angle: '<path d="M8 38h32M8 38 30 12" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M21 38a13 13 0 0 1-3-9" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>',
+    deviation: '<path d="M24 6v18M15 15h18M14 36h20" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>',
+    average: '<path d="M5 24h38" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="4 5"/><path d="M5 30c5-18 9-18 14 0s9 18 14 0l5-8" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',
+    peak: '<path d="M4 40 15 21l8 9 10-22 11 32" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',
+    clock: '<circle cx="24" cy="24" r="17" fill="none" stroke="currentColor" stroke-width="4"/><path d="M24 14v10l7 5" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',
+    alert: '<path d="M24 6 4 40h40z" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M24 19v10M24 35h.1" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>',
+    sag: '<path d="M5 12l14 14 8-8 14 14" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M31 34h10V24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',
+    swell: '<path d="M5 36l14-14 8 8 14-14" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M31 14h10v10" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',
+    calendar: '<rect x="6" y="9" width="36" height="32" rx="5" fill="none" stroke="currentColor" stroke-width="4"/><path d="M6 20h36M15 5v8M33 5v8" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>',
+    sum: '<path d="M37 9H12l13 15-13 15h25" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',
+    tag: '<path d="M6 8h18l18 18-16 16L8 26z" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><circle cx="16" cy="17" r="2.6" fill="currentColor"/>',
+    gauge: '<path d="M6 36a18 18 0 1 1 36 0" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M24 36l9-12" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>',
   };
 
   class GridMonitorCardEditor extends HTMLElement {
@@ -1476,9 +1489,11 @@
       const ariaLabel = `${this._t('metric_info_button')}: ${label}`;
       return `<button type="button" class="metric-info-button" data-metric-info="${key}" aria-label="${this._escape(ariaLabel)}" title="${this._escape(ariaLabel)}"><span aria-hidden="true">i</span></button>`;
     }
-    _detail(key, label, digits = 1) {
+    _detailIcon(icon) { return icon ? `<span class="detail-icon" aria-hidden="true">${this._svg(icon)}</span>` : ''; }
+
+    _detail(key, label, digits = 1, icon = '') {
       const infoButton = this._metricInfoButton(key);
-      return `<div class="detail${infoButton ? ' metric-info-card' : ''}">${infoButton}<span>${this._escape(label)}</span><b data-value-key="${key}" data-value-digits="${digits}">${this._escape(this._formatted(key, digits))}</b></div>`;
+      return `<div class="detail${infoButton ? ' metric-info-card' : ''}${icon ? ' has-icon' : ''}">${this._detailIcon(icon)}${infoButton}<span>${this._escape(label)}</span><b data-value-key="${key}" data-value-digits="${digits}">${this._escape(this._formatted(key, digits))}</b></div>`;
     }
     _row(key, label, icon, digits = 1) { return `<div class="row"><span class="row-label"><span class="row-symbol">${icon}</span>${this._escape(label)}</span><strong data-value-key="${key}" data-value-digits="${digits}">${this._escape(this._formatted(key, digits))}</strong></div>`; }
     _setting(key, label) {
@@ -3671,9 +3686,9 @@
       return `${value.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits })} ${metric.unit(this._lang())}`;
     }
 
-    _voltageRangeDetail(bound, label) {
+    _voltageRangeDetail(bound, label, icon = '') {
       const value = this._voltageRangeStats()[bound];
-      return `<div class="detail"><span>${this._escape(label)}</span><b data-role="voltage-${bound}-period">${this._escape(this._formatVoltage(value))}</b></div>`;
+      return `<div class="detail${icon ? ' has-icon' : ''}">${this._detailIcon(icon)}<span>${this._escape(label)}</span><b data-role="voltage-${bound}-period">${this._escape(this._formatVoltage(value))}</b></div>`;
     }
 
     _rangeLayout() {
@@ -3748,11 +3763,11 @@
 
     _params() {
       return `<section class="detail-panel"><h2>${this._escape(this._t('params_title'))}</h2>${this._chart()}${this._rangeCard()}${this._powerRangeCard()}<div class="detail-grid">
-        ${this._detail('apparent_power', this._t('apparent'), 0)}${this._detail('reactive_power', this._t('reactive'), 0)}${this._detail('phase_angle', this._t('phase'), 1)}
-        ${this._detail('voltage_deviation', this._t('deviation'), 1)}${this._detail('voltage_average', this._t('average'), 1)}${this._detail('voltage_status', this._t('voltage_state'), 0)}
-        ${this._voltageRangeDetail('min', this._t('min_voltage'))}${this._voltageRangeDetail('max', this._t('max_voltage'))}${this._detail('current_max', this._t(!Number.isFinite(this._statsStart) ? 'max_current' : 'max_current_period'), 2)}${this._detail('power_peak', this._t(!Number.isFinite(this._statsStart) ? 'peak_power' : 'peak_power_period'), 0)}
+        ${this._detail('apparent_power', this._t('apparent'), 0, 'bolt')}${this._detail('reactive_power', this._t('reactive'), 0, 'frequency')}${this._detail('phase_angle', this._t('phase'), 1, 'angle')}
+        ${this._detail('voltage_deviation', this._t('deviation'), 1, 'deviation')}${this._detail('voltage_average', this._t('average'), 1, 'average')}${this._detail('voltage_status', this._t('voltage_state'), 0, 'shield')}
+        ${this._voltageRangeDetail('min', this._t('min_voltage'), 'arrow_down')}${this._voltageRangeDetail('max', this._t('max_voltage'), 'arrow_up')}${this._detail('current_max', this._t(!Number.isFinite(this._statsStart) ? 'max_current' : 'max_current_period'), 2, 'current')}${this._detail('power_peak', this._t(!Number.isFinite(this._statsStart) ? 'peak_power' : 'peak_power_period'), 0, 'peak')}
       </div><h2 class="subheading">${this._escape(this._t('events'))}</h2><div class="detail-grid">
-        ${this._detail('inverter_events', this._t('inverter_events'), 0)}${this._detail('inverter_current_duration', this._t('current_duration'), 1)}${this._detail('last_inverter_duration', this._t('last_duration'), 1)}${this._detail('total_inverter_time', this._t('total_duration'), 2)}${this._detail('sag_count', this._t('sag_events'), 0)}${this._detail('swell_count', this._t('swell_events'), 0)}
+        ${this._detail('inverter_events', this._t('inverter_events'), 0, 'alert')}${this._detail('inverter_current_duration', this._t('current_duration'), 1, 'clock')}${this._detail('last_inverter_duration', this._t('last_duration'), 1, 'clock')}${this._detail('total_inverter_time', this._t('total_duration'), 2, 'sum')}${this._detail('sag_count', this._t('sag_events'), 0, 'sag')}${this._detail('swell_count', this._t('swell_events'), 0, 'swell')}
       </div></section>`;
     }
 
@@ -3765,14 +3780,10 @@
         </div>
         ${this._energyChart()}
         <div class="detail-grid energy-grid">
-          ${this._detail('energy_today', this._t('today'), 3)}${this._detail('energy_month', this._t('energy_month'), 2)}${this._detail('energy_total', this._t('energy_total'), 3)}
-          ${this._detail('cost_today', this._t('cost_today'), 2)}${this._detail('cost_month', this._t('cost_month'), 2)}${this._detail('cost_total', this._t('cost_total'), 2)}
-          ${this._detail('tariff', this._t('tariff'), 2)}${this._detail('cost_rate', this._t('cost_rate'), 2)}
-          ${twoZone ? `<div class="detail tariff-state"><span>${this._escape(this._t('two_zone'))}</span><b data-role="energy-two-zone-value" class="good">${this._escape(this._t('on'))}</b><i class="tariff-led active" data-role="energy-two-zone-led"></i></div>` : ''}
-        </div>
-        <div class="visual-grid energy-visual-grid">
-          <section class="visual-card tariff-visual"><h3>${this._escape(this._t('tariff_compare'))}</h3>${this._tariffBars()}</section>
-          <section class="visual-card current-tariff"><h3>${this._escape(this._t('current_rate'))}</h3><strong class="big-number" data-value-key="tariff" data-value-digits="2">${this._escape(this._formatted('tariff', 2))}</strong>${twoZone ? `<span class="rate-pulse">${this._svg('energy')} ${this._escape(this._t('two_zone'))}: <span data-role="energy-two-zone-label">${this._escape(this._t('on'))}</span></span>` : ''}</section>
+          ${this._detail('energy_today', this._t('today'), 3, 'energy')}${this._detail('energy_month', this._t('energy_month'), 2, 'calendar')}${this._detail('energy_total', this._t('energy_total'), 3, 'sum')}
+          ${this._detail('cost_today', this._t('cost_today'), 2, 'coin')}${this._detail('cost_month', this._t('cost_month'), 2, 'calendar')}${this._detail('cost_total', this._t('cost_total'), 2, 'sum')}
+          ${this._detail('tariff', this._t('tariff'), 2, 'tag')}${this._detail('cost_rate', this._t('cost_rate'), 2, 'gauge')}
+          ${twoZone ? `<div class="detail tariff-state has-icon">${this._detailIcon('clock')}<span>${this._escape(this._t('two_zone'))}</span><b data-role="energy-two-zone-value" class="good">${this._escape(this._t('on'))}</b><i class="tariff-led active" data-role="energy-two-zone-led"></i></div>` : ''}
         </div>
       </section>`;
     }
@@ -3919,13 +3930,6 @@
       `;
     }
 
-    _tariffBars() {
-      const day = this._num('tariff_day'); const night = this._num('tariff_night');
-      const twoZone = this._raw('two_zone') === 'on';
-      const max = Math.max(day || 0, twoZone ? night || 0 : 0, 0.01);
-      const row = (key, label, cls, value) => `<div class="bar-row"><span>${this._escape(this._t(label))}</span><div class="bar-track"><i class="${cls}" data-tariff-fill="${key}" style="width:${value === null ? 0 : Math.max(0, Math.min(100, value / max * 100)).toFixed(1)}%"></i></div><b data-value-key="${key}" data-value-digits="2">${this._escape(this._formatted(key, 2))}</b></div>`;
-      return `<div class="bar-list">${row('tariff_day', 'day', 'day-rate', day)}${twoZone ? row('tariff_night', 'night', 'night-rate', night) : ''}</div>`;
-    }
 
     _settings() {
       const twoZone = this._raw('two_zone') === 'on';
@@ -4398,25 +4402,13 @@
       this._setChartMarker(chart, x1, y, `${current.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits })} ${metric.unit(this._lang(), this._currencyCode())}`);
     }
 
-    _updateTariffBars() {
-      const day = this._num('tariff_day');
-      const night = this._num('tariff_night');
-      const max = Math.max(day || 0, night || 0, 0.01);
-      this.shadowRoot.querySelectorAll('[data-tariff-fill]').forEach((fill) => {
-        const value = this._num(fill.dataset.tariffFill);
-        fill.style.width = `${value === null ? 0 : Math.max(0, Math.min(100, value / max * 100)).toFixed(1)}%`;
-      });
-    }
-
     _updateEnergyTwoZone() {
       const active = this._raw('two_zone') === 'on';
       const label = this._t(active ? 'on' : 'off');
       const value = this.shadowRoot.querySelector('[data-role="energy-two-zone-value"]');
       const led = this.shadowRoot.querySelector('[data-role="energy-two-zone-led"]');
-      const pulse = this.shadowRoot.querySelector('[data-role="energy-two-zone-label"]');
       if (value) { value.textContent = label; value.classList.toggle('good', active); }
       if (led) led.classList.toggle('active', active);
-      if (pulse) pulse.textContent = label;
     }
 
     _updateSettings(changed) {
@@ -4477,7 +4469,6 @@
     }
 
     _updateEnergy(changed) {
-      if (changed.has('tariff_day') || changed.has('tariff_night')) this._updateTariffBars();
       if (changed.has('two_zone')) this._updateEnergyTwoZone();
     }
 
@@ -4630,13 +4621,12 @@
         .banner{position:relative;overflow:hidden;background:linear-gradient(105deg,#07362bf7,#082830f7 55%,#082038f7);border-color:#43f5a0b3;box-shadow:0 0 0 1px #43f5a01a,0 0 30px #29dc8621,inset 0 1px 0 #ffffff2e,inset 0 -8px 20px #0005}.banner strong{text-shadow:0 2px 12px #24ff9d45}.banner .banner-check{box-shadow:0 0 0 6px #3fffa414,0 0 24px #3fffa078,inset 0 2px 4px #ffffff5c}.banner.inverter{background:linear-gradient(105deg,#403014f7,#222a32f7 58%,#10233af7)}.banner.pzem-offline{background:linear-gradient(105deg,#403014f7,#222a32f7 58%,#10233af7)}.banner.alarm,.banner.offline{background:linear-gradient(105deg,#401b27f7,#202336f7 62%,#171c2af7)}
         .house-art{width:min(30%,210px);max-width:210px;filter:drop-shadow(0 8px 14px #0007);opacity:1}.house-art svg{display:block;width:100%;height:auto}.house-wire-pulse{stroke-dasharray:4 6;animation:houseWireFlow 1.6s linear infinite}@keyframes houseWireFlow{from{stroke-dashoffset:20}to{stroke-dashoffset:0}}
         .energy-hero{display:grid;grid-template-columns:1.08fr .92fr;gap:15px;margin:0 0 15px}.energy-visual{position:relative;isolation:isolate;min-height:170px;overflow:hidden;padding:20px;border-radius:19px;border:1px solid #70aee24f;box-shadow:inset 0 1px 0 #ffffff2c,0 16px 32px #0006,inset 0 -10px 20px #0004;display:flex;flex-direction:column;justify-content:center;align-items:flex-start}.energy-visual:before{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(circle at 82% 24%,#ffbd4a42,transparent 34%),linear-gradient(125deg,#193e68,#10213d 58%,#201d45)}.energy-load:before{background:radial-gradient(circle at 82% 24%,#19cdff40,transparent 35%),linear-gradient(125deg,#123f61,#10213d 60%,#122d50)}.energy-visual .eyebrow{color:#b4cbe6;font-size:12px;letter-spacing:.1em;text-transform:uppercase}.energy-visual .hero-number{position:relative;z-index:1;max-width:75%;margin:7px 0 3px;font-size:clamp(25px,4cqw,43px);line-height:1.12;font-weight:850;letter-spacing:-1px;text-shadow:0 4px 18px #0008;overflow-wrap:anywhere}.energy-visual small{position:relative;z-index:1;max-width:76%;color:#c1d4ea;font-size:13px}.energy-object{position:absolute;right:16px;bottom:10px;width:95px;height:95px;max-width:32%;max-height:80%;pointer-events:none;filter:drop-shadow(0 8px 14px #0008);opacity:.92;transition:transform .2s ease}.coin-object{transform:rotate(-3deg)}.plug-object{transform:rotate(4deg)}
-        .energy-visual-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;margin-top:14px}.visual-card{padding:18px;border-radius:18px;background:linear-gradient(145deg,#1b334ff5,#0a1728fa);border:1px solid #69a4d944;box-shadow:inset 0 1px 0 #ffffff1e,0 11px 24px #0005}.visual-card h3{margin:0 0 15px;font-size:17px}.bar-list{display:grid;gap:14px}.bar-row{display:grid;grid-template-columns:64px minmax(36px,1fr) minmax(80px,auto);gap:11px;align-items:center;color:var(--muted);font-size:13px}.bar-row b{color:var(--text);font-size:14px;text-align:right}.bar-track{height:9px;border-radius:9px;overflow:hidden;background:#263c56;box-shadow:inset 0 2px 3px #0008}.bar-track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#078bff,#16d6e8);box-shadow:0 0 12px #0aaaff62;transition:width .55s ease}.bar-track i.night-rate{background:linear-gradient(90deg,#8057d8,#c07aff);box-shadow:0 0 12px #a875ff62}.rate-pulse{display:inline-flex;align-items:center;gap:7px;margin-top:13px;padding:6px 10px;border-radius:18px;background:#0b3440;border:1px solid #28bdc457;color:#69e6d4;font-size:12px;max-width:100%;flex-wrap:wrap}.rate-pulse .icon{width:17px;height:17px}.current-tariff{display:flex;flex-direction:column;justify-content:center;align-items:flex-start}.current-tariff .big-number{font-size:clamp(27px,3.5cqw,40px);overflow-wrap:anywhere}
         .settings-hero{display:flex;align-items:center;gap:15px;padding:14px 18px;margin:0 0 15px;border-radius:18px;background:linear-gradient(110deg,#163c5ff2,#17224bf2);border:1px solid #70aee24a;box-shadow:inset 0 1px 0 #ffffff27,0 14px 28px #0005}.chip-art{width:68px;height:68px;flex:none;filter:drop-shadow(0 6px 12px #0008) drop-shadow(0 0 10px #078fff35)}.device-copy{min-width:0}.device-copy strong{display:block;font-size:17px}.device-copy span{display:block;margin-top:4px;color:#a9bfdc;font-size:12px}.device-status{margin-left:auto;display:flex;align-items:center;gap:8px;white-space:nowrap;color:var(--muted);font-size:13px}.device-status i{width:10px;height:10px;border-radius:50%;background:#8597aa;box-shadow:0 0 8px #8597aa66}.device-status.online{color:var(--green)}.device-status.online i{background:var(--green);box-shadow:0 0 12px #35ed91a8}.device-status.offline{color:var(--red)}.device-status.offline i{background:var(--red);box-shadow:0 0 12px #ff526d88}.detail:hover,.visual-card:hover,.control:hover{border-color:#59bbef70;box-shadow:0 16px 32px #0007,0 0 24px #0099ff13}.tariff-state{position:relative}.tariff-led{position:absolute;right:14px;bottom:14px;width:8px;height:8px;border-radius:50%;background:#7e8ea2}.tariff-led.active{background:var(--green);box-shadow:0 0 12px #35ed91b0}
         .metric:hover,.info:hover,.action-button:hover,.save-button:hover,.switch-button:hover{transform:translateY(-3px);border-color:#54bdff80;box-shadow:0 18px 34px #0008,0 0 24px #0099ff1b}.tab,.period-button,.action-button,.save-button,.switch-button{transition:background .22s,color .22s,border-color .22s,box-shadow .22s,transform .22s}
         @media(prefers-reduced-motion:no-preference){.shell:not(.render-ready){animation:deviceBoot .7s cubic-bezier(.2,.8,.2,1) both}.logo .icon{animation:logoFloat 4.2s ease-in-out infinite}.gauge-dot{animation:gaugePulse 2.8s ease-in-out infinite}.chart-dot{animation:chartPulse 2.4s ease-in-out infinite}.voltage:after{animation:screenGlow 7s ease-in-out infinite alternate}@keyframes deviceBoot{from{opacity:0;transform:translateY(8px) scale(.995)}to{opacity:1;transform:translateY(0) scale(1)}}@keyframes logoFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}@keyframes gaugePulse{0%,100%{filter:drop-shadow(0 0 5px #08c5ff)}50%{filter:drop-shadow(0 0 12px #08c5ff)}}@keyframes chartPulse{0%,100%{opacity:.8}50%{opacity:1}}@keyframes screenGlow{from{box-shadow:inset 0 0 24px #0091ff10}to{box-shadow:inset 0 0 40px #0091ff24}}}
         @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
-        @container (max-width:760px){.energy-hero{grid-template-columns:1fr}.energy-visual{min-height:145px}.energy-visual-grid{grid-template-columns:1fr}.energy-object{width:76px;height:76px;right:10px;bottom:8px}.settings-hero{gap:11px;padding:12px}.chip-art{width:56px;height:56px}.device-copy strong{font-size:15px}.device-status{font-size:12px}}
-        @container (max-width:420px){.energy-visual{min-height:130px;padding:15px}.energy-visual .hero-number{font-size:clamp(24px,7cqw,31px);max-width:80%}.energy-visual small{font-size:11px;max-width:80%}.energy-object{width:58px;height:58px;right:8px;bottom:6px;opacity:.8}.settings-hero{flex-wrap:wrap}.chip-art{width:46px;height:46px}.device-status{margin-left:6px}.bar-row{grid-template-columns:47px minmax(24px,1fr) minmax(75px,auto);gap:7px}.banner strong{max-width:68%}}
+        @container (max-width:760px){.energy-hero{grid-template-columns:1fr}.energy-visual{min-height:145px}.energy-object{width:76px;height:76px;right:10px;bottom:8px}.settings-hero{gap:11px;padding:12px}.chip-art{width:56px;height:56px}.device-copy strong{font-size:15px}.device-status{font-size:12px}}
+        @container (max-width:420px){.energy-visual{min-height:130px;padding:15px}.energy-visual .hero-number{font-size:clamp(24px,7cqw,31px);max-width:80%}.energy-visual small{font-size:11px;max-width:80%}.energy-object{width:58px;height:58px;right:8px;bottom:6px;opacity:.8}.settings-hero{flex-wrap:wrap}.chip-art{width:46px;height:46px}.device-status{margin-left:6px}.banner strong{max-width:68%}}
         .app-dialog-backdrop{position:fixed;inset:0;z-index:99999;display:grid;place-items:center;padding:18px;background:rgba(2,8,18,.78);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px)}
         .app-dialog{width:min(100%,430px);padding:24px;border:1px solid #55bfff75;border-radius:22px;background:radial-gradient(ellipse at 50% 0%,#17436a,#0b1728 68%);color:#f3f7ff;box-shadow:0 24px 70px #000c,inset 0 1px 0 #ffffff20;text-align:center}
         .dialog-mark{width:48px;height:48px;margin:0 auto 14px;display:grid;place-items:center;border-radius:15px;border:1px solid #32b7ff6e;background:linear-gradient(145deg,#0d5893,#0b2949);color:#77d6ff;font-size:28px;font-weight:800;box-shadow:0 0 24px #078fff33}.dialog-mark .icon{width:25px;height:25px}
@@ -4784,6 +4774,12 @@
         .detail:before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:0 3px 3px 0;background:linear-gradient(#12aaff,#13d5f4);box-shadow:0 0 10px #12aaff80}
         .detail>span,.detail label>span{font-size:13px;color:#9fb7d6;margin-bottom:6px}
         .detail b{font-size:21px;font-weight:750;letter-spacing:-.2px}
+        .detail.has-icon{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:13px;align-items:center}
+        .detail.has-icon>.detail-icon{grid-row:1/3;grid-column:1;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;color:#7fd4ff;background:radial-gradient(circle at 30% 18%,#2a6aa355,#0f2a4655);border:1px solid #5d96ca44;box-shadow:inset 0 1px 0 #ffffff1c}
+        .detail.has-icon>.detail-icon .icon{width:22px;height:22px}
+        .detail.has-icon>span:not(.detail-icon),.detail.has-icon>b{grid-column:2;min-width:0}
+        .detail.has-icon>span:not(.detail-icon){margin-bottom:3px}
+        .energy-panel .energy-grid{margin-top:14px}
         .metric{position:relative}
         .metric .metric-info-button,.detail .metric-info-button{position:absolute;top:8px;right:8px;z-index:3;width:28px;height:28px;display:grid;place-items:center;padding:0;border:1px solid #64caff88;border-radius:50%;background:linear-gradient(145deg,#0d5791,#082340);color:#c5efff;font-family:inherit;font-size:15px;font-weight:800;line-height:1;cursor:pointer;box-shadow:0 0 12px #009dff26}
         .metric .metric-info-button:hover,.detail .metric-info-button:hover{background:linear-gradient(145deg,#0e78bf,#0a3961);color:#fff;border-color:#8edcff}
@@ -4933,6 +4929,7 @@
           .detail{padding:12px 11px 12px 15px;border-radius:14px}
           .detail>span,.detail label>span{font-size:12px}
           .detail b{font-size:18px}
+          .detail.has-icon{column-gap:10px}.detail.has-icon>.detail-icon{width:34px;height:34px;border-radius:10px}.detail.has-icon>.detail-icon .icon{width:19px;height:19px}.energy-panel .energy-grid{margin-top:12px}
           .settings-grid{grid-template-columns:1fr}
           .setting{flex-direction:column;align-items:stretch;gap:8px}
           .setting label,.setting-input{width:100%}
@@ -4948,9 +4945,6 @@
           .energy-visual{min-height:138px;padding:16px}
           .energy-visual .hero-number{font-size:clamp(25px,7cqw,34px);max-width:76%}
           .energy-object{width:65px;height:65px}
-          .energy-visual-grid{grid-template-columns:1fr;gap:10px}
-          .visual-card{padding:14px}
-          .bar-row{grid-template-columns:48px minmax(30px,1fr) minmax(70px,auto);gap:8px}
           .action-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;overflow:visible}
           .action-button{min-height:72px;padding:10px 8px;font-size:12px}
           .action-grid .action-button:nth-child(5){grid-column:1/-1}
