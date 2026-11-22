@@ -364,7 +364,7 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("if (!bucket.min || sample.v < bucket.min.v) bucket.min = sample", card)
         self.assertIn("if (sample.v > 0 && (!bucket.minPositive || sample.v < bucket.minPositive.v)) bucket.minPositive = sample", card)
         self.assertIn("if (!bucket.max || sample.v > bucket.max.v) bucket.max = sample", card)
-        self.assertIn("[bucket.first, bucket.min, bucket.minPositive, bucket.max, bucket.last]", card)
+        self.assertIn("[bucket.first, bucket.min, bucket.minPositive, bucket.max, bucket.last, ...bucket.edges]", card)
         self.assertIn("metricKey === 'power' ? plottedPoints.filter((point) => point.v > 0) : plottedPoints", card)
         self.assertIn("this._historyBounds(range)", card)
         self.assertIn("_chartDateRangeHtml()", card)

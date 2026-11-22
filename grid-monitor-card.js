@@ -3474,6 +3474,7 @@
       if (metricKey === 'voltage') {
         const values = series.map((point) => point.v);
         const low = Math.min(...values); const high = Math.max(...values);
+        if (low <= 0) return { lo: 0, ...this._niceScale(high) };
         for (const step of [5, 10, 20, 25, 50]) {
           const lo = Math.floor((low - 2) / step) * step;
           const hi = Math.max(Math.ceil((high + 2) / step) * step, lo + step);
@@ -3501,7 +3502,10 @@
       const clampY = (y) => Math.min(highest, Math.max(lowest, y));
       let d = `M${fix(points[0].x)} ${fix(points[0].y)}`;
       for (let i = 0; i < points.length - 1; i += 1) {
-        const p0 = points[i - 1] || points[i]; const p1 = points[i]; const p2 = points[i + 1]; const p3 = points[i + 2] || p2;
+        let p0 = points[i - 1] || points[i]; const p1 = points[i]; const p2 = points[i + 1]; let p3 = points[i + 2] || p2;
+        if (Math.abs(p2.x - p1.x) < 0.05) { d += ` L${fix(p2.x)} ${fix(p2.y)}`; continue; }
+        if (Math.abs(p1.x - p0.x) < 0.05) p0 = p1;
+        if (Math.abs(p3.x - p2.x) < 0.05) p3 = p2;
         d += ` C${fix(p1.x + (p2.x - p0.x) / 6)} ${fix(clampY(p1.y + (p2.y - p0.y) / 6))} ${fix(p2.x - (p3.x - p1.x) / 6)} ${fix(clampY(p2.y - (p3.y - p1.y) / 6))} ${fix(p2.x)} ${fix(p2.y)}`;
       }
       return d;
@@ -3510,7 +3514,7 @@
     _bucketHistory(start, end, count, sourceHistory = this._history) {
       if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || count < 1) return [];
       const bucketMs = (end - start) / count;
-      const buckets = Array.from({ length: count }, () => ({ weighted: 0, duration: 0, first: null, last: null, min: null, minPositive: null, max: null }));
+      const buckets = Array.from({ length: count }, () => ({ weighted: 0, duration: 0, first: null, last: null, min: null, minPositive: null, max: null, edges: [] }));
       const history = Array.isArray(sourceHistory) ? sourceHistory : [];
 
       for (let index = 0; index < history.length; index += 1) {
@@ -3522,6 +3526,9 @@
         const intervalStart = Math.max(start, pointTime);
         const intervalEnd = Math.min(end, nextTime);
         if (intervalEnd <= intervalStart) continue;
+        const previous = index > 0 ? history[index - 1] : null;
+        const edge = previous && Boolean(previous.outage) !== Boolean(point.outage) && Number.isFinite(previous.value) && pointTime >= start && pointTime < end
+          ? [{ t: pointTime, v: previous.value, order: index - 0.5 }, { t: pointTime, v: point.value, order: index }] : null;
 
         let bucketIndex = Math.max(0, Math.floor((intervalStart - start) / bucketMs));
         while (bucketIndex < count && start + bucketIndex * bucketMs < intervalEnd) {
@@ -3529,6 +3536,7 @@
           const overlap = Math.max(0, Math.min(intervalEnd, bucketStart + bucketMs) - Math.max(intervalStart, bucketStart));
           if (overlap > 0) {
             const bucket = buckets[bucketIndex];
+            if (edge && pointTime >= bucketStart && pointTime < bucketStart + bucketMs) bucket.edges.push(...edge);
             const sample = { t: Math.max(intervalStart, bucketStart), v: point.value, order: index };
             bucket.weighted += point.value * overlap;
             bucket.duration += overlap;
@@ -3545,9 +3553,9 @@
       // Keep measured bucket extrema so brief PZEM power spikes survive chart reduction.
       return buckets.flatMap((bucket, index) => {
         if (!bucket.duration) return [];
-        if (bucket.min.v === bucket.max.v) return [{ t: start + (index + 0.5) * bucketMs, v: bucket.weighted / bucket.duration }];
+        if (bucket.min.v === bucket.max.v && !bucket.edges.length) return [{ t: start + (index + 0.5) * bucketMs, v: bucket.weighted / bucket.duration }];
         const seen = new Set();
-        return [bucket.first, bucket.min, bucket.minPositive, bucket.max, bucket.last]
+        return [bucket.first, bucket.min, bucket.minPositive, bucket.max, bucket.last, ...bucket.edges]
           .filter(Boolean)
           .sort((a, b) => a.t - b.t || a.order - b.order)
           .filter((point) => {
@@ -4412,6 +4420,8 @@
         const value = Number(item.state);
         const plausible = Number.isFinite(value) && value >= minValid && value <= maxValid;
         const time = new Date(item.last_changed || item.last_updated);
+        // No PZEM data (unavailable/unknown or below the mains threshold) means there was no voltage: draw 0, not a bridge.
+        if (metricKey === 'voltage' && !plausible && !(Number.isFinite(value) && value > maxValid)) return { time, value: 0, outage: true };
         return { time, value: plausible ? value : null };
       })
         .filter((item) => Number.isFinite(item.time.getTime()))
@@ -4560,7 +4570,7 @@
         };
       }
       const data = this._chartData(this._voltageHistory, 'voltage');
-      const values = data?.series.filter((point) => !Number.isFinite(this._statsStart) || point.t >= this._statsStart).map((point) => point.v).filter(Number.isFinite) || [];
+      const values = data?.series.filter((point) => !Number.isFinite(this._statsStart) || point.t >= this._statsStart).map((point) => point.v).filter((value) => Number.isFinite(value) && value >= CHART_METRICS.voltage.plausible[0]) || [];
       return {
         min: values.length ? Math.min(...values) : null,
         max: values.length ? Math.max(...values) : null,
