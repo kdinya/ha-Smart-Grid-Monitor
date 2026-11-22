@@ -564,6 +564,7 @@ sensor:
     lambda: |-
       return id(outage_count);
   - platform: template
+    id: sensor_last_outage_duration
     name: "Last PZEM Offline Duration"
     unit_of_measurement: s
     accuracy_decimals: 0
@@ -572,6 +573,7 @@ sensor:
     lambda: |-
       return id(last_outage_s);
   - platform: template
+    id: sensor_total_outage_time
     name: "Total PZEM Offline Time"
     unit_of_measurement: h
     state_class: total_increasing
@@ -736,15 +738,24 @@ interval:
             id(outage_start_ms) = id(last_pzem_ms);
             id(outage_count)++;
             id(sensor_outage_count).publish_state(id(outage_count));
-            id(sensor_current_outage_duration).publish_state(0.0f);
+            id(sensor_current_outage_duration).publish_state((millis() - id(outage_start_ms)) / 1000.0f);
+            id(bin_pzem_online).publish_state(false);
+            id(bin_pzem_offline).publish_state(true);
           } else if (ok && id(outage_active)) {
             id(outage_active) = false;
             uint32_t d = (millis() - id(outage_start_ms)) / 1000;
             id(last_outage_s) = d;
             id(outage_total_s) += d;
             id(sensor_current_outage_duration).publish_state(0.0f);
+            id(sensor_last_outage_duration).publish_state(d);
+            id(sensor_total_outage_time).publish_state(id(outage_total_s) / 3600.0f);
+            id(bin_pzem_online).publish_state(true);
+            id(bin_pzem_offline).publish_state(false);
           } else if (id(outage_active)) {
             id(sensor_current_outage_duration).publish_state((millis() - id(outage_start_ms)) / 1000.0f);
+          } else if (ok && !id(comm_ok)) {
+            id(bin_pzem_online).publish_state(true);
+            id(bin_pzem_offline).publish_state(false);
           }
           id(comm_ok) = ok;
 

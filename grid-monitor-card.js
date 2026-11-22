@@ -166,7 +166,7 @@
       today: 'Сьогодні', energy_month: 'Споживання за місяць', energy_total: 'Загальна енергія PZEM', cost_today: 'Вартість сьогодні', cost_month: 'Вартість за місяць', cost_total: 'Загальна розрахована вартість', tariff: 'Поточний тариф', cost_rate: 'Вартість за годину', two_zone: 'Двозонний облік',
       estimated_cost: 'Орієнтовна вартість', current_load: 'Поточне навантаження', night: 'Ніч', device_name: 'Grid Monitor · ESP32-C3', device_description: 'Контролер ESPHome · PZEM-004T', diagnostics: 'Діагностика',
       sag: 'Поріг просідання', swell: 'Поріг перенапруги', nominal: 'Номінальна напруга', tariff_day: 'Денний тариф', tariff_night: 'Нічний тариф', wifi: 'Сигнал Wi‑Fi', temperature: 'Температура ESP32', uptime: 'Час роботи ESP32', ip: 'IP-адреса', ssid: 'Wi‑Fi мережа',
-      events: 'Переривання зв’язку з PZEM', inverter_events: 'Кількість переривань PZEM', current_duration: 'Поточний час без PZEM', last_duration: 'Остання тривалість без PZEM', total_duration: 'Загальний час без PZEM', sag_events: 'Просідання напруги', swell_events: 'Перенапруги', save: 'Зберегти', on: 'Увімкнено', off: 'Вимкнено',
+      events: 'Переривання зв’язку з PZEM', inverter_events: 'Кількість переривань PZEM', current_duration: 'Час без PZEM', last_duration: 'Остання тривалість без PZEM', total_duration: 'Загальний час без PZEM', sag_events: 'Просідання напруги', swell_events: 'Перенапруги', save: 'Зберегти', on: 'Увімкнено', off: 'Вимкнено',
             editor_title: 'Налаштування Smart Grid Monitor',
       editor_device_select: 'Вибір пристрою ESP32 / Префікс',
       editor_device_hint: 'Показано лише пристрої ESPHome. За потреби введіть власний префікс нижче.',
@@ -1026,6 +1026,7 @@
       this._chartReadingsTimer = null;
       this._measureQueued = false;
       this._heartbeatTimer = null;
+      this._outageTicker = null;
       this.shadowRoot.addEventListener('click', (event) => this._handleCardClick(event));
       this.shadowRoot.addEventListener('keydown', (event) => this._handleCardKeydown(event));
       this.shadowRoot.addEventListener('toggle', (event) => {
@@ -1137,6 +1138,27 @@
       }
       if (this._heartbeatTimer !== null) window.clearTimeout(this._heartbeatTimer);
       this._heartbeatTimer = null;
+      if (this._outageTicker !== null && typeof window !== 'undefined') window.clearInterval(this._outageTicker);
+      this._outageTicker = null;
+    }
+
+    _syncOutageTicker() {
+      const isOffline = this._effectiveEspStatus() === 'on' && (this._raw('inverter') === 'on' || this._raw('mains') === 'off' || this._raw('source_status') === 'pzem_offline_source_unknown');
+      if (isOffline) {
+        if (!this._outageTicker && typeof window !== 'undefined') {
+          this._outageTicker = window.setInterval(() => {
+            if (!this.isConnected) {
+              if (this._outageTicker) window.clearInterval(this._outageTicker);
+              this._outageTicker = null;
+              return;
+            }
+            this._updateValueBindings(new Set(['inverter_current_duration']));
+          }, 1000);
+        }
+      } else if (this._outageTicker) {
+        if (typeof window !== 'undefined') window.clearInterval(this._outageTicker);
+        this._outageTicker = null;
+      }
     }
 
     // False while the page is in the background or the card is scrolled/collapsed out of view.
@@ -1545,14 +1567,23 @@
       if (key === 'uptime' && this._state(key)?.attributes?.unit_of_measurement === 's') return this._formatDuration(n);
       if (['inverter_current_duration', 'last_inverter_duration', 'total_inverter_time'].includes(key)) {
         if (key === 'inverter_current_duration') {
-          const isOffline = this._effectiveEspStatus() === 'on' && (this._raw('inverter') === 'on' || this._raw('mains') === 'off');
-          if (isOffline && (!n || n <= 0)) {
-            const lastChanged = this._state('inverter')?.last_changed || this._state('mains')?.last_changed;
-            const elapsed = lastChanged ? Math.max(0, Math.floor((Date.now() - new Date(lastChanged).getTime()) / 1000)) : 0;
+          const isOffline = this._effectiveEspStatus() === 'on' && (this._raw('inverter') === 'on' || this._raw('mains') === 'off' || this._raw('source_status') === 'pzem_offline_source_unknown');
+          if (isOffline) {
+            const stateObj = this._state(key);
+            const reported = Number(stateObj?.state);
+            const lastUpdated = stateObj?.last_updated || stateObj?.last_changed;
+            const extra = lastUpdated ? Math.max(0, Math.floor((Date.now() - new Date(lastUpdated).getTime()) / 1000)) : 0;
+            if (Number.isFinite(reported) && reported > 0) {
+              return this._formatDuration(reported + extra);
+            }
+            const fallbackChanged = this._state('inverter')?.last_changed || this._state('mains')?.last_changed || this._state('source_status')?.last_changed;
+            const elapsed = fallbackChanged ? Math.max(0, Math.floor((Date.now() - new Date(fallbackChanged).getTime()) / 1000)) : 0;
             if (elapsed > 0) return this._formatDuration(elapsed);
+            return this._formatDuration(1);
           }
+          return this._formatDuration(0);
         }
-        const unit = this._state(key)?.attributes?.unit_of_measurement || (key === 'total_inverter_time' ? 'h' : 'min');
+        const unit = this._state(key)?.attributes?.unit_of_measurement || (key === 'total_inverter_time' ? 'h' : 's');
         const seconds = (n || 0) * (unit === 'h' ? 3600 : unit === 'min' ? 60 : 1);
         return this._formatDuration(seconds);
       }
@@ -2679,7 +2710,7 @@
       const btnWidth = button.offsetWidth || 100;
       const maxLeft = Math.max(12, clientWidth - btnWidth / 2 - 8);
       button.style.left = `${Math.max(btnWidth / 2 + 8, Math.min(maxLeft, left))}px`;
-      button.style.top = '2px';
+      button.style.top = '-34px';
     }
 
     _chartZoomSelectionBounds(chartOverride = null) {
@@ -2846,9 +2877,9 @@
         this._chartZoomAnimation = animation;
         animation.onfinish = () => {
           if (this._chartZoomAnimation !== animation) return;
-          animation.cancel();
           this._chartZoomAnimation = null;
           this._commitChartZoomRange(start, end);
+          try { animation.cancel(); } catch (_e) {}
         };
         animation.oncancel = () => {
           if (this._chartZoomAnimation === animation) this._chartZoomAnimation = null;
@@ -3188,10 +3219,17 @@
       const bufferedHistory = scope === 'energy' ? this._energyHistory?.[energyMetric] : this._history;
       const bufferedStart = scope === 'energy' ? this._energyHistoryBufferStart?.[energyMetric] : this._historyBufferStart;
       const bufferedEnd = scope === 'energy' ? this._energyHistoryBufferEnd?.[energyMetric] : this._historyBufferEnd;
+      let pinchAlpha = 0.5;
+      if (pointerType === 'touch' && points.length >= 2) {
+        const chartW = chartWidth || 1;
+        const plotLeft = rect.left + (x0 / chartW) * rect.width;
+        const plotWidthPx = ((x1 - x0) / chartW) * rect.width;
+        pinchAlpha = plotWidthPx > 0 ? Math.max(0, Math.min(1, (startX - plotLeft) / plotWidthPx)) : 0.5;
+      }
       this._chartPan = {
         plot, chart, dataGroup, scope, energyMetric, pointerType, pointerIds, startX, deltaX: 0,
         x0, x1, previewNow: Date.now(), frame: null, frameKind: null, lastTransform: null,
-        rangeMs: tEnd - tStart, plotWidth,
+        rangeMs: tEnd - tStart, plotWidth, pinchAlpha,
         startDistance: pointerType === 'touch' ? this._chartPointerDistance(points) : 1,
         currentDistance: pointerType === 'touch' ? this._chartPointerDistance(points) : 1,
         tStart, tEnd, live: false, committed: false,
@@ -3262,12 +3300,14 @@
       const nextRange = Math.max(minRange, Math.min(maxAvailableRange, pan.rangeMs * scale));
       const shift = pan.pointerType === 'touch' ? 0 : this._chartPanShiftForDelta(pan.deltaX, pan.rangeMs, pan.plotWidth);
       let latestStart = now - nextRange;
-      let start = Math.max(floor, Math.min(latestStart, (pan.tStart + pan.tEnd) / 2 - shift - nextRange / 2));
-      if ((pan.pointerType === 'axis' || pan.pointerType === 'drag') && pan.buf && pan.buf.end - pan.buf.start >= nextRange) {
+      const alpha = Number.isFinite(pan.pinchAlpha) ? pan.pinchAlpha : 0.5;
+      let start = (pan.pointerType === 'touch' && scale !== 1)
+        ? (pan.tStart + alpha * pan.rangeMs) - alpha * nextRange
+        : (pan.tStart + pan.tEnd) / 2 - shift - nextRange / 2;
+      if (pan.buf && Number.isFinite(pan.buf.start) && pan.buf.start < pan.tStart) {
         floor = Math.max(floor, pan.buf.start);
-        latestStart = Math.min(latestStart, pan.buf.end - nextRange);
-        start = Math.max(floor, Math.min(latestStart, start));
       }
+      start = Math.max(floor, Math.min(latestStart, start));
       return { start, end: start + nextRange };
     }
 
@@ -3554,8 +3594,18 @@
       const data = this._chartData(history, metricKey, { range, customRange, bounds, includeCurrent: !isEnergy });
       if (!data) {
         if (!isEnergy) this._chartPts = [];
-        if (loading) return `<div class="chart-empty">${this._escape(this._t('loading'))}</div>`;
-        return `<div class="chart-empty">${this._escape(this._t('no_history'))}</div>`;
+        if (loading && (!history || !history.length)) return `<div class="chart-empty">${this._escape(this._t('loading'))}</div>`;
+        if (history && history.length > 0) {
+          const nearest = history.reduce((closest, pt) => {
+            const ptT = pt.time?.getTime?.() || 0;
+            const dist = Math.min(Math.abs(ptT - tStart), Math.abs(ptT - tEnd));
+            return !closest || dist < closest.dist ? { pt, dist } : closest;
+          }, null);
+          if (nearest?.pt && Number.isFinite(nearest.pt.value)) {
+            data = { series: [{ t: tStart, v: nearest.pt.value }, { t: tEnd, v: nearest.pt.value }], tStart, tEnd, rangeMs };
+          }
+        }
+        if (!data) return `<div class="chart-empty">${this._escape(this._t('no_history'))}</div>`;
       }
       const { series, tStart, tEnd, rangeMs } = data;
       const scale = this._chartScale(series, metricKey);
@@ -3565,10 +3615,13 @@
       const Y = (v) => y1 - ((Math.max(scale.lo, Math.min(scale.max, v)) - scale.lo) / (scale.max - scale.lo)) * (y1 - y0);
       const pts = series.map((point) => ({ x: X(point.t), y: Y(point.v), v: point.v, t: point.t }));
       if (!isEnergy) this._chartPts = pts;
-      const bufferStart = !isEnergy ? Math.min(tStart, Number(this._historyBufferStart) || tStart) : tStart;
-      const bufferEnd = !isEnergy ? Math.max(tEnd, Number(this._historyBufferEnd) || tEnd) : tEnd;
-      const bufferSeries = !isEnergy && bufferStart < tStart
-        ? this._bucketHistory(bufferStart, bufferEnd, Math.min(288, Math.ceil((bufferEnd - bufferStart) / rangeMs * (width < 520 ? 48 : 96))), history)
+      const histStart = Array.isArray(history) && history.length ? (history[0].time?.getTime?.() || tStart) : tStart;
+      const histEnd = Array.isArray(history) && history.length ? (history.at(-1).time?.getTime?.() || tEnd) : tEnd;
+      const bufferStart = !isEnergy ? Math.min(tStart, histStart) : tStart;
+      const bufferEnd = !isEnergy ? Math.max(tEnd, histEnd) : tEnd;
+      const hasBuffer = bufferStart < tStart || bufferEnd > tEnd;
+      const bufferSeries = !isEnergy && hasBuffer
+        ? this._bucketHistory(bufferStart, bufferEnd, Math.min(288, Math.ceil(((bufferEnd - bufferStart) / rangeMs) * (width < 520 ? 48 : 96))), history)
         : series;
       const pathPts = bufferSeries.map((point) => ({
         x: x0 + ((point.t - tStart) / rangeMs) * (x1 - x0),
@@ -5064,6 +5117,7 @@
       });
       const bannerLabel = banner?.querySelector('[data-role="home-banner-label"]');
       if (bannerLabel) bannerLabel.textContent = status.banner;
+      this._syncOutageTicker();
     }
 
     _updateGauge() {
@@ -5782,9 +5836,10 @@
         .banner.inverter .banner-system strong,.banner.pzem-offline .banner-system strong{color:#fff1d0!important}
         .banner.alarm .banner-system strong,.banner.offline .banner-system strong{color:#ffe0e5!important}
         .chart-zoom-selection-button{flex:none;min-height:32px;padding:0 11px;border:1px solid #128dc3;border-radius:9px;background:linear-gradient(135deg,#087bbc,#07528a);color:#fff;font:inherit;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 5px 16px #00101dcc}
-        .chart-zoom-confirm-button{position:absolute;z-index:3;transform:translateX(-50%);white-space:nowrap;animation:chart-zoom-confirm-in .16s ease-out both}
+        .chart-zoom-confirm-button{position:absolute;top:-34px;z-index:10;transform:translateX(-50%);white-space:nowrap;animation:chart-zoom-confirm-in .16s ease-out both;pointer-events:auto}
         .chart-zoom-confirm-button[hidden]{display:none!important}
-        @keyframes chart-zoom-confirm-in{from{opacity:0;translate:0 4px}to{opacity:1;translate:0 0}}
+        .chart-zoom-confirm-button::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border-width:5px 5px 0 5px;border-style:solid;border-color:#128dc3 transparent transparent transparent}
+        @keyframes chart-zoom-confirm-in{from{opacity:0;transform:translate(-50%,-4px)}to{opacity:1;transform:translate(-50%,0)}}
         .chart-zoom-selection-button:disabled{opacity:.42;filter:saturate(.55);cursor:not-allowed}
         .chart-zoom-selection-band{fill:#20baff18;stroke:#20baff70;stroke-width:1;pointer-events:none}
         .chart-zoom-selection-edge{stroke:#46c8ff;stroke-width:1.5;stroke-dasharray:4 3;pointer-events:none}
@@ -5794,10 +5849,10 @@
         .chart-zoom-handle-end .chart-zoom-handle-mark{fill:#9257ff}
         .chart-zoom-handle:focus .chart-zoom-handle-mark{stroke:#fff;stroke-width:2.5}
         .chart-pan-axis{fill:#128bd019;stroke:#2b9fe466;stroke-width:1;stroke-dasharray:4 3;pointer-events:all;cursor:grab;touch-action:none}.chart-pan-axis:hover{fill:#128bd02c;stroke:#43bcff}.chart-pan-hint{fill:#80ccf4;font-size:10px;font-weight:650;letter-spacing:.2px;pointer-events:none;user-select:none}.chart-plot.is-panning .chart-pan-axis{fill:#128bd040;stroke:#58d1ff;cursor:grabbing}.chart-plot.is-panning .chart-pan-hint{fill:#d0f1ff}
-        .chart-plot{touch-action:none;user-select:none;-webkit-user-select:none;cursor:crosshair}
+        .chart-plot{touch-action:none;position:relative;overflow:visible;user-select:none;-webkit-user-select:none;cursor:crosshair}
         .chart-plot.is-panning{cursor:grabbing}
         @container (max-width:760px){
-          .chart-zoom-confirm-button{min-height:30px;padding:0 9px;font-size:11px}
+          .chart-zoom-confirm-button{top:-32px;min-height:30px;padding:0 9px;font-size:11px}
           .chart-tools{width:100%;margin-left:0;justify-content:flex-end}
           .chart-date-range{flex:1 1 auto;min-width:0;position:relative}
           .chart-date-range>[data-chart-date-toggle]{width:100%;padding:8px 4px;font-size:12px}
