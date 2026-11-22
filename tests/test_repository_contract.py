@@ -241,20 +241,28 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn(".action-grid .action-button:nth-child(5){grid-column:1/-1}", card)
         self.assertNotIn("minmax(104px,1fr)", card)
 
-    def test_home_places_esp_power_scheme_in_final_pzem_banner(self):
+    def test_home_has_no_status_tiles_and_keeps_esp_power_scheme_in_banner(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
         home = card.split("    _home() {", 1)[1].split("    _id(", 1)[0]
-        self.assertIn('class="card info info-system"', home)
-        self.assertNotIn('class="info-system-section"', home)
-        self.assertEqual(home.count('data-role="home-mains"'), 1)
+        for removed in ('class="bottom-status"', 'class="card info', 'data-role="home-mains"', 'data-role="home-source"', 'data-role="home-voltage-quality"'):
+            self.assertNotIn(removed, home)
+        self.assertNotIn("_updateHomeStatus", card)
         self.assertEqual(home.count('data-role="esp-power-label"'), 1)
-        pzem_card = home.split('class="card info info-system"', 1)[1].split('</div></div>', 1)[0]
-        self.assertNotIn('data-role="esp-power-label"', pzem_card)
         banner = home.split('class="card banner ', 1)[1]
         self.assertIn('data-role="home-banner-label"', banner)
         self.assertIn('data-role="esp-power-label"', banner)
         self.assertIn('data-role="esp-power-note"', banner)
-        self.assertIn(".bottom-status{grid-template-columns:repeat(4,minmax(0,1fr))", card)
+
+    def test_today_usage_sits_under_gauge_between_label_and_status(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        home = card.split("    _home() {", 1)[1].split("    _id(", 1)[0]
+        label = home.index('class="voltage-label"')
+        usage = home.index('data-role="gauge-usage"')
+        state = home.index('data-role="state-indicator"')
+        self.assertLess(label, usage)
+        self.assertLess(usage, state)
+        self.assertEqual(home.count('data-value-key="energy_today"'), 1)
+        self.assertEqual(home.count('data-value-key="cost_today"'), 1)
 
     def test_mobile_layout_prioritizes_voltage_and_avoids_horizontal_action_scrolling(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
@@ -454,14 +462,15 @@ class RepositoryContractTests(unittest.TestCase):
         result = subprocess.run(["node", "-e", script], cwd=ROOT, text=True, capture_output=True, check=False)
         self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_house_night_scene_and_tower_artwork_without_sheen(self):
+    def test_house_neutral_scene_and_tower_artwork_without_sheen(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
         # Tower artwork must not contain the left diagonal sheen glare streak
         self.assertNotIn("id('sheen')", card)
         self.assertNotIn("sheen", card)
-        # House artwork must contain the night scene elements
-        self.assertIn("house-night-scene", card)
-        self.assertIn("houseSky", card)
+        # House artwork is a neutral scene: no night sky, stars or moon
+        self.assertIn("house-scene", card)
+        for night in ("house-night-scene", "houseSky", "houseWindowWarm", "Crescent Moon", "Stars"):
+            self.assertNotIn(night, card)
         self.assertIn("poleWood", card)
         self.assertIn("house-wire-pulse", card)
         self.assertIn("houseWireFlow", card)
