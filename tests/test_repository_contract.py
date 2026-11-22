@@ -454,6 +454,19 @@ class RepositoryContractTests(unittest.TestCase):
         result = subprocess.run(["node", "-e", script], cwd=ROOT, text=True, capture_output=True, check=False)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_house_night_scene_and_tower_artwork_without_sheen(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        # Tower artwork must not contain the left diagonal sheen glare streak
+        self.assertNotIn("id('sheen')", card)
+        self.assertNotIn("sheen", card)
+        # House artwork must contain the night scene elements
+        self.assertIn("house-night-scene", card)
+        self.assertIn("houseSky", card)
+        self.assertIn("poleWood", card)
+        self.assertIn("house-wire-pulse", card)
+        self.assertIn("houseWireFlow", card)
+        self.assertIn(".shell.eco .house-wire-pulse{animation:none!important}", card)
+
 
 if __name__ == "__main__":
     unittest.main()
