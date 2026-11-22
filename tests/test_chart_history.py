@@ -1450,6 +1450,237 @@ assert.deepEqual(applied, [20, 40], 'pointerup applies its final position immedi
         result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False)
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
+    def test_chart_pan_pointer_moves_are_coalesced_and_commit_only_on_release(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const scheduled = new Map();
+let frameId = 0;
+const context = {
+  window: {
+    customCards: [],
+    requestAnimationFrame(callback) { const id = ++frameId; scheduled.set(id, callback); return id; },
+    cancelAnimationFrame(id) { scheduled.delete(id); },
+    setTimeout(callback) { const id = ++frameId; scheduled.set(id, callback); return id; },
+    clearTimeout(id) { scheduled.delete(id); },
+  },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+};
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+let previews = 0;
+let commits = 0;
+let deferredFlushes = 0;
+let historyRequests = 0;
+const plot = { releasePointerCapture() {}, classList: { remove() {} } };
+const pan = {
+  plot, pointerIds: [1], pointerType: 'axis', startX: 100, deltaX: 0,
+  startDistance: 1, currentDistance: 1, live: false, frame: null,
+  rangeMs: 60000, plotWidth: 300, tStart: 1000, tEnd: 61000,
+};
+card._chartPan = pan;
+card._chartPointers = new Map([[1, { x: 100, y: 0 }]]);
+card._chartPointerPlots = new Map([[1, plot]]);
+card._chartPanPreview = () => { previews += 1; };
+card._panEnsureBuffer = () => { historyRequests += 1; };
+card._refreshChart = () => { throw new Error('full chart refresh during drag'); };
+card._finishChartPan = () => { commits += 1; card._chartPan = null; };
+card._flushDeferredChartUpdates = () => { deferredFlushes += 1; };
+const move = (x) => ({ pointerId: 1, clientX: x, clientY: 0, preventDefault() {} });
+card._chartPointerMove(move(120));
+card._chartPointerMove(move(140));
+assert.equal(scheduled.size, 1, 'pointer events are coalesced into one frame');
+assert.equal(previews, 0, 'pointer event handlers do no chart work');
+assert.equal(historyRequests, 0, 'dragging never fetches or merges history');
+const [id, callback] = scheduled.entries().next().value;
+scheduled.delete(id);
+callback();
+assert.equal(previews, 1, 'the frame updates the lightweight transform once');
+assert.equal(pan.deltaX, 40, 'the frame uses the latest pointer position');
+assert.equal(pan.live, true, 'the movement threshold is applied in the frame');
+card._chartPointerMove(move(150));
+assert.equal(scheduled.size, 1);
+card._chartPointerEnd(move(155));
+assert.equal(scheduled.size, 0, 'pointer release cancels any unneeded preview frame');
+assert.equal(pan.deltaX, 55, 'release applies the exact final pointer position');
+assert.equal(commits, 1, 'range commit happens once on release');
+assert.equal(deferredFlushes, 1, 'deferred telemetry and chart updates resume after release');
+assert.equal(historyRequests, 0, 'the gesture itself does not request buffer history');
+"""
+        result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_telemetry_changes_are_coalesced_until_chart_gesture_ends(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const scheduled = [];
+const context = {
+  window: { customCards: [], requestAnimationFrame(callback) { scheduled.push(callback); return scheduled.length; } },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+};
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+let updates = 0;
+card._hasRendered = true;
+card._pendingChangedKeys = new Set();
+card._updateScheduled = false;
+card._chartPan = {};
+card._chartZoomDrag = null;
+card._chartGestureChangedKeys = new Set();
+card._updateChanged = (changed) => { updates += 1; assert.deepEqual([...changed].sort(), ['power', 'voltage']); };
+card._scheduleStateUpdate(new Set(['power']));
+card._scheduleStateUpdate(new Set(['voltage']));
+assert.equal(scheduled.length, 1, 'HA state events still share one animation frame');
+scheduled.shift()();
+assert.equal(updates, 0, 'telemetry DOM updates are skipped during the gesture');
+assert.deepEqual([...card._chartGestureChangedKeys].sort(), ['power', 'voltage']);
+card._chartPan = null;
+card._chartRefreshPending = false;
+card._energyChartRefreshPending = false;
+card._chartFullRenderPending = false;
+card._statsExtremesApplyPending = false;
+card._ensureHistory = () => {};
+card._ensureEnergyHistory = () => {};
+card._ensureStatsExtremes = () => {};
+card._flushDeferredChartUpdates();
+assert.equal(updates, 1, 'latest telemetry changes are applied once on release');
+assert.equal(card._chartGestureChangedKeys.size, 0);
+"""
+        result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_chart_rebuilds_are_deferred_during_gesture_and_flushed_once(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = { window: { customCards: [] }, HTMLElement: class HTMLElement {}, customElements: { define: (name, value) => registry.set(name, value) } };
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+let domQueries = 0;
+let svgBuilds = 0;
+let chartStatsBuilds = 0;
+let energyStatsBuilds = 0;
+let appliedStats = 0;
+card._chartZoomDrag = null;
+card._chartPan = {};
+card._chartRefreshPending = false;
+card._energyChartRefreshPending = false;
+card._chartFullRenderPending = false;
+card._chartGestureChangedKeys = new Set();
+card._statsExtremesApplyPending = false;
+card.shadowRoot = { querySelector() { domQueries += 1; throw new Error('DOM should not be touched during gesture'); } };
+card._refreshChart();
+card._refreshEnergyCharts();
+card._applyStatsExtremes();
+assert.equal(domQueries, 0, 'chart rebuild, energy rebuild and stats bindings skip DOM work mid-gesture');
+assert.equal(card._chartRefreshPending, true);
+assert.equal(card._energyChartRefreshPending, true);
+assert.equal(card._statsExtremesApplyPending, true);
+const plot = { innerHTML: '' };
+const stats = { innerHTML: '' };
+const energyPlot = { dataset: {}, innerHTML: '' };
+const energySelection = { innerHTML: '' };
+const energyStats = { dataset: {}, innerHTML: '' };
+const energyTitle = { textContent: '' };
+card._chartPan = null;
+card._chartZoomDrag = null;
+card._activeTab = 'params';
+card.shadowRoot = {
+  querySelector(selector) {
+    if (selector.includes('chart-plot')) return plot;
+    if (selector.includes('chart-stats')) return stats;
+    if (selector === '[data-energy-plot]') return energyPlot;
+    if (selector === '[data-energy-selection]') return energySelection;
+    if (selector === '[data-energy-stats]') return energyStats;
+    if (selector === '[data-energy-chart-title]') return energyTitle;
+    return null;
+  },
+  querySelectorAll() { return []; },
+};
+card._chartSvg = () => { svgBuilds += 1; return '<svg />'; };
+card._chartStatsHtml = (_metric, _history, scope) => {
+  if (scope === 'energy') energyStatsBuilds += 1;
+  else chartStatsBuilds += 1;
+  return '<div />';
+};
+card._energyChartMetric = 'energy_total';
+card._energyHistory = { energy_total: [] };
+card._energyHistoryLoading = { energy_total: false };
+card._energyBarSvg = () => '<svg />';
+card._energyBarSelectionHtml = () => '<div />';
+card._t = (key) => key;
+card._restoreChartScrub = () => true;
+card._updateChartScrubber = () => {};
+card._updateChartReadings = () => {};
+card._updateChartZoomSelection = () => {};
+card._updateRange = () => {};
+card._updateValueBindings = () => { appliedStats += 1; };
+card._ensureHistory = () => {};
+card._ensureEnergyHistory = () => {};
+card._ensureStatsExtremes = () => {};
+card._flushDeferredChartUpdates();
+assert.equal(svgBuilds, 1, 'one final SVG rebuild occurs after release');
+assert.equal(chartStatsBuilds, 1, 'chart statistics rebuild once after release');
+assert.equal(energyStatsBuilds, 1, 'energy statistics rebuild once after release');
+assert.equal(appliedStats, 1, 'deferred statistics bindings apply once after release');
+assert.equal(card._chartRefreshPending, false);
+assert.equal(card._energyChartRefreshPending, false);
+"""
+        result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_zoom_handle_drag_defers_labels_and_accessibility_updates_until_release(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = { window: { customCards: [] }, HTMLElement: class HTMLElement {}, customElements: { define: (name, value) => registry.set(name, value) } };
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+let formats = 0;
+card._formatChartTimestamp = (value) => { formats += 1; return String(value); };
+const node = () => {
+  const attrs = new Map();
+  return { attrs, textContent: '', disabled: true,
+    getAttribute(name) { return attrs.has(name) ? attrs.get(name) : null; },
+    setAttribute(name, value) { attrs.set(name, String(value)); } };
+};
+const chart = { dataset: { chartY0: '20', chartY1: '180' } };
+const nodes = {
+  band: node(), startEdge: node(), endEdge: node(), startHandle: node(), endHandle: node(),
+  startLabel: node(), endLabel: node(), applyButton: node(),
+};
+const drag = { chart, bounds: { start: 1000, end: 61000 }, x0: 100, x1: 900, nodes, labelsAt: 0 };
+card._chartZoomWindow = { start: 11000, end: 21000, dirty: true };
+card._updateChartZoomSelection(drag, false);
+assert.equal(formats, 0, 'active drag does not format locale labels');
+assert.equal(nodes.startHandle.getAttribute('transform'), 'translate(233.33 0)', 'handle position still previews immediately');
+assert.equal(nodes.startHandle.getAttribute('aria-valuenow'), null, 'ARIA timestamps wait until release');
+assert.equal(nodes.startLabel.textContent, '', 'visible timestamp labels wait until release');
+assert.equal(nodes.applyButton.disabled, true, 'button state is not recalculated mid-drag');
+card._updateChartZoomSelection(drag, true);
+assert.equal(formats, 2, 'release formats both labels once');
+assert.equal(nodes.startHandle.getAttribute('aria-valuenow'), '11000');
+assert.equal(nodes.startLabel.textContent, '11000');
+assert.equal(nodes.applyButton.disabled, false, 'release recalculates the apply state');
+"""
+        result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
     def test_axis_pan_targets_energy_and_parameter_history_without_changing_scale(self):
         script = r"""
 const assert = require('node:assert/strict');
