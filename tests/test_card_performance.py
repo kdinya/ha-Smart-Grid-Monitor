@@ -654,5 +654,75 @@ assert.deepEqual(JSON.parse(JSON.stringify(card._mergeStatsExtremes(null, null))
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
 
+class PeriodRangeSelectionTests(unittest.TestCase):
+    def test_calendar_opens_immediately_and_show_waits_for_both_dates(self):
+        result = run_node(r"""
+const card = makeCard();
+const start = { value: '' };
+const end = { value: '' };
+const startLabel = { textContent: '' };
+const endLabel = { textContent: '' };
+const apply = { disabled: true };
+const calendar = { hidden: true, innerHTML: '' };
+const error = { textContent: '' };
+const trigger = { setAttribute() {}, getBoundingClientRect: () => ({ left: 0, right: 120, top: 0, bottom: 40 }) };
+const panel = {
+  dataset: { rangeScope: 'params' },
+  querySelector(selector) {
+    if (selector === '[data-chart-calendar]') return calendar;
+    if (selector === '[data-role="chart-date-error"]') return error;
+    if (selector === '[data-chart-date-value="start"]') return startLabel;
+    if (selector === '[data-chart-date-value="end"]') return endLabel;
+    if (selector === '[data-chart-date-apply]') return apply;
+    return null;
+  },
+};
+card.shadowRoot = {
+  querySelector(selector) {
+    if (selector === '.chart-date-range-panel[data-range-scope="params"]') return panel;
+    if (selector === '[data-chart-date-toggle][data-chart-scope="params"]') return trigger;
+    return null;
+  },
+};
+card._chartDateInput = (_scope, field) => field === 'start' ? start : end;
+card._chartDateRangeMin = () => '2026-11-01';
+card._chartDateRangeMax = () => '2026-11-22';
+card._positionChartDateRangePopover = (_trigger, openPanel) => { openPanel.hidden = false; };
+card._locale = () => 'en';
+card._formatChartDateLabel = (value) => value;
+card._t = (key) => key;
+card._escape = (value) => String(value);
+card._openChartDateCalendar('params');
+assert.equal(calendar.hidden, false, 'the calendar is visible as soon as the period button opens');
+assert.equal(card._chartCalendarState.start, '');
+assert.equal(card._chartCalendarState.end, '');
+assert.equal(apply.disabled, true, 'Show starts disabled');
+
+card._selectChartCalendarDate('2026-11-10', 'params');
+assert.equal(start.value, '2026-11-10');
+assert.equal(end.value, '');
+assert.equal(startLabel.textContent, '2026-11-10');
+assert.equal(apply.disabled, true, 'one selected date is not an applicable range');
+assert.match(calendar.innerHTML, /range-start/);
+
+card._selectChartCalendarDate('2026-11-15', 'params');
+assert.equal(end.value, '2026-11-15');
+assert.equal(apply.disabled, false, 'Show becomes active after the second date');
+assert.match(calendar.innerHTML, /range-end/);
+assert.match(calendar.innerHTML, /in-range/);
+
+card._selectChartCalendarDate('2026-11-18', 'params');
+assert.equal(start.value, '2026-11-18', 'a third selection starts a new range');
+assert.equal(end.value, '');
+assert.equal(apply.disabled, true, 'a new incomplete range disables Show again');
+
+card._selectChartCalendarDate('2026-11-12', 'params');
+assert.equal(start.value, '2026-11-12', 'reverse selection is ordered chronologically');
+assert.equal(end.value, '2026-11-18');
+assert.equal(apply.disabled, false);
+""")
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()

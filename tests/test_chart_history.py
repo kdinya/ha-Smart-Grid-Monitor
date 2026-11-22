@@ -1417,9 +1417,10 @@ card._energyHistoryBounds = () => ({ start: Date.parse('2026-11-20T00:00:00Z'), 
 
 // 1. HTML generation: date inputs, min/max constraints
 const html = card._chartDateRangeHtml('params');
-assert.ok(html.includes('type="hidden"'), 'date values are stored behind custom calendar buttons');
+assert.ok(html.includes('type="hidden"'), 'draft date values are stored in hidden form fields');
 assert.ok(html.includes('data-chart-calendar'), 'renders the custom month calendar container');
-assert.ok(html.includes('data-chart-calendar-open') && html.includes('data-chart-field="start"') && html.includes('data-chart-field="end"'), 'both range endpoints open the styled calendar');
+assert.ok(html.includes('data-chart-calendar') && html.includes('data-chart-date-apply') && html.includes('disabled'), 'the period picker opens a calendar with Show disabled until the range is complete');
+assert.ok(!html.includes('data-chart-calendar-open'), 'there is no intermediate date-picker dialog');
 assert.ok(!html.includes('type="datetime-local"'), 'date picker does not use native browser date-time controls');
 
 // 2. Single day range application (same start and end date -> 24h span)
@@ -1464,7 +1465,7 @@ assert.ok(appliedStart >= card._statsStart, 'start is clamped to statsStart');
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
 
-    def test_month_calendar_dims_days_before_selected_start_for_both_chart_scopes(self):
+    def test_month_calendar_disables_dates_before_statistics_start_for_both_chart_scopes(self):
         script = r"""
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -1480,19 +1481,16 @@ card._escape = (value) => String(value);
 card._chartDateRangeMin = () => '2026-11-01';
 card._chartDateRangeMax = () => '2026-11-22';
 card._formatDateInput = (timestamp) => new Date(timestamp).toISOString().slice(0, 10);
-const start = { value: '2026-11-10' };
-const end = { value: '2026-11-18' };
-card.shadowRoot = { querySelector: (selector) => {
-  if (selector === '[data-chart-date-start]' || selector === '[data-energy-chart-date-start]') return start;
-  if (selector === '[data-chart-date-end]' || selector === '[data-energy-chart-date-end]') return end;
-  return null;
-} };
 for (const scope of ['params', 'energy']) {
-  const html = card._chartCalendarContentHtml(scope, 'end', '2026-11');
-  const dayBeforeStart = html.match(new RegExp(`<button[^>]*data-chart-calendar-day="2026-11-09"[^>]*>`))?.[0] || '';
+  card._chartCalendarState = { scope, month: '2026-11', start: '2026-11-10', end: '2026-11-18' };
+  const html = card._chartCalendarContentHtml(scope, '2026-11');
+  const dayBeforeStatsStart = html.match(new RegExp(`<button[^>]*data-chart-calendar-day="2026-10-26"[^>]*>`))?.[0] || '';
   const startDay = html.match(new RegExp(`<button[^>]*data-chart-calendar-day="2026-11-10"[^>]*>`))?.[0] || '';
-  assert.ok(dayBeforeStart.includes('aria-disabled="true"'), `${scope}: date before chosen start is disabled and dimmed`);
-  assert.ok(!startDay.includes('aria-disabled="true"'), `${scope}: selected start date remains selectable as end`);
+  const endDay = html.match(new RegExp(`<button[^>]*data-chart-calendar-day="2026-11-18"[^>]*>`))?.[0] || '';
+  assert.ok(dayBeforeStatsStart.includes('aria-disabled="true"'), `${scope}: date before statistics start is disabled and dimmed`);
+  assert.ok(!startDay.includes('aria-disabled="true"') && startDay.includes('range-start'), `${scope}: start date is highlighted and selectable`);
+  assert.ok(!endDay.includes('aria-disabled="true"') && endDay.includes('range-end'), `${scope}: end date is highlighted and selectable`);
+  assert.ok(html.includes('in-range'), `${scope}: dates inside the selected range are highlighted`);
 }
 """
         result = subprocess.run(

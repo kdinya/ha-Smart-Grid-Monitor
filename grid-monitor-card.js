@@ -2241,22 +2241,16 @@
       return date.toLocaleDateString(this._locale(), { day: 'numeric', month: 'short', year: 'numeric' });
     }
 
-    _chartCalendarLimits(scope, field) {
-      let min = this._chartDateRangeMin();
-      let max = this._chartDateRangeMax();
-      const start = this._chartDateInput(scope, 'start')?.value || '';
-      const end = this._chartDateInput(scope, 'end')?.value || '';
-      if (field === 'start' && end && (!max || end < max)) max = end;
-      if (field === 'end' && start && (!min || start > min)) min = start;
-      return { min, max };
+    _chartCalendarLimits() {
+      return { min: this._chartDateRangeMin(), max: this._chartDateRangeMax() };
     }
 
-    _chartCalendarContentHtml(scope, field, monthKey) {
+    _chartCalendarContentHtml(scope, monthKey) {
       const [year, month] = monthKey.split('-').map(Number);
       if (!Number.isFinite(year) || !Number.isFinite(month) || month < 1 || month > 12) return '';
-      const limits = this._chartCalendarLimits(scope, field);
-      const minMonth = limits.min.slice(0, 7);
-      const maxMonth = limits.max.slice(0, 7);
+      const limits = this._chartCalendarLimits();
+      const minMonth = limits.min ? limits.min.slice(0, 7) : '';
+      const maxMonth = limits.max ? limits.max.slice(0, 7) : '';
       const previous = new Date(year, month - 2, 1);
       const next = new Date(year, month, 1);
       const monthKeyFor = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
@@ -2265,7 +2259,9 @@
       const title = new Date(year, month - 1, 1).toLocaleDateString(this._locale(), { month: 'long', year: 'numeric' });
       const weekdays = Array.from({ length: 7 }, (_, index) => new Date(Date.UTC(2024, 0, 1 + index))
         .toLocaleDateString(this._locale(), { weekday: 'short' }));
-      const selected = this._chartDateInput(scope, field)?.value || '';
+      const state = this._chartCalendarState;
+      const start = state?.scope === scope ? state.start : '';
+      const end = state?.scope === scope ? state.end : '';
       const today = this._formatDateInput(Date.now());
       const first = new Date(year, month - 1, 1);
       const mondayOffset = (first.getDay() + 6) % 7;
@@ -2274,11 +2270,35 @@
         const date = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + index);
         const key = this._formatDateInput(date.getTime());
         const disabled = (limits.min && key < limits.min) || (limits.max && key > limits.max);
-        const classes = ['chart-calendar-day', date.getMonth() !== month - 1 ? 'outside-month' : '', key === selected ? 'selected' : '', key === today ? 'today' : '', disabled ? 'is-disabled' : ''].filter(Boolean).join(' ');
+        const isStart = key === start;
+        const isEnd = Boolean(end) && key === end;
+        const inRange = Boolean(start && end && key > start && key < end);
+        const classes = [
+          'chart-calendar-day', date.getMonth() !== month - 1 ? 'outside-month' : '',
+          isStart || isEnd ? 'selected' : '', isStart ? 'range-start' : '', isEnd ? 'range-end' : '',
+          inRange ? 'in-range' : '', key === today ? 'today' : '', disabled ? 'is-disabled' : '',
+        ].filter(Boolean).join(' ');
         const label = date.toLocaleDateString(this._locale(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-        return `<button type="button" class="${classes}" data-chart-calendar-day="${key}" data-chart-scope="${scope}" aria-label="${this._escape(label)}" aria-pressed="${key === selected}"${key === today ? ' aria-current="date"' : ''}${disabled ? ' disabled aria-disabled="true"' : ''}>${date.getDate()}</button>`;
+        return `<button type="button" class="${classes}" data-chart-calendar-day="${key}" data-chart-scope="${scope}" aria-label="${this._escape(label)}" aria-pressed="${isStart || isEnd}"${key === today ? ' aria-current="date"' : ''}${disabled ? ' disabled aria-disabled="true"' : ''}>${date.getDate()}</button>`;
       }).join('');
       return `<div class="chart-calendar-heading"><button type="button" class="chart-calendar-nav" data-chart-calendar-nav="-1" data-chart-scope="${scope}" aria-label="${this._escape(this._t('chart_calendar_previous'))}"${previousDisabled ? ' disabled' : ''}>‹</button><strong>${this._escape(title)}</strong><button type="button" class="chart-calendar-nav" data-chart-calendar-nav="1" data-chart-scope="${scope}" aria-label="${this._escape(this._t('chart_calendar_next'))}"${nextDisabled ? ' disabled' : ''}>›</button></div><div class="chart-calendar-weekdays" aria-hidden="true">${weekdays.map((day) => `<span>${this._escape(day)}</span>`).join('')}</div><div class="chart-calendar-days">${days}</div>`;
+    }
+
+    _updateChartDateRangeDraft(scope) {
+      const state = this._chartCalendarState;
+      if (!state || state.scope !== scope) return;
+      const startInput = this._chartDateInput(scope, 'start');
+      const endInput = this._chartDateInput(scope, 'end');
+      if (startInput) startInput.value = state.start;
+      if (endInput) endInput.value = state.end;
+      const panel = this.shadowRoot.querySelector(`.chart-date-range-panel[data-range-scope="${scope}"]`);
+      ['start', 'end'].forEach((field) => {
+        const display = panel?.querySelector(`[data-chart-date-value="${field}"]`);
+        const value = field === 'start' ? state.start : state.end;
+        if (display) display.textContent = this._formatChartDateLabel(value) || '—';
+      });
+      const apply = panel?.querySelector('[data-chart-date-apply]');
+      if (apply) apply.disabled = !(state.start && state.end);
     }
 
     _renderChartDateCalendar() {
@@ -2287,21 +2307,24 @@
       const panel = this.shadowRoot.querySelector(`.chart-date-range-panel[data-range-scope="${state.scope}"]`);
       const calendar = panel?.querySelector('[data-chart-calendar]');
       if (!calendar) return;
-      calendar.innerHTML = this._chartCalendarContentHtml(state.scope, state.field, state.month);
+      calendar.innerHTML = this._chartCalendarContentHtml(state.scope, state.month);
       calendar.hidden = false;
-      const fieldButton = panel.querySelector(`[data-chart-calendar-open][data-chart-field="${state.field}"]`);
-      if (fieldButton) fieldButton.setAttribute('aria-expanded', 'true');
+      this._updateChartDateRangeDraft(state.scope);
       const trigger = this.shadowRoot.querySelector(`[data-chart-date-toggle][data-chart-scope="${state.scope}"]`);
       this._positionChartDateRangePopover(trigger, panel);
     }
 
-    _openChartDateCalendar(scope, field) {
-      if (!['params', 'energy'].includes(scope) || !['start', 'end'].includes(field)) return;
+    _openChartDateCalendar(scope) {
+      if (!['params', 'energy'].includes(scope)) return;
       const panel = this.shadowRoot.querySelector(`.chart-date-range-panel[data-range-scope="${scope}"]`);
-      const input = this._chartDateInput(scope, field);
-      if (!panel || !input) return;
-      const value = input.value || this._formatDateInput(Date.now());
-      this._chartCalendarState = { scope, field, month: value.slice(0, 7) };
+      const startInput = this._chartDateInput(scope, 'start');
+      const endInput = this._chartDateInput(scope, 'end');
+      if (!panel || !startInput || !endInput) return;
+      const month = this._chartDateRangeMax().slice(0, 7);
+      this._chartCalendarState = { scope, month, start: '', end: '' };
+      const error = panel.querySelector('[data-role="chart-date-error"]');
+      if (error) error.textContent = '';
+      this._updateChartDateRangeDraft(scope);
       this._renderChartDateCalendar();
     }
 
@@ -2311,15 +2334,13 @@
       const panel = this.shadowRoot.querySelector(`.chart-date-range-panel[data-range-scope="${state.scope}"]`);
       const calendar = panel?.querySelector('[data-chart-calendar]');
       if (calendar) { calendar.hidden = true; calendar.innerHTML = ''; }
-      const fieldButton = panel?.querySelector(`[data-chart-calendar-open][data-chart-field="${state.field}"]`);
-      if (fieldButton) fieldButton.setAttribute('aria-expanded', 'false');
       this._chartCalendarState = null;
     }
 
     _handleChartDateDocumentPointerDown(event) {
       if (!this._chartCalendarState) return;
       const path = typeof event?.composedPath === 'function' ? event.composedPath() : [event?.target];
-      const calendarControl = path.some((node) => node?.matches?.('[data-chart-calendar-day], [data-chart-calendar-nav], [data-chart-calendar-open]'));
+      const calendarControl = path.some((node) => node?.matches?.('[data-chart-calendar-day], [data-chart-calendar-nav]'));
       if (calendarControl) return;
       const insideRange = path.some((node) => node?.matches?.('.chart-date-range'));
       if (insideRange) this._closeChartCalendar();
@@ -2350,32 +2371,31 @@
     _selectChartCalendarDate(value, scope) {
       const state = this._chartCalendarState;
       if (!state || state.scope !== scope) return;
-      const limits = this._chartCalendarLimits(scope, state.field);
+      const limits = this._chartCalendarLimits();
       if ((limits.min && value < limits.min) || (limits.max && value > limits.max)) return;
-      const input = this._chartDateInput(scope, state.field);
-      if (!input) return;
-      input.value = value;
-      const panel = this.shadowRoot.querySelector(`.chart-date-range-panel[data-range-scope="${scope}"]`);
-      const button = panel?.querySelector(`[data-chart-calendar-open][data-chart-field="${state.field}"]`);
-      const display = panel?.querySelector(`[data-chart-date-value="${state.field}"]`);
-      const label = this._formatChartDateLabel(value);
-      if (display) display.textContent = label;
-      if (button) button.setAttribute('aria-label', `${this._t(state.field === 'start' ? 'chart_from' : 'chart_to')}: ${label}`);
-      this._closeChartCalendar(scope);
+      if (!state.start || state.end) {
+        state.start = value;
+        state.end = '';
+      } else if (value < state.start) {
+        state.end = state.start;
+        state.start = value;
+      } else {
+        state.end = value;
+      }
+      state.month = value.slice(0, 7);
+      this._updateChartDateRangeDraft(scope);
+      this._renderChartDateCalendar();
     }
 
     _chartDateRangeHtml(scope = 'params') {
       const isEnergy = scope === 'energy';
-      const bounds = isEnergy ? this._energyHistoryBounds() : this._historyBounds();
-      const startKey = isEnergy ? 'data-energy-chart-date-start' : 'data-chart-date-start';
-      const endKey = isEnergy ? 'data-energy-chart-date-end' : 'data-chart-date-end';
       const isCustom = isEnergy ? this._energyHistoryRange === 'custom' : this._historyRange === 'custom';
       const popoverId = `${this._instanceId}-${scope}-chart-date-range`;
       const calendarId = `${this._instanceId}-${scope}-chart-date-calendar`;
-      const startVal = this._formatDateInput(bounds.start);
-      const endVal = this._formatDateInput(bounds.end > bounds.start ? bounds.end - 1 : bounds.end);
-      const field = (key, name, value) => `<div class="chart-date-field"><span>${this._escape(this._t(name === 'start' ? 'chart_from' : 'chart_to'))}</span><button type="button" class="chart-date-value" data-chart-calendar-open data-chart-scope="${scope}" data-chart-field="${name}" aria-controls="${calendarId}" aria-expanded="false" aria-label="${this._escape(this._t(name === 'start' ? 'chart_from' : 'chart_to'))}: ${this._escape(this._formatChartDateLabel(value))}"><span data-chart-date-value="${name}">${this._escape(this._formatChartDateLabel(value))}</span><span class="chart-date-caret" aria-hidden="true">▾</span></button><input type="hidden" ${key} value="${this._escape(value)}"></div>`;
-      return `<div class="chart-date-range ${isCustom ? 'active' : ''}"><button type="button" class="period-button ${isCustom ? 'active' : ''}" data-chart-date-toggle data-chart-scope="${scope}" aria-controls="${popoverId}" aria-haspopup="dialog" aria-expanded="false" aria-pressed="${isCustom}">${this._escape(this._t('chart_date_range'))}</button><div class="chart-date-range-panel" id="${popoverId}" data-range-scope="${scope}" popover="auto" hidden role="dialog" aria-label="${this._escape(this._t('chart_date_range'))}"><div class="chart-date-fields">${field(startKey, 'start', startVal)}${field(endKey, 'end', endVal)}</div><div class="chart-date-calendar" id="${calendarId}" data-chart-calendar hidden role="group" aria-label="${this._escape(this._t('chart_date_range'))}"></div><button type="button" class="chart-date-apply" data-chart-date-apply data-chart-scope="${scope}">${this._escape(this._t('chart_apply'))}</button><small data-role="chart-date-error" aria-live="polite"></small></div></div>`;
+      const startKey = isEnergy ? 'data-energy-chart-date-start' : 'data-chart-date-start';
+      const endKey = isEnergy ? 'data-energy-chart-date-end' : 'data-chart-date-end';
+      const field = (key, name) => `<div class="chart-date-field"><span>${this._escape(this._t(name === 'start' ? 'chart_from' : 'chart_to'))}</span><strong class="chart-date-value" data-chart-date-value="${name}">—</strong><input type="hidden" ${key} value=""></div>`;
+      return `<div class="chart-date-range ${isCustom ? 'active' : ''}"><button type="button" class="period-button ${isCustom ? 'active' : ''}" data-chart-date-toggle data-chart-scope="${scope}" aria-controls="${popoverId}" aria-haspopup="dialog" aria-expanded="false" aria-pressed="${isCustom}">${this._escape(this._t('chart_date_range'))}</button><div class="chart-date-range-panel" id="${popoverId}" data-range-scope="${scope}" popover="auto" hidden role="dialog" aria-label="${this._escape(this._t('chart_date_range'))}"><div class="chart-date-fields">${field(startKey, 'start')}${field(endKey, 'end')}</div><div class="chart-date-calendar" id="${calendarId}" data-chart-calendar hidden role="group" aria-label="${this._escape(this._t('chart_date_range'))}"></div><button type="button" class="chart-date-apply" data-chart-date-apply data-chart-scope="${scope}" disabled>${this._escape(this._t('chart_apply'))}</button><small data-role="chart-date-error" aria-live="polite"></small></div></div>`;
     }
 
     _closeChartDateRangePopover(panel = null) {
@@ -2433,22 +2453,16 @@
       const bounds = isEnergy ? this._energyHistoryBounds() : this._historyBounds();
       const start = this.shadowRoot.querySelector(isEnergy ? '[data-energy-chart-date-start]' : '[data-chart-date-start]');
       const end = this.shadowRoot.querySelector(isEnergy ? '[data-energy-chart-date-end]' : '[data-chart-date-end]');
-      const minVal = this._chartDateRangeMin();
-      const maxVal = this._chartDateRangeMax();
-      if (start) {
-        start.value = this._formatDateInput(bounds.start);
-        if (minVal) start.setAttribute('min', minVal); else start.removeAttribute('min');
-        if (maxVal) start.setAttribute('max', maxVal); else start.removeAttribute('max');
-      }
+      if (start) start.value = this._formatDateInput(bounds.start);
       if (end) end.value = this._formatDateInput(bounds.end > bounds.start ? bounds.end - 1 : bounds.end);
       const scopePanel = this.shadowRoot.querySelector(`.chart-date-range-panel[data-range-scope="${scope}"]`);
       ['start', 'end'].forEach((field) => {
-        const button = scopePanel?.querySelector(`[data-chart-calendar-open][data-chart-field="${field}"]`);
         const value = scopePanel?.querySelector(`[data-chart-date-value="${field}"]`);
         const label = this._formatChartDateLabel(this._chartDateInput(scope, field)?.value || '');
-        if (value) value.textContent = label;
-        if (button) button.setAttribute('aria-label', `${this._t(field === 'start' ? 'chart_from' : 'chart_to')}: ${label}`);
+        if (value) value.textContent = label || '—';
       });
+      const apply = scopePanel?.querySelector('[data-chart-date-apply]');
+      if (apply) apply.disabled = !(start?.value && end?.value);
       const error = scopePanel?.querySelector('[data-role="chart-date-error"]');
       if (error) error.textContent = '';
       this._syncChartPeriodHighlight(scope);
@@ -2477,6 +2491,7 @@
       const isEnergy = scope === 'energy';
       const startInput = this.shadowRoot.querySelector(isEnergy ? '[data-energy-chart-date-start]' : '[data-chart-date-start]');
       const endInput = this.shadowRoot.querySelector(isEnergy ? '[data-energy-chart-date-end]' : '[data-chart-date-end]');
+      if (!startInput?.value || !endInput?.value) return;
       this._clampChartDateInput(startInput);
       this._clampChartDateInput(endInput);
       let start = startInput?.value ? new Date(`${startInput.value}T00:00:00`).getTime() : NaN;
@@ -4207,8 +4222,6 @@
         if (calendarNav) { this._navigateChartDateCalendar(Number(calendarNav.dataset.chartCalendarNav), calendarNav.dataset.chartScope || 'params'); return; }
         const calendarDay = event.target?.closest?.('[data-chart-calendar-day]');
         if (calendarDay && !calendarDay.disabled) { this._selectChartCalendarDate(calendarDay.dataset.chartCalendarDay, calendarDay.dataset.chartScope || 'params'); return; }
-        const calendarOpen = event.target?.closest?.('[data-chart-calendar-open]');
-        if (calendarOpen) { this._openChartDateCalendar(calendarOpen.dataset.chartScope || 'params', calendarOpen.dataset.chartField || 'start'); return; }
       }
       const dialogAction = event.target?.closest?.('[data-dialog-action]');
       if (dialogAction) {
@@ -4231,8 +4244,8 @@
         try { isOpen = panel?.matches(':popover-open'); } catch (_error) { isOpen = !panel?.hidden; }
         if (isOpen) this._closeChartDateRangePopover(panel);
         else {
-          this._updateChartDateRangeControls(target.dataset.chartScope || 'params');
-          this._positionChartDateRangePopover(target, panel);
+          this._closeChartDateRangePopover();
+          this._openChartDateCalendar(target.dataset.chartScope || 'params');
         }
         return;
       }
@@ -5123,10 +5136,7 @@
         .chart-date-range-panel input[type="hidden"]{display:none}
         .chart-date-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
         .chart-date-field{display:grid;gap:5px;min-width:0;color:#9fb5d1;font-size:12px}
-        .chart-date-value{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;min-height:40px;padding:0 9px;border:1px solid #37526f;border-radius:10px;background:#091727;color:#eef6ff;font:inherit;font-size:12px;font-weight:650;text-align:left;cursor:pointer}
-        .chart-date-value:hover,.chart-date-value[aria-expanded="true"]{border-color:#23aaff;box-shadow:0 0 0 2px #23aaff20}
-        .chart-date-value>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-        .chart-date-caret{flex:0 0 auto;color:#53caff}
+        .chart-date-value{display:flex;align-items:center;min-width:0;min-height:40px;padding:0 9px;border:1px solid #37526f;border-radius:10px;background:#091727;color:#eef6ff;font:inherit;font-size:12px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .chart-date-calendar{width:100%;padding:10px;border:1px solid #2c4a69;border-radius:13px;background:radial-gradient(circle at 50% 0,#142e49 0,#0a1929 68%);box-shadow:inset 0 1px 0 #ffffff0a}
         .chart-date-calendar[hidden]{display:none!important}
         .chart-calendar-heading{display:grid;grid-template-columns:36px minmax(0,1fr) 36px;align-items:center;gap:6px;margin-bottom:7px}
@@ -5141,10 +5151,15 @@
         .chart-calendar-day:hover:not(:disabled){border-color:#1b9ddd;background:#123451;color:#fff}
         .chart-calendar-day.outside-month{color:#7289a4;opacity:.56}
         .chart-calendar-day.today{border-color:#3178a8;color:#65d0ff}
-        .chart-calendar-day.selected{border-color:#1bb9ff;background:linear-gradient(135deg,#087bbc,#07528a);color:#fff;box-shadow:0 0 12px #11aaff40}
+        .chart-calendar-day.in-range{border-radius:0;background:#0b4770;color:#d8f2ff}
+        .chart-calendar-day.selected{position:relative;border-color:#1bb9ff;background:linear-gradient(135deg,#087bbc,#07528a);color:#fff;box-shadow:0 0 12px #11aaff40}
+        .chart-calendar-day.range-start{border-top-right-radius:0;border-bottom-right-radius:0}
+        .chart-calendar-day.range-end{border-top-left-radius:0;border-bottom-left-radius:0}
         .chart-calendar-day.is-disabled{border-color:transparent;background:transparent;color:#65758a;opacity:.28;cursor:not-allowed;box-shadow:none}
         .chart-date-range-panel small{color:#ff9ba8;font-size:12px}
         .chart-date-apply{min-height:40px;padding:0 14px;border-radius:10px}
+        .chart-date-apply:disabled{opacity:.4;filter:saturate(.55);cursor:not-allowed}
+        .chart-date-apply:disabled:hover{background:#092645}
         .chart-card>.chart-head{position:relative;z-index:20}
         .energy-chart-controls{margin:14px 0 10px}
         .energy-chart-controls .chart-head{margin:0}
