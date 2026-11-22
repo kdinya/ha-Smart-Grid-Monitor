@@ -4838,8 +4838,8 @@
           .detail b{font-size:19px}
         }
 
-        .shell:not(.home-active)>.header>.brand{flex:1 1 auto}.shell:not(.home-active)>.header>.tabs-top{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));flex:0 0 45%;width:45%;min-width:360px;max-width:560px;margin:0 0 0 auto;padding:8px;gap:6px}
-        .shell:not(.home-active)>.header>.tabs-top .tab{padding:15px 8px}
+        .shell:not(.home-active)>.header>.brand{flex:1 1 auto}@container (min-width:960px){.shell:not(.home-active)>.header>.tabs-top{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));flex:0 0 calc((100% - 16px) / 2.2);width:calc((100% - 16px) / 2.2);min-width:0;max-width:none;margin:0 0 0 auto;padding:8px;gap:6px}}
+        @container (min-width:960px){.shell:not(.home-active)>.header>.tabs-top .tab{padding:15px 8px}}
         .chart-scrubber{display:grid;grid-template-columns:minmax(180px,auto) minmax(0,1fr) auto;align-items:center;gap:12px;margin-top:8px;padding:4px 2px}
         .chart-scrubber-label{color:#b7c9df;font-size:13px;overflow-wrap:anywhere}
         .chart-scrubber input[type=range]{width:100%;min-width:0;accent-color:#12aaff;touch-action:pan-x;cursor:ew-resize}
@@ -4855,14 +4855,14 @@
         .chart-reading{min-width:0;padding:11px 12px;border-radius:14px;background:#13243a;border:1px solid #2b4562}
         .chart-reading span{display:block;color:#9fb5d1;font-size:12px;line-height:1.3}
         .chart-reading strong{display:block;margin-top:5px;color:#f3f7ff;font-size:clamp(15px,1.7cqw,20px);overflow-wrap:anywhere}
-        @container (max-width:959px){.shell:not(.home-active)>.header{flex-wrap:wrap;gap:11px;padding-bottom:12px}.shell:not(.home-active)>.header>.brand{flex:1 1 auto}.shell:not(.home-active)>.header>.tabs-top{flex:1 0 100%;width:100%;min-width:0;max-width:none;margin:0 0 4px;grid-template-columns:repeat(4,minmax(0,1fr))}}
+        @container (max-width:959px){.shell:not(.home-active)>.header{flex-wrap:wrap;gap:11px;padding:0 0 8px}.shell:not(.home-active)>.header>.brand{flex:1 1 auto}.shell:not(.home-active)>.header>.tabs-top{order:-1;flex:1 0 100%;width:100%;min-width:0;max-width:none;margin:0 0 10px;grid-template-columns:repeat(4,minmax(0,1fr))}.shell:not(.home-active)>.page-layout{margin-top:0}}
         @container (max-width:900px){.chart-reading-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
         @container (max-width:760px){.chart-scrubber{grid-template-columns:minmax(0,1fr) auto;gap:8px}.chart-scrubber-label{grid-column:1/-1}.chart-readings-head .chart-readings-status{margin-left:0}}
         @container (max-width:520px){.chart-reading-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.chart-reading{padding:10px}.chart-reading strong{font-size:16px}}
 
         .voltage{padding:5px 12px 4px;justify-content:space-between}
-        .shell:not(.home-active)>.header{align-items:flex-start;padding-bottom:1px;z-index:2}
-        @container (max-width:959px){.shell:not(.home-active)>.header{padding-bottom:1px}.shell:not(.home-active)>.header>.tabs-top{margin-bottom:0}}
+        .shell:not(.home-active)>.header{align-items:flex-start;padding:0 0 1px;z-index:2}
+        @container (max-width:959px){.shell:not(.home-active)>.header{padding-bottom:8px}.shell:not(.home-active)>.header>.tabs-top{margin-bottom:10px}}
         @container (max-width:760px){.voltage{padding:5px 10px 4px}}
         .voltage-brand,.voltage-gauge,.state-indicator{transform:translateY(-4px)}
         .action-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
@@ -4873,7 +4873,7 @@
           .shell{padding:10px;border-radius:22px}
           .header{gap:9px;padding:4px 2px 10px}
           .shell.home-active>.tabs-top{margin:0 0 10px}
-          .shell:not(.home-active)>.header>.tabs-top{margin:0 0 4px}
+          .shell:not(.home-active)>.header>.tabs-top{margin:0 0 10px}
           .tabs{gap:4px;padding:4px;margin-bottom:10px;border-radius:17px}
           .tab{min-height:44px;gap:4px;padding:8px 3px;font-size:12px;border-radius:13px}
           .home-view .main-grid{grid-template-columns:minmax(0,1fr);gap:10px}
