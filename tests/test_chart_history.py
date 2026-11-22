@@ -382,7 +382,11 @@ const Card = registry.get('grid-monitor-card');
 const card = Object.create(Card.prototype);
 card._chartMetric = 'voltage';
 card._historyRange = 'day';
-card._history = [{ value: 210 }, { value: 240 }];
+card._history = [
+  { time: new Date('2026-11-21T10:05:00Z'), value: 210 },
+  { time: new Date('2026-11-21T12:35:00Z'), value: 240 },
+];
+card._historyBounds = () => ({ start: Date.parse('2026-11-21T00:00:00Z'), end: Date.parse('2026-11-21T23:00:00Z') });
 card._locale = () => 'en-GB';
 card._lang = () => 'en';
 card._t = (key) => ({ stat_min: 'Min', stat_avg: 'Avg', stat_max: 'Max' })[key];
@@ -2385,6 +2389,111 @@ assert.ok(onlyOutage.max > 0);
             check=False,
             env={**os.environ, "TZ": "UTC"},
         )
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+
+PRELUDE_CLARITY = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = {
+  window: { customCards: [] },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+};
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+const at = (minutes, value, extra = {}) => ({ time: new Date(Date.UTC(2026, 10, 21, 0, 0, 0) + minutes * 60e3), value, ...extra });
+"""
+
+
+def run_clarity(body):
+    return subprocess.run(
+        ["node", "-e", PRELUDE_CLARITY + body, str(ROOT / "grid-monitor-card.js")],
+        capture_output=True,
+        text=True,
+        check=False,
+        env={**os.environ, "TZ": "UTC"},
+    )
+
+
+class LongRangeClarityTests(unittest.TestCase):
+    def test_long_voltage_ranges_draw_one_averaged_point_per_clean_bucket(self):
+        result = run_clarity(r"""
+// Noisy voltage around 230 V for four hours, sampled every minute.
+const history = [];
+for (let minute = 0; minute < 240; minute += 1) history.push(at(minute, 230 + (minute % 2 ? 3 : -3)));
+const start = history[0].time.getTime();
+const end = start + 240 * 60e3;
+const detailed = card._bucketHistory(start, end, 8, history);
+const smooth = card._bucketHistory(start, end, 8, history, { smooth: true });
+assert.ok(detailed.length > smooth.length, 'detailed keeps extremes of every bucket');
+assert.equal(smooth.length, 8, 'one point per bucket');
+smooth.forEach((point) => assert.ok(Math.abs(point.v - 230) < 0.2, `bucket mean is the trend, got ${point.v}`));
+assert.equal(card._chartSmooth('voltage', 4 * 3600e3), true);
+assert.equal(card._chartSmooth('voltage', 3600e3), false, 'the hour view keeps its detail');
+assert.equal(card._chartSmooth('power', 24 * 3600e3), false, 'power keeps spikes');
+""")
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_long_voltage_ranges_keep_outages_as_sharp_steps_without_pulling_the_average_down(self):
+        result = run_clarity(r"""
+const history = [];
+for (let minute = 0; minute < 60; minute += 1) history.push(at(minute, 230));
+history.push(at(60, 0, { outage: true }));
+history.push(at(80, 231));
+for (let minute = 81; minute < 120; minute += 1) history.push(at(minute, 231));
+const start = history[0].time.getTime();
+const end = start + 120 * 60e3;
+const series = card._bucketHistory(start, end, 4, history, { smooth: true });
+const drop = series.filter((point) => point.v === 0);
+assert.ok(drop.length >= 1, 'the outage is still drawn at 0');
+const stepTime = start + 60 * 60e3;
+assert.ok(series.some((point) => point.t === stepTime && point.v === 230) && series.some((point) => point.t === stepTime && point.v === 0), 'vertical drop at the outage start');
+const clean = series.filter((point) => point.v > 0);
+clean.forEach((point) => assert.ok(point.v >= 230 && point.v <= 231, `no point is pulled down by the outage: ${point.v}`));
+""")
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_voltage_minimum_and_average_ignore_outage_zeros_and_keep_true_extremes(self):
+        result = run_clarity(r"""
+card._chartMetric = 'voltage';
+card._historyRange = 'day';
+card._locale = () => 'en-GB';
+card._lang = () => 'en';
+card._t = (key) => ({ stat_min: 'Min', stat_avg: 'Avg', stat_max: 'Max' })[key];
+card._escape = (value) => String(value);
+card._historyBounds = () => ({ start: Date.UTC(2026, 10, 21, 0, 0, 0), end: Date.UTC(2026, 10, 21, 23, 0, 0) });
+card._history = [at(10, 228), at(20, 0, { outage: true }), at(30, 232), at(40, 0, { outage: true }), at(50, 236), at(60, 229)];
+// The plotted series is averaged (and contains zeros), but statistics must come from real measurements.
+card._chartData = () => ({ series: [{ t: 1, v: 0 }, { t: 2, v: 231 }] });
+const html = card._chartStatsHtml();
+assert.match(html, /Min<\/span><b>228 V<\/b>/, html);
+assert.match(html, /Max<\/span><b>236 V<\/b>/, html);
+assert.match(html, /Avg<\/span><b>231\.3 V<\/b>/, html);
+card._voltageHistory = card._history;
+const range = card._voltageRangeStats();
+assert.equal(range.min, 228);
+assert.equal(range.max, 236);
+""")
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_chart_minimum_never_counts_zero_for_power_or_voltage(self):
+        result = run_clarity(r"""
+card._historyRange = 'day';
+card._locale = () => 'en-GB';
+card._lang = () => 'en';
+card._t = (key) => ({ stat_min: 'Min', stat_avg: 'Avg', stat_max: 'Max' })[key];
+card._escape = (value) => String(value);
+card._historyBounds = () => ({ start: Date.UTC(2026, 10, 21, 0, 0, 0), end: Date.UTC(2026, 10, 21, 23, 0, 0) });
+card._history = [at(10, 120)];
+card._chartMetric = 'power';
+card._chartData = () => ({ series: [{ t: 1, v: 0 }, { t: 2, v: 80 }, { t: 3, v: 900 }] });
+const html = card._chartStatsHtml();
+assert.match(html, /Min<\/span><b>80 W<\/b>/, html);
+""")
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
 

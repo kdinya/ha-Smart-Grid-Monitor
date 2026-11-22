@@ -896,6 +896,8 @@
 
   const DEFAULT_KEYS = Object.keys(DEFAULTS);
   const STATS_REFRESH_OVERLAP_MS = 120e3;
+  // Beyond this range the voltage curve is drawn as one averaged point per bucket instead of every extreme.
+  const VOLTAGE_SMOOTH_MIN_RANGE_MS = 90 * 60e3;
 
   let CARD_SEQUENCE = 0;
 
@@ -3006,10 +3008,11 @@
       const dailyEnergyBars = isEnergy && (range === 'week' || range === 'month' || range === 'custom' && bounds.end - bounds.start > 24 * 3600e3);
       const maxLabel = isEnergy ? this._t(dailyEnergyBars ? 'energy_max_day' : 'energy_max_hour') : this._t('stat_max');
       const data = isEnergy ? null : this._chartData(history, metricKey, { range, customRange, bounds, includeCurrent: true });
+      const realVoltage = !isEnergy && metricKey === 'voltage' ? this._realVoltagePoints(history, bounds) : null;
       const plottedPoints = isEnergy
         ? energyBars.filter((bar) => !bar.unavailable).map((bar) => ({ t: bar.start, v: bar.value }))
-        : (data?.series || []).filter((point) => Number.isFinite(point.v) && (!Number.isFinite(this._statsStart) || point.t >= this._statsStart));
-      const minimumPoints = metricKey === 'power' ? plottedPoints.filter((point) => point.v > 0) : plottedPoints;
+        : realVoltage || (data?.series || []).filter((point) => Number.isFinite(point.v) && (!Number.isFinite(this._statsStart) || point.t >= this._statsStart));
+      const minimumPoints = isEnergy ? plottedPoints : plottedPoints.filter((point) => point.v > 0);
       const historyPoints = isEnergy ? [] : (Array.isArray(history) ? history : [])
         .filter((item) => !Number.isFinite(this._statsStart) || (item.time && item.time.getTime() >= this._statsStart))
         .filter((item) => Number.isFinite(item.value));
@@ -3031,6 +3034,8 @@
       if (isEnergy && energyBars.length) {
         const availableBars = energyBars.filter((bar) => !bar.unavailable);
         avg = availableBars.length ? availableBars.reduce((sum, bar) => sum + bar.value, 0) / availableBars.length : null;
+      } else if (realVoltage) {
+        avg = realVoltage.length ? realVoltage.reduce((sum, point) => sum + point.v, 0) / realVoltage.length : null;
       } else if (!isEnergy && historyPoints.length) {
         avg = historyPoints.reduce((sum, point) => sum + point.value, 0) / historyPoints.length;
       }
@@ -3440,6 +3445,25 @@
       }
     }
 
+    _chartSmooth(metricKey, rangeMs) { return metricKey === 'voltage' && rangeMs > VOLTAGE_SMOOTH_MIN_RANGE_MS; }
+
+    // Real voltage samples only: outage zeros are not measurements and must not count as a minimum or lower the average.
+    _realVoltagePoints(history, bounds) {
+      const lowest = CHART_METRICS.voltage.plausible[0];
+      const from = Math.max(bounds.start, Number.isFinite(this._statsStart) ? this._statsStart : -Infinity);
+      const points = [];
+      let prior = null;
+      (Array.isArray(history) ? history : []).forEach((item) => {
+        const t = item.time?.getTime?.();
+        if (!Number.isFinite(t) || !Number.isFinite(item.value) || t > bounds.end) return;
+        const real = !item.outage && item.value >= lowest;
+        if (t < from) { prior = real ? { t: from, v: item.value } : null; return; }
+        if (real) points.push({ t, v: item.value });
+      });
+      if (prior && !points.some((point) => point.t === from)) points.unshift(prior);
+      return points;
+    }
+
     _chartData(history = this._history, metricKey = this._chartMetric || 'power', options = {}) {
       const width = Math.max(280, Math.round(this._chartW || 985));
       const range = options.range ?? this._historyRange;
@@ -3447,7 +3471,7 @@
       const bounds = options.bounds || this._historyBounds(range, Date.now(), customRange);
       const { start: tStart, end: tEnd } = bounds;
       const rangeMs = tEnd - tStart;
-      const series = this._bucketHistory(tStart, tEnd, width < 520 ? 48 : 96, history);
+      const series = this._bucketHistory(tStart, tEnd, width < 520 ? 48 : 96, history, { smooth: this._chartSmooth(metricKey, rangeMs) });
       if (!series.length) {
         const prior = Array.isArray(history) ? history.filter((p) => p.time?.getTime?.() <= tStart && Number.isFinite(p.value)).at(-1) : null;
         if (prior) {
@@ -3512,10 +3536,10 @@
       return d;
     }
 
-    _bucketHistory(start, end, count, sourceHistory = this._history) {
+    _bucketHistory(start, end, count, sourceHistory = this._history, options = {}) {
       if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || count < 1) return [];
       const bucketMs = (end - start) / count;
-      const buckets = Array.from({ length: count }, () => ({ weighted: 0, duration: 0, first: null, last: null, min: null, minPositive: null, max: null, edges: [] }));
+      const buckets = Array.from({ length: count }, () => ({ weighted: 0, duration: 0, first: null, last: null, min: null, minPositive: null, max: null, edges: [], real: 0 }));
       const history = Array.isArray(sourceHistory) ? sourceHistory : [];
 
       for (let index = 0; index < history.length; index += 1) {
@@ -3541,6 +3565,7 @@
             const sample = { t: Math.max(intervalStart, bucketStart), v: point.value, order: index };
             bucket.weighted += point.value * overlap;
             bucket.duration += overlap;
+            if (options.smooth && !point.outage && point.value > 0) bucket.real += overlap;
             if (!bucket.first) bucket.first = sample;
             bucket.last = sample;
             if (!bucket.min || sample.v < bucket.min.v) bucket.min = sample;
@@ -3555,6 +3580,8 @@
       return buckets.flatMap((bucket, index) => {
         if (!bucket.duration) return [];
         if (bucket.min.v === bucket.max.v && !bucket.edges.length) return [{ t: start + (index + 0.5) * bucketMs, v: bucket.weighted / bucket.duration }];
+        // Long ranges: a bucket without any outage is one averaged point, so the curve shows the trend instead of noise.
+        if (options.smooth && !bucket.edges.length && bucket.real === bucket.duration) return [{ t: start + (index + 0.5) * bucketMs, v: bucket.weighted / bucket.duration }];
         const seen = new Set();
         return [bucket.first, bucket.min, bucket.minPositive, bucket.max, bucket.last, ...bucket.edges]
           .filter(Boolean)
@@ -3630,7 +3657,7 @@
       const bufferEnd = !isEnergy ? Math.max(tEnd, histEnd) : tEnd;
       const hasBuffer = bufferStart < tStart || bufferEnd > tEnd;
       const bufferSeries = !isEnergy && hasBuffer
-        ? this._bucketHistory(bufferStart, bufferEnd, Math.min(288, Math.ceil(((bufferEnd - bufferStart) / rangeMs) * (width < 520 ? 48 : 96))), history)
+        ? this._bucketHistory(bufferStart, bufferEnd, Math.min(288, Math.ceil(((bufferEnd - bufferStart) / rangeMs) * (width < 520 ? 48 : 96))), history, { smooth: this._chartSmooth(metricKey, rangeMs) })
         : series;
       const pathPts = bufferSeries.map((point) => ({
         x: x0 + ((point.t - tStart) / rangeMs) * (x1 - x0),
@@ -4570,8 +4597,7 @@
           max: this._statsExtremes.voltage.max ?? null,
         };
       }
-      const data = this._chartData(this._voltageHistory, 'voltage');
-      const values = data?.series.filter((point) => !Number.isFinite(this._statsStart) || point.t >= this._statsStart).map((point) => point.v).filter((value) => Number.isFinite(value) && value >= CHART_METRICS.voltage.plausible[0]) || [];
+      const values = this._realVoltagePoints(this._voltageHistory, this._historyBounds()).map((point) => point.v);
       return {
         min: values.length ? Math.min(...values) : null,
         max: values.length ? Math.max(...values) : null,
