@@ -2491,3 +2491,43 @@ assert.match(html, /Min<\/span><b>80 W<\/b>/, html);
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class EnergyCounterRestoreTests(unittest.TestCase):
+    def test_small_counter_drop_after_reboot_is_not_counted_as_a_reset(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), {
+  window: { customCards: [] },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+});
+const card = Object.create(registry.get('grid-monitor-card').prototype);
+card._locale = () => 'en-GB';
+card._state = () => ({ attributes: { unit_of_measurement: 'UAH' }, last_changed: '2026-11-22T00:00:00Z' });
+const day = Date.UTC(2026, 10, 22, 0, 0);
+const H = 3600e3;
+const iso = (ms) => new Date(ms).toISOString();
+let total = 5000;
+const series = [];
+for (let h = 0; h <= 14; h += 1) { total += 2; series.push({ state: String(total), last_changed: iso(day + h * H + 50 * 60e3) }); }
+series.push({ state: 'unavailable', last_changed: iso(day + 15 * H) });
+series.push({ state: String(total - 0.15), last_changed: iso(day + 16 * H) });
+series.push({ state: String(total + 0.2), last_changed: iso(day + 16 * H + 3 * 60e3) });
+const bounds = { start: day, end: day + 17 * H };
+const bars = card._energyHistoryBars(card._parseCumulativeHistory([series], 'cost_total', bounds, total + 0.2), bounds, 'day');
+const outageHour = bars.find((bar) => bar.start === day + 15 * H);
+assert.ok(outageHour.value < 0.01, `outage hour must stay empty, got ${outageHour.value}`);
+bars.forEach((bar) => assert.ok(bar.value < 5, `no bar may contain the lifetime total, got ${bar.value}`));
+// A real reset to zero still counts the new consumption from zero.
+const reset = card._parseCumulativeHistory([[
+  { state: '100', last_changed: iso(day + H) },
+  { state: '0.4', last_changed: iso(day + 2 * H) },
+]], 'cost_total', { start: day, end: day + 3 * H }, 0.4);
+assert.ok(Math.abs(reset.at(-1).value - 0.4) < 1e-9, `reset keeps the new value, got ${reset.at(-1).value}`);
+"""
+        result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False, env={**os.environ, "TZ": "UTC"})
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)

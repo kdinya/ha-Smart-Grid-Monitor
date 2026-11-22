@@ -4333,12 +4333,20 @@
       const within = raw.filter((item) => item.time.getTime() > start && item.time.getTime() <= end);
       let previous = before?.value ?? raw.find((item) => item.time.getTime() > start)?.value;
       let cumulative = 0;
+      // A small drop is the firmware restoring a slightly older saved value after a reboot, not a counter reset:
+      // keep the high-water mark and count nothing. Only a drop to under half of the last value is a real reset.
+      const step = (value, last) => {
+        if (value >= last) return { add: value - last, next: value };
+        if (value < last * 0.5) return { add: value, next: value };
+        return { add: 0, next: last };
+      };
       const result = [{ time: new Date(start), value: 0 }];
       let lastTime = start;
       for (const item of within) {
         if (previous === undefined) { previous = item.value; lastTime = item.time.getTime(); result.push({ time: new Date(lastTime), value: cumulative }); continue; }
-        cumulative += item.value >= previous ? item.value - previous : item.value;
-        previous = item.value;
+        const counted = step(item.value, previous);
+        cumulative += counted.add;
+        previous = counted.next;
         lastTime = item.time.getTime();
         result.push({ time: new Date(lastTime), value: cumulative });
       }
@@ -4346,7 +4354,7 @@
       const normalizedCurrentValue = currentValue * unitFactor;
       if (Number.isFinite(normalizedCurrentValue) && normalizedCurrentValue >= minimum * unitFactor && normalizedCurrentValue <= maximum * unitFactor && Number.isFinite(currentStateTime) && currentStateTime <= end) {
         if (previous === undefined) previous = normalizedCurrentValue;
-        else cumulative += normalizedCurrentValue >= previous ? normalizedCurrentValue - previous : normalizedCurrentValue;
+        else cumulative += step(normalizedCurrentValue, previous).add;
       }
       if (lastTime < end) result.push({ time: new Date(end), value: cumulative });
       else if (lastTime === end) result[result.length - 1] = { time: new Date(end), value: cumulative };
