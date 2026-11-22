@@ -1366,6 +1366,15 @@ assert.ok(!html.includes('chart-zoom-button'), 'chart does not render chart-zoom
 assert.ok(html.includes('data-period="month"'), 'renders month period button');
 assert.ok(html.indexOf('data-period="month"') < html.indexOf('chart-date-range'), 'Select period is placed to the right of Month button');
 assert.ok(html.includes('Вибрати період'), 'button is renamed to Вибрати період');
+assert.ok(html.includes('class="periods chart-range-periods"'), 'period buttons and date picker use a dedicated responsive group');
+assert.ok(html.includes('class="periods chart-metric-periods"'), 'metric buttons use their own responsive group');
+card._energyChartMetric = 'energy_total';
+card._energyHistoryRange = 'day';
+card._chartDateRangeHtml = () => '<div class="chart-date-range"></div>';
+const energyControls = card._energyChartControlsHtml();
+assert.ok(energyControls.includes('class="periods chart-range-periods"'), 'energy period controls use the same responsive group');
+assert.ok(Card.CSS.includes('.periods.chart-range-periods{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))'), 'mobile period buttons occupy separate grid cells');
+assert.ok(Card.CSS.includes('.shell:not(.home-active)>.header>.tabs-top .tab[data-tab="home"] .tab-icon{display:none}'), 'the home icon is hidden on narrow secondary tabs');
 """
         result = subprocess.run(
             ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
@@ -1492,6 +1501,43 @@ for (const scope of ['params', 'energy']) {
             text=True,
             check=False,
             env={**os.environ, "TZ": "UTC"},
+        )
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_document_touch_and_scroll_dismiss_open_calendar(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = { window: { customCards: [] }, HTMLElement: class HTMLElement {}, customElements: { define: (name, value) => registry.set(name, value) } };
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+let calendarClosed = 0, rangeClosed = 0;
+card._closeChartCalendar = () => { calendarClosed += 1; card._chartCalendarState = null; };
+card._closeChartDateRangePopover = () => { rangeClosed += 1; card._chartCalendarState = null; };
+const outside = { matches: () => false };
+card._chartCalendarState = { scope: 'params' };
+card._handleChartDateDocumentPointerDown({ composedPath: () => [outside] });
+assert.equal(rangeClosed, 1, 'touching outside the card dismisses the whole date picker');
+const rangeSurface = { matches: (selector) => selector === '.chart-date-range' };
+card._chartCalendarState = { scope: 'params' };
+card._handleChartDateDocumentPointerDown({ composedPath: () => [rangeSurface] });
+assert.equal(calendarClosed, 1, 'touching the picker surface closes the calendar');
+const dateButton = { matches: (selector) => selector.includes('[data-chart-calendar-day]') };
+card._chartCalendarState = { scope: 'params' };
+card._handleChartDateDocumentPointerDown({ composedPath: () => [dateButton] });
+assert.equal(calendarClosed, 1, 'calendar date buttons remain usable');
+card._chartCalendarState = { scope: 'params' };
+card._handleChartDateDocumentScroll();
+assert.equal(rangeClosed, 2, 'scrolling the page also dismisses the date picker');
+"""
+        result = subprocess.run(
+            ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
+            capture_output=True,
+            text=True,
+            check=False,
         )
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
