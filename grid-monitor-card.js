@@ -4654,8 +4654,8 @@
         .voltage-unit{font-size:40px;font-weight:700;fill:#dcecff}
         .voltage-label{font-size:22px;fill:#a9c2e2;letter-spacing:.3px}
         .gauge-end{font-size:14px;fill:#6f8db1;letter-spacing:.3px}
-        .gauge-usage{font-size:21px;font-weight:700;fill:#dcecff;letter-spacing:.2px}
-        .gauge-usage-cost{font-size:18px;font-weight:600;fill:#9fb7d6}
+        .gauge-usage{font-size:17px;font-weight:700;fill:#dcecff;letter-spacing:.2px}
+        .gauge-usage-cost{font-size:14px;font-weight:600;fill:#9fb7d6}
         .gauge-fill-glow{mix-blend-mode:screen}
         .dial-tick{stroke:#9db8cd;stroke-opacity:.6;stroke-width:1.6;stroke-linecap:round}
         .dial-tick.major{stroke-width:2.2;stroke-opacity:.72}
@@ -4774,8 +4774,8 @@
         .detail:before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:0 3px 3px 0;background:linear-gradient(#12aaff,#13d5f4);box-shadow:0 0 10px #12aaff80}
         .detail>span,.detail label>span{font-size:13px;color:#9fb7d6;margin-bottom:6px}
         .detail b{font-size:21px;font-weight:750;letter-spacing:-.2px}
-        .detail.has-icon{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:13px;align-items:center}
-        .detail.has-icon>.detail-icon{grid-row:1/3;grid-column:1;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;color:#7fd4ff;background:radial-gradient(circle at 30% 18%,#2a6aa355,#0f2a4655);border:1px solid #5d96ca44;box-shadow:inset 0 1px 0 #ffffff1c}
+        .detail.has-icon{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto 1fr;column-gap:13px;align-items:start;align-content:start}
+        .detail.has-icon>.detail-icon{grid-row:1/3;grid-column:1;align-self:start;justify-self:start;margin:0;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;color:#7fd4ff;background:radial-gradient(circle at 30% 18%,#2a6aa355,#0f2a4655);border:1px solid #5d96ca44;box-shadow:inset 0 1px 0 #ffffff1c}
         .detail.has-icon>.detail-icon .icon{width:22px;height:22px}
         .detail.has-icon>span:not(.detail-icon),.detail.has-icon>b{grid-column:2;min-width:0}
         .detail.has-icon>span:not(.detail-icon){margin-bottom:3px}
