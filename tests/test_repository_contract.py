@@ -167,6 +167,24 @@ class RepositoryContractTests(unittest.TestCase):
         # The status line reflects the real helper state on the first render, not only after a later update.
         self.assertIn('data-role="stats-start-sync">${this._escape(this._statsSyncText())}', card)
 
+    def test_period_picker_respects_statistics_start_and_highlights_custom_period(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        # Both the parameters and the energy picker use the statistics start as the lower bound.
+        self.assertNotIn("!isEnergy && Number.isFinite(this._statsStart) ? ` min=", card)
+        html = card[card.index("_chartDateRangeHtml(scope = 'params') {"):card.index("_closeChartDateRangePopover(panel = null) {")]
+        self.assertIn("this._chartDateRangeMin()", html)
+        apply_range = card[card.index("_applyChartDateRange(scope = 'params') {"):card.index("_setCustomChartRange(start, end")]
+        # An earlier moment is moved to the start instead of producing a warning.
+        self.assertIn("this._clampChartDateInput(startInput)", apply_range)
+        self.assertIn("Math.max(start, this._statsStart)", apply_range)
+        self.assertNotIn("chart_date_error_earlier", apply_range)
+        self.assertIn("addEventListener('focusout'", card)
+        # Choosing a custom period highlights the picker button of that chart only.
+        controls = card[card.index("_updateChartDateRangeControls(scope = 'params') {"):card.index("_applyChartDateRange(scope = 'params') {")]
+        self.assertIn("this._chartDateRangeMin()", controls)
+        self.assertIn("this._syncChartPeriodHighlight(scope)", controls)
+        self.assertIn("data-chart-date-toggle][data-chart-scope=\"${scope}\"]", controls)
+
     def test_scroll_to_top_is_fixed_and_smooth_for_home_assistant_scroll_containers(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
         self.assertIn('popover="manual" data-scroll-top aria-label=', card)
