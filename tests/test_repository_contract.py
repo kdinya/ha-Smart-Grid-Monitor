@@ -173,7 +173,10 @@ class RepositoryContractTests(unittest.TestCase):
         html = card[card.index("_chartDateRangeHtml(scope = 'params') {"):card.index("_closeChartDateRangePopover(panel = null) {")]
         self.assertIn("data-chart-calendar hidden", html)
         self.assertIn("data-chart-date-toggle", html)
+        self.assertIn("data-chart-date-summary", html)
         self.assertIn("data-chart-date-apply data-chart-scope=\"${scope}\" disabled", html)
+        self.assertNotIn("chart-date-fields", html)
+        self.assertNotIn("chart-date-value", html)
         self.assertNotIn("data-chart-calendar-open", html)
         calendar_limits = card[card.index("_chartCalendarLimits() {"):card.index("_chartCalendarContentHtml(scope, monthKey) {")]
         self.assertIn("this._chartDateRangeMin()", calendar_limits)
@@ -184,6 +187,9 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertNotIn("chart_date_error_earlier", apply_range)
         self.assertIn("addEventListener('focusout'", card)
         self.assertIn("this._openChartDateCalendar(target.dataset.chartScope || 'params')", card)
+        outside_handler = card[card.index("_handleChartDateDocumentPointerDown(event) {"):card.index("_handleChartDateDocumentScroll() {")]
+        self.assertIn("this._closeChartDateRangePopover()", outside_handler)
+        self.assertIn("this._chartDateEventInsidePicker(event)", outside_handler)
         # Applying a custom range highlights the picker button for that chart only.
         controls = card[card.index("_updateChartDateRangeControls(scope = 'params') {"):card.index("_applyChartDateRange(scope = 'params') {")]
         self.assertIn("this._syncChartPeriodHighlight(scope)", controls)
@@ -349,7 +355,10 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("metricKey === 'power' ? plottedPoints.filter((point) => point.v > 0) : plottedPoints", card)
         self.assertIn("this._historyBounds(range)", card)
         self.assertIn("_chartDateRangeHtml()", card)
-        self.assertIn('type="hidden" ${key}', card)
+        self.assertIn('type="hidden" ${startKey}', card)
+        self.assertIn('type="hidden" ${endKey}', card)
+        self.assertIn('data-chart-date-summary', card)
+        self.assertNotIn('chart-date-fields', card)
         self.assertIn('class="chart-calendar-day', card)
         self.assertIn('data-chart-date-apply data-chart-scope=\"${scope}\" disabled', card)
         self.assertIn("isEnergy ? 'data-energy-chart-date-start' : 'data-chart-date-start'", card)

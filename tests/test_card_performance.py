@@ -660,8 +660,7 @@ class PeriodRangeSelectionTests(unittest.TestCase):
 const card = makeCard();
 const start = { value: '' };
 const end = { value: '' };
-const startLabel = { textContent: '' };
-const endLabel = { textContent: '' };
+const summary = { textContent: '' };
 const apply = { disabled: true };
 const calendar = { hidden: true, innerHTML: '' };
 const error = { textContent: '' };
@@ -671,8 +670,7 @@ const panel = {
   querySelector(selector) {
     if (selector === '[data-chart-calendar]') return calendar;
     if (selector === '[data-role="chart-date-error"]') return error;
-    if (selector === '[data-chart-date-value="start"]') return startLabel;
-    if (selector === '[data-chart-date-value="end"]') return endLabel;
+    if (selector === '[data-chart-date-summary]') return summary;
     if (selector === '[data-chart-date-apply]') return apply;
     return null;
   },
@@ -701,7 +699,7 @@ assert.equal(apply.disabled, true, 'Show starts disabled');
 card._selectChartCalendarDate('2026-11-10', 'params');
 assert.equal(start.value, '2026-11-10');
 assert.equal(end.value, '');
-assert.equal(startLabel.textContent, '2026-11-10');
+assert.equal(summary.textContent, 'chart_from: 2026-11-10');
 assert.equal(apply.disabled, true, 'one selected date is not an applicable range');
 assert.match(calendar.innerHTML, /range-start/);
 
@@ -720,6 +718,15 @@ card._selectChartCalendarDate('2026-11-12', 'params');
 assert.equal(start.value, '2026-11-12', 'reverse selection is ordered chronologically');
 assert.equal(end.value, '2026-11-18');
 assert.equal(apply.disabled, false);
+
+card._selectChartCalendarDate('2026-11-20', 'params');
+assert.equal(start.value, '2026-11-20', 'after a completed range, a new date starts a fresh range');
+assert.equal(end.value, '');
+assert.equal(apply.disabled, true);
+card._selectChartCalendarDate('2026-11-20', 'params');
+assert.equal(end.value, '2026-11-20', 'selecting the same date twice completes a single-day range');
+assert.equal(apply.disabled, false, 'Show is enabled for a same-day range');
+assert.match(calendar.innerHTML, /single-day/, 'the selected day remains fully highlighted');
 """)
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 

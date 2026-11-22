@@ -1502,7 +1502,7 @@ for (const scope of ['params', 'energy']) {
         )
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
-    def test_document_touch_and_scroll_dismiss_open_calendar(self):
+    def test_document_touch_dismisses_whole_picker_but_keeps_inside_and_toggle_clicks(self):
         script = r"""
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -1512,21 +1512,25 @@ const context = { window: { customCards: [] }, HTMLElement: class HTMLElement {}
 vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
 const Card = registry.get('grid-monitor-card');
 const card = Object.create(Card.prototype);
-let calendarClosed = 0, rangeClosed = 0;
-card._closeChartCalendar = () => { calendarClosed += 1; card._chartCalendarState = null; };
+let rangeClosed = 0;
 card._closeChartDateRangePopover = () => { rangeClosed += 1; card._chartCalendarState = null; };
+card._chartCalendarState = { scope: 'params' };
 const outside = { matches: () => false };
-card._chartCalendarState = { scope: 'params' };
 card._handleChartDateDocumentPointerDown({ composedPath: () => [outside] });
-assert.equal(rangeClosed, 1, 'touching outside the card dismisses the whole date picker');
-const rangeSurface = { matches: (selector) => selector === '.chart-date-range' };
+assert.equal(rangeClosed, 1, 'touching anywhere outside the calendar popover closes the whole picker');
+const panel = { matches: (selector) => selector === '.chart-date-range-panel' };
+const showButton = { matches: () => false };
 card._chartCalendarState = { scope: 'params' };
-card._handleChartDateDocumentPointerDown({ composedPath: () => [rangeSurface] });
-assert.equal(calendarClosed, 1, 'touching the picker surface closes the calendar');
-const dateButton = { matches: (selector) => selector.includes('[data-chart-calendar-day]') };
+card._handleChartDateDocumentPointerDown({ composedPath: () => [showButton, panel], target: showButton });
+assert.equal(rangeClosed, 1, 'interactions inside the calendar window stay open until Show runs');
+const dateButton = { matches: (selector) => selector === '[data-chart-calendar-day]' };
 card._chartCalendarState = { scope: 'params' };
-card._handleChartDateDocumentPointerDown({ composedPath: () => [dateButton] });
-assert.equal(calendarClosed, 1, 'calendar date buttons remain usable');
+card._handleChartDateDocumentPointerDown({ composedPath: () => [dateButton, panel], target: dateButton });
+assert.equal(rangeClosed, 1, 'calendar date buttons remain usable');
+const toggle = { matches: (selector) => selector === '[data-chart-date-toggle]' };
+card._chartCalendarState = { scope: 'params' };
+card._handleChartDateDocumentPointerDown({ composedPath: () => [toggle], target: toggle });
+assert.equal(rangeClosed, 1, 'the period toggle is left for its click handler to close');
 card._chartCalendarState = { scope: 'params' };
 card._handleChartDateDocumentScroll();
 assert.equal(rangeClosed, 2, 'scrolling the page also dismisses the date picker');
@@ -1539,7 +1543,7 @@ assert.equal(rangeClosed, 2, 'scrolling the page also dismisses the date picker'
         )
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
-    def test_touching_outside_the_open_calendar_closes_it(self):
+    def test_touching_elsewhere_inside_card_closes_the_whole_calendar_popover(self):
         script = r"""
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -1549,17 +1553,18 @@ const context = { window: { customCards: [] }, HTMLElement: class HTMLElement {}
 vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
 const Card = registry.get('grid-monitor-card');
 const card = Object.create(Card.prototype);
-let calendarClosed = 0, rangeClosed = 0;
-const calendar = { contains: (target) => target.insideCalendar };
-card.shadowRoot = { querySelector: () => calendar };
-card._closeChartCalendar = () => { calendarClosed += 1; };
-card._closeChartDateRangePopover = () => { rangeClosed += 1; };
-card._handleChartDatePointerDown({ target: { insideCalendar: false, closest: (selector) => selector === '.chart-date-range' ? {} : null } });
-assert.equal(calendarClosed, 1);
-assert.equal(rangeClosed, 0, 'touch elsewhere in the range controls closes only the month calendar');
-card._handleChartDatePointerDown({ target: { insideCalendar: false, closest: () => null } });
-assert.equal(calendarClosed, 2);
-assert.equal(rangeClosed, 1, 'touch elsewhere on the card closes the calendar and its period popover');
+let closed = 0;
+card._chartCalendarState = { scope: 'params' };
+card.shadowRoot = {};
+card._closeChartDateRangePopover = () => { closed += 1; card._chartCalendarState = null; };
+const outside = { matches: () => false, closest: () => null };
+card._handleChartDatePointerDown({ target: outside, composedPath: () => [outside] });
+assert.equal(closed, 1, 'touching any card content outside the calendar dismisses the full popover');
+const panel = { matches: (selector) => selector === '.chart-date-range-panel' };
+const inside = { matches: () => false, closest: () => null };
+card._chartCalendarState = { scope: 'params' };
+card._handleChartDatePointerDown({ target: inside, composedPath: () => [inside, panel] });
+assert.equal(closed, 1, 'touching within the calendar window keeps it open');
 """
         result = subprocess.run(
             ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
@@ -1568,6 +1573,7 @@ assert.equal(rangeClosed, 1, 'touch elsewhere on the card closes the calendar an
             check=False,
         )
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()
