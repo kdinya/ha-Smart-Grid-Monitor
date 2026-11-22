@@ -1581,7 +1581,7 @@
       const source = esp === 'off' ? this._t('source_unknown') : pzemOffline ? this._t('pzem_source_offline') : pzemOnline ? this._t('source_unconfirmed') : waitingForPzem ? this._t('detecting') : this._t('source_unknown');
       const banner = esp === 'off' ? this._t('offline_banner') : pzemOffline ? this._t('pzem_offline_banner') : alarm ? this._t('alarm_banner') : qualityUnknown ? this._t('quality_unknown') : healthy ? this._t('healthy') : waitingForPzem ? this._t('detecting') : this._t('source_unknown');
       const status = esp === 'off' ? this._t('offline') : pzemOffline ? this._t('pzem_offline') : alarm ? this._t('alarm') : healthy ? this._t('normal') : waitingForPzem ? this._t('detecting') : this._t('unknown');
-      return { mains, pzemOnline, pzemOffline, esp, alarm, qualityUnknown, stateClass, source, banner, status };
+      return { mains, pzemOnline, pzemOffline, waitingForPzem, esp, alarm, qualityUnknown, stateClass, source, banner, status };
     }
 
     _headRightHtml(status) {
@@ -2744,10 +2744,10 @@
       const chartX = (clientX - drag.rectLeft) * drag.chartWidth / drag.rectWidth;
       const normalized = Math.max(0, Math.min(1, (chartX - drag.x0) / (drag.x1 - drag.x0)));
       const raw = drag.bounds.start + normalized * (drag.bounds.end - drag.bounds.start);
-      const snapped = Math.max(drag.bounds.start, Math.min(drag.bounds.end, Math.round(raw / 1000) * 1000));
+      const mapped = Math.max(drag.bounds.start, Math.min(drag.bounds.end, raw));
       const state = this._chartZoomWindow || { start: drag.bounds.start, end: drag.bounds.end, dirty: false };
-      if (drag.handle === 'start') state.start = Math.max(drag.bounds.start, Math.min(state.end - 1000, snapped));
-      else state.end = Math.min(drag.bounds.end, Math.max(state.start + 1000, snapped));
+      if (drag.handle === 'start') state.start = Math.max(drag.bounds.start, Math.min(state.end - 1000, mapped));
+      else state.end = Math.min(drag.bounds.end, Math.max(state.start + 1000, mapped));
       state.dirty = true;
       this._chartZoomWindow = state;
       this._updateChartZoomSelection(drag, forceLabels);
@@ -2860,7 +2860,7 @@
       const maxLabel = isEnergy ? this._t(dailyEnergyBars ? 'energy_max_day' : 'energy_max_hour') : this._t('stat_max');
       const data = isEnergy ? null : this._chartData(history, metricKey, { range, customRange, bounds, includeCurrent: true });
       const plottedPoints = isEnergy
-        ? energyBars.map((bar) => ({ t: bar.start, v: bar.value }))
+        ? energyBars.filter((bar) => !bar.unavailable).map((bar) => ({ t: bar.start, v: bar.value }))
         : (data?.series || []).filter((point) => Number.isFinite(point.v) && (!Number.isFinite(this._statsStart) || point.t >= this._statsStart));
       const minimumPoints = metricKey === 'power' ? plottedPoints.filter((point) => point.v > 0) : plottedPoints;
       const historyPoints = isEnergy ? [] : (Array.isArray(history) ? history : [])
@@ -2882,7 +2882,8 @@
       const max = maxPoint?.v ?? null;
       let avg = null;
       if (isEnergy && energyBars.length) {
-        avg = energyBars.reduce((sum, bar) => sum + bar.value, 0) / energyBars.length;
+        const availableBars = energyBars.filter((bar) => !bar.unavailable);
+        avg = availableBars.length ? availableBars.reduce((sum, bar) => sum + bar.value, 0) / availableBars.length : null;
       } else if (!isEnergy && historyPoints.length) {
         avg = historyPoints.reduce((sum, point) => sum + point.value, 0) / historyPoints.length;
       }
@@ -3088,9 +3089,10 @@
       const currentX = points.reduce((sum, point) => sum + point.x, 0) / points.length;
       pan.deltaX = currentX - pan.startX;
       pan.currentDistance = pan.pointerType === 'touch' ? this._chartPointerDistance(points) : 1;
+      const activationThreshold = pan.pointerType === 'touch' ? 8 : 2;
       const gestureChanged = pan.pointerType === 'touch'
-        ? Math.abs((pan.currentDistance || 1) - (pan.startDistance || 1)) >= 8
-        : Math.abs(pan.deltaX) >= 8;
+        ? Math.abs((pan.currentDistance || 1) - (pan.startDistance || 1)) >= activationThreshold
+        : Math.abs(pan.deltaX) >= activationThreshold;
       if (!pan.live && !gestureChanged) return;
       pan.live = true;
       if (preview) this._chartPanPreview(pan);
@@ -3357,7 +3359,7 @@
       const bounds = isEnergy ? this._energyHistoryBounds() : this._historyBounds();
       const width = Math.max(280, Math.round(this._chartW || 985));
       const narrow = width < 520;
-      const panStripHeight = 26;
+      const panStripHeight = 34;
       const height = (narrow ? 200 : 228) + panStripHeight;
       const x0 = narrow ? 56 : 70; const x1 = width - (narrow ? 14 : 20); const y0 = 26;
       const panStripY = height - panStripHeight; const y1 = panStripY - 30;
@@ -3494,7 +3496,22 @@
           if (overlap > 0) bin.value += delta * (overlap / duration);
         }
       }
+      const telemetry = this._energyTelemetryUnavailable?.();
+      if (telemetry && bins.length) {
+        bins.forEach((bin, index) => {
+          if (Number.isFinite(telemetry.since) ? bin.end > telemetry.since : index === bins.length - 1) bin.unavailable = true;
+        });
+      }
       return bins;
+    }
+
+    _energyTelemetryUnavailable() {
+      const status = this._displayStatus?.();
+      if (!status || status.pzemOnline || !(status.pzemOffline || status.waitingForPzem || status.esp === 'off')) return null;
+      const state = this._state?.('mains');
+      const since = Date.parse(state?.last_changed || state?.last_updated || '');
+      const message = status.pzemOffline ? this._t('pzem_offline_banner') : status.esp === 'off' ? this._t('offline_banner') : status.waitingForPzem ? this._t('detecting') : this._t('source_unknown');
+      return { since, message };
     }
 
     _energyBarScale(maximum, metricKey) {
@@ -3511,15 +3528,17 @@
     }
 
     _energyBarSelectionHtml(metricKey = this._energyChartMetric || 'energy_total') {
-      const selected = this._energySelectedBar;
-      if (!selected || selected.metricKey !== metricKey) return '';
       const bars = this._energyHistoryBars(this._energyHistory?.[metricKey] || [], this._energyHistoryBounds(), this._energyHistoryRange);
+      const offlineNote = bars.some((bar) => bar.unavailable)
+        ? `<div class="energy-offline-note">${this._escape(this._energyTelemetryUnavailable()?.message || this._t('source_unknown'))}</div>` : '';
+      const selected = this._energySelectedBar;
+      if (!selected || selected.metricKey !== metricKey) return offlineNote;
       const bar = bars.find((candidate) => candidate.start === selected.start);
-      if (!bar) { this._energySelectedBar = null; return ''; }
+      if (!bar || bar.unavailable) { this._energySelectedBar = null; return offlineNote; }
       const metric = CHART_METRICS[metricKey];
       const unit = metric.unit(this._lang(), this._currencyCode());
       const value = `${bar.value.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits })} ${unit}`;
-      return `<div class="energy-selection-detail"><span>${this._escape(this._t('energy_selected_interval'))}</span><time>${this._escape(bar.fullLabel)}</time><b>${this._escape(value)}</b></div>`;
+      return `${offlineNote}<div class="energy-selection-detail"><span>${this._escape(this._t('energy_selected_interval'))}</span><time>${this._escape(bar.fullLabel)}</time><b>${this._escape(value)}</b></div>`;
     }
 
     _energyBarSvg(metricKey = this._energyChartMetric || 'energy_total', history = this._energyHistory[metricKey], loading = this._energyHistoryLoading[metricKey]) {
@@ -3533,11 +3552,11 @@
       if (!bars.length) return `<div class="chart-empty">${this._escape(this._t('no_history'))}</div>`;
       const metric = CHART_METRICS[metricKey];
       const unit = metric.unit(this._lang(), this._currencyCode());
-      const maximum = Math.max(0, ...bars.map((bar) => bar.value));
+      const maximum = Math.max(0, ...bars.filter((bar) => !bar.unavailable).map((bar) => bar.value));
       const scale = this._energyBarScale(maximum, metricKey);
       const width = Math.max(280, Math.round(this._chartW || 985));
       const narrow = width < 520;
-      const panStripHeight = 26;
+      const panStripHeight = 34;
       const height = (narrow ? 200 : 228) + panStripHeight;
       const x0 = narrow ? 56 : 70;
       const x1 = width - (narrow ? 14 : 20);
@@ -3558,10 +3577,12 @@
       const vertical = bars.map((bar, index) => {
         const center = x0 + (index + 0.5) * slot;
         const show = index === 0 || index === bars.length - 1 || index % labelStep === 0;
-        return show ? `<text x="${center.toFixed(1)}" y="${panStripY - 8}" text-anchor="middle">${this._escape(bar.label)}</text>` : '';
+        return show ? `<text class="chart-axis-label" x="${center.toFixed(1)}" y="${panStripY - 8}" text-anchor="middle">${this._escape(bar.label)}</text>` : '';
       }).join('');
       const fill = metricKey === 'cost_total' ? '#f5b94c' : '#16b5ff';
       const rects = bars.map((bar, index) => {
+        const center = x0 + (index + 0.5) * slot;
+        if (bar.unavailable) return `<text class="energy-bar-unavailable" x="${center.toFixed(1)}" y="${(y1 - 7).toFixed(1)}" text-anchor="middle" role="img" aria-label="${this._escape(this._energyTelemetryUnavailable()?.message || this._t('source_unknown'))}">—</text>`;
         const x = x0 + index * slot + (slot - barWidth) / 2;
         const y = Y(bar.value);
         const rectHeight = Math.max(1, y1 - y);
@@ -4517,7 +4538,7 @@
       const metricKey = this._energyChartMetric || 'energy_total';
       const bars = this._energyHistoryBars(this._energyHistory[metricKey] || [], this._energyHistoryBounds(), this._energyHistoryRange);
       const bar = bars[index];
-      if (!bar) return;
+      if (!bar || bar.unavailable) return;
       this._energySelectedBar = { metricKey, start: bar.start };
       this._refreshEnergyCharts();
       if (restoreFocus) this.shadowRoot.querySelector(`[data-energy-bar="${index}"]`)?.focus?.();
@@ -5167,7 +5188,7 @@
         .chart-plot{touch-action:none;position:relative;cursor:grab;user-select:none}.chart-plot.is-panning{cursor:grabbing}
         .chart{overflow:visible}
         .chart-grid{stroke:#7fb2e133}
-        .chart-grid text{fill:#8fa9c9;font-size:12.5px;letter-spacing:.2px}
+        .chart-grid text,.energy-bars .chart-axis-label{fill:#8fa9c9;stroke:none;font-size:12.5px;letter-spacing:.2px}
         .chart-line{stroke:#25c2ff;stroke-width:3}
         .chart-dot{fill:#fff;stroke:#18baff;stroke-width:3.5}
         .chart-cross{fill:none;stroke:#8fd6ff;stroke-opacity:.6;stroke-dasharray:3 4}
@@ -5519,6 +5540,8 @@
         .energy-selection-detail>span{color:#9fb5d1;font-size:12px}
         .energy-selection-detail>time{color:#d9e8fa;font-size:13px;overflow-wrap:anywhere}
         .energy-selection-detail>b{color:#f3f7ff;font-size:17px;text-align:right;white-space:nowrap}
+        .energy-offline-note{margin:2px 0 8px;color:#ffd078;font-size:12px;text-align:center}
+        .energy-bars .energy-bar-unavailable{fill:#ffd078;stroke:none;font-size:14px;font-weight:700;pointer-events:none}
         .banner-main{flex:1 1 38%;min-width:0}
         .banner-main strong{display:block;max-width:none}
         .banner-system{flex:1 1 35%;min-width:0;display:grid;gap:3px;padding-left:16px;border-left:1px solid #ffffff2c}
@@ -5536,7 +5559,7 @@
         .chart-zoom-selection-button:disabled{opacity:.42;filter:saturate(.55);cursor:not-allowed}
         .chart-zoom-selection-band{fill:#20baff18;stroke:#20baff70;stroke-width:1;pointer-events:none}
         .chart-zoom-selection-edge{stroke:#46c8ff;stroke-width:1.5;stroke-dasharray:4 3;pointer-events:none}
-        .chart-zoom-handle{cursor:ew-resize;touch-action:none;outline:none}
+        .chart-zoom-handle{cursor:ew-resize;touch-action:none;outline:none}.chart-gesture-active .chart-zoom-handle{will-change:transform}.chart-gesture-active .chart-zoom-handle-mark{filter:none!important}
         .chart-zoom-handle-hit{fill:transparent;pointer-events:all}
         .chart-zoom-handle-mark{fill:#14a8e8;stroke:#e5f7ff;stroke-width:1.5;pointer-events:none;filter:drop-shadow(0 2px 4px #00101d)}
         .chart-zoom-handle-end .chart-zoom-handle-mark{fill:#9257ff}
@@ -5583,8 +5606,8 @@
         .shell.eco *,.shell.eco *::before,.shell.eco *::after{animation:none!important;filter:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
         .shell.eco .gauge-fill-glow,.shell.eco .tower-halo,.shell.eco .tower-haze,.shell.eco .chart-glow{display:none}.shell.eco .house-smoke,.shell.eco .house-canopy{animation:none!important}
         .header>.header-house{flex:none;position:relative;z-index:3;align-self:flex-start;width:0;height:0;max-width:none;margin:0;overflow:visible}
-        .header>.header-house .house-scene{position:absolute;right:-56px;top:50px;width:264px;transform:translateX(30px) scale(1.3);transform-origin:center center}
-        @container (max-width:959px){.header>.header-house{order:3;margin-left:auto}.header>.header-house .house-scene{right:-30px;top:22px;width:174px;transform:translateX(30px) scale(1.3);transform-origin:center center}}
+        .header>.header-house .house-scene{position:absolute;right:-56px;top:50px;width:264px;transform:translateX(20px) scale(1.1818);transform-origin:center center}
+        @container (max-width:959px){.header>.header-house{order:3;margin-left:auto}.header>.header-house .house-scene{right:-30px;top:22px;width:174px;transform:translateX(20px) scale(1.1818);transform-origin:center center}}
 
         @media(prefers-reduced-motion:reduce){.card{backdrop-filter:none;-webkit-backdrop-filter:none}.tower-beacon{animation:none}}
 

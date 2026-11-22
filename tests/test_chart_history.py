@@ -879,6 +879,48 @@ assert.match(card._chartStatsHtml('cost_total', cost, 'energy'), /75 UAH/);
         )
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
+    def test_energy_cost_intervals_after_pzem_loss_are_marked_unavailable(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = { window: { customCards: [] }, HTMLElement: class HTMLElement {}, customElements: { define: (name, value) => registry.set(name, value) } };
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+const start = Date.parse('2026-11-21T00:00:00Z');
+const end = start + 3 * 3600e3;
+const outage = start + 90 * 60e3;
+const bounds = { start, end };
+card._energyHistoryRange = 'day';
+card._energyCustomRange = null;
+card._energyHistoryBounds = () => bounds;
+card._displayStatus = () => ({ pzemOnline: false, pzemOffline: true, esp: 'on' });
+card._state = (key) => key === 'mains' ? { last_changed: new Date(outage).toISOString() } : { attributes: { unit_of_measurement: 'UAH' } };
+card._locale = () => 'en-US';
+card._lang = () => 'en';
+card._currencyCode = () => 'UAH';
+card._t = (key) => ({ stat_min: 'Min', stat_avg: 'Avg', stat_max: 'Max', energy_max_hour: 'Max per hour', pzem_offline_banner: 'PZEM offline; source unknown' })[key] || key;
+card._escape = String;
+card._formatChartStatTimestamp = () => 'time';
+const history = [
+  { time: new Date(start), value: 0 },
+  { time: new Date(start + 3600e3), value: 1 },
+  { time: new Date(start + 2 * 3600e3), value: 101 },
+  { time: new Date(end), value: 102 },
+];
+const bars = card._energyHistoryBars(history, bounds, 'day');
+assert.equal(bars[0].unavailable, undefined, 'confirmed hours before the outage remain visible');
+assert.equal(bars[1].unavailable, true, 'the hour containing the loss of telemetry is not presented as a confirmed total');
+assert.equal(bars[2].unavailable, true, 'later hours remain unknown while PZEM is offline');
+const stats = card._chartStatsHtml('cost_total', history, 'energy');
+assert.match(stats, /1 UAH/);
+assert.doesNotMatch(stats, /100 UAH|101 UAH|102 UAH/, 'unconfirmed costs do not inflate the displayed extrema or average');
+"""
+        result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False, env={**os.environ, "TZ": "UTC"})
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
     def test_energy_max_stat_is_the_largest_hour_or_day_bucket_not_period_total(self):
         script = r"""
 const assert = require('node:assert/strict');
@@ -1374,7 +1416,30 @@ assert.equal(applied.end - applied.start, 1000, 'one-second selection is accepte
         result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False, env={**os.environ, "TZ": "UTC"})
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
-    def test_dragging_chart_handles_maps_to_one_second_time_coordinates(self):
+    def test_zoom_handle_tracks_subsecond_pointer_motion_without_one_second_jumps(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = { window: { customCards: [] }, HTMLElement: class HTMLElement {}, customElements: { define: (name, value) => registry.set(name, value) } };
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+const start = 1700000000000;
+const end = start + 60000;
+const chart = { dataset: { chartStart: String(start), chartEnd: String(end), chartW: '1000', chartX0: '100', chartX1: '900' } };
+const drag = { pointerId: 1, bounds: { start, end }, chart, handle: 'start', rectLeft: 50, rectWidth: 1000, chartWidth: 1000, x0: 100, x1: 900, lastX: null, nodes: {} };
+card._chartZoomDrag = drag;
+card._chartZoomWindow = { start: start + 30000, end, dirty: false };
+card._updateChartZoomSelection = () => {};
+card._chartZoomSelectionMove({ pointerId: 1, clientX: 551, preventDefault() {} });
+assert.equal(card._chartZoomWindow.start, start + 30075, 'a one-pixel move on a one-minute range should not quantize to a full second');
+"""
+        result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False, env={**os.environ, "TZ": "UTC"})
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_dragging_chart_handles_maps_to_precise_time_coordinates(self):
         script = r"""
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -1405,7 +1470,7 @@ assert.equal(card._chartZoomWindow.end, end, 'moving the start handle leaves the
 assert.equal(card._chartZoomWindow.dirty, true);
 card._chartZoomDrag.handle = 'end';
 card._chartZoomSelectionMove({ pointerId: 1, clientX: 650, preventDefault() {} });
-assert.equal(card._chartZoomWindow.end, start + 38000, 'dragged end handle snaps to one-second precision');
+assert.equal(card._chartZoomWindow.end, start + 37500, 'dragged end handle follows the selected time without whole-second rounding');
 """
         result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False, env={**os.environ, "TZ": "UTC"})
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
@@ -1446,6 +1511,29 @@ card._queueChartZoomSelectionMove(move(30));
 card._chartZoomSelectionMove(move(40));
 assert.equal(scheduled.size, 0, 'pointerup cancels the pending frame');
 assert.deepEqual(applied, [20, 40], 'pointerup applies its final position immediately');
+"""
+        result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_time_axis_pan_responds_after_a_small_intentional_drag(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = { window: { customCards: [] }, HTMLElement: class HTMLElement {}, customElements: { define: (name, value) => registry.set(name, value) } };
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+const plot = { isConnected: true };
+const pan = { pointerIds: [1], pointerType: 'axis', startX: 100, deltaX: 0, live: false, startDistance: 1, currentDistance: 1 };
+card._chartPan = pan;
+card._chartPointers = new Map([[1, { x: 102, y: 0 }]]);
+let previews = 0;
+card._chartPanPreview = () => { previews += 1; };
+card._updateChartPanFromPointers(pan, true);
+assert.equal(pan.live, true, 'the visible pan strip responds after a small deliberate drag');
+assert.equal(previews, 1, 'the preview starts immediately after the activation threshold');
 """
         result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False)
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)

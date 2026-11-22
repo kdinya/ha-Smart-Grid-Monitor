@@ -563,6 +563,16 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertNotIn("_refreshChart(", finish)
         self.assertNotIn("_refreshEnergyCharts(", finish)
 
+    def test_energy_time_axis_labels_match_parameter_chart_contrast(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        self.assertIn('class="chart-axis-label"', card)
+        self.assertIn('.chart-grid text,.energy-bars .chart-axis-label{fill:#8fa9c9;stroke:none;font-size:12.5px;letter-spacing:.2px}', card)
+
+    def test_zoom_handles_drop_expensive_filter_during_drag(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        self.assertIn('.chart-gesture-active .chart-zoom-handle{will-change:transform}', card)
+        self.assertIn('.chart-gesture-active .chart-zoom-handle-mark{filter:none!important}', card)
+
     def test_chart_pan_strip_is_visible_on_both_chart_types(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
         self.assertEqual(card.count("this._chartPanAxisHtml(x0, x1, panStripY, panStripHeight)"), 2)
@@ -570,14 +580,14 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("chart-pan-axis:hover", card)
         self.assertIn("chart_pan_hint: 'Потягніть для прокручування'", card)
         self.assertIn("chart_pan_hint: 'Drag to scroll'", card)
-        self.assertGreaterEqual(card.count("const panStripHeight = 26;"), 2)
+        self.assertGreaterEqual(card.count("const panStripHeight = 34;"), 2)
 
     def test_detail_header_house_moves_right_and_scales_without_affecting_home_art(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
-        self.assertEqual(card.count("transform:translateX(30px) scale(1.3);transform-origin:center center"), 2)
+        self.assertEqual(card.count("transform:translateX(20px) scale(1.1818);transform-origin:center center"), 2)
         self.assertIn(".header>.header-house .house-scene", card)
-        self.assertIn("width:264px;transform:translateX(30px) scale(1.3)", card)
-        self.assertIn("width:174px;transform:translateX(30px) scale(1.3)", card)
+        self.assertIn("width:264px;transform:translateX(20px) scale(1.1818)", card)
+        self.assertIn("width:174px;transform:translateX(20px) scale(1.1818)", card)
 
 if __name__ == "__main__":
     unittest.main()
