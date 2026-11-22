@@ -1556,7 +1556,7 @@
     }
 
     _headerHtml() {
-      return `<header class="header"><div class="logo">${this._svg('bolt')}</div><div class="brand"><h1>${this._escape(this._config.name || this._t('title'))}</h1><p>${this._escape(this._t('subtitle'))}</p></div>${this._tabs('top')}</header>`;
+      return `<header class="header"><div class="logo">${this._svg('bolt')}</div><div class="brand"><h1>${this._escape(this._config.name || this._t('title'))}</h1><p>${this._escape(this._t('subtitle'))}</p></div><span class="house-art header-house" aria-hidden="true">${this._houseArt(this._displayStatus())}</span>${this._tabs('top')}</header>`;
     }
 
     _home() {
@@ -4251,12 +4251,11 @@
       const indicatorLabel = indicator?.querySelector('[data-role="state-label"]');
       if (indicatorLabel) indicatorLabel.textContent = status.status;
       if (banner) banner.className = `card banner ${status.stateClass}`;
-      const houseScene = banner?.querySelector('[data-role="house-scene"]');
-      if (houseScene) {
-        const light = this._houseLighting(status);
-        houseScene.classList.toggle('interior-off', light.interiorOff);
-        houseScene.classList.toggle('exterior-off', light.exteriorOff);
-      }
+      const light = this._houseLighting(status);
+      this.shadowRoot.querySelectorAll('[data-role="house-scene"]').forEach((scene) => {
+        scene.classList.toggle('interior-off', light.interiorOff);
+        scene.classList.toggle('exterior-off', light.exteriorOff);
+      });
       const bannerLabel = banner?.querySelector('[data-role="home-banner-label"]');
       if (bannerLabel) bannerLabel.textContent = status.banner;
     }
@@ -4635,7 +4634,7 @@
 
         .banner{margin-top:16px;padding:12px 22px;min-height:84px;gap:16px}
         .banner strong{font-size:clamp(16px,1.9cqw,22px);font-weight:750}
-        .house-art{width:min(26%,190px);margin:-34px -6px -16px auto}
+        .house-art{width:min(39%,285px);max-width:285px;margin:-46px -34px -46px auto}
 
         .footer{margin-top:16px;font-size:12px;color:#5f7f9f}
 
@@ -4680,7 +4679,7 @@
           .info strong{font-size:16px}
           .banner{padding:12px 14px;min-height:76px;gap:12px}
           .banner strong{max-width:none}
-          .house-art{width:104px;margin:-18px -4px -10px auto}
+          .house-art{width:156px;margin:-28px -22px -28px auto}
           .logo{width:50px;height:50px;border-radius:15px}
           .logo .icon{width:32px;height:32px}
           .chart-head h2{font-size:19px}
@@ -4826,7 +4825,7 @@
           .banner-check{width:34px;height:34px}
           .banner-check .icon{width:25px;height:25px}
           .banner strong{flex:1;min-width:0;max-width:none;font-size:clamp(14px,4cqw,17px);line-height:1.3}
-          .house-art{width:76px;max-width:22%;margin:-14px -4px -8px auto}
+          .house-art{width:114px;max-width:30%;margin:-22px -18px -22px auto}
           .chart-card{margin-top:12px;padding:14px 12px 11px;border-radius:19px}
           .chart-head{gap:8px}
           .chart-head h2{font-size:18px}
@@ -4964,7 +4963,7 @@
           .banner-check{grid-column:1;grid-row:1}
           .banner-main{grid-column:2;grid-row:1}
           .banner-system{grid-column:1/-1;grid-row:2;padding:10px 0 0;margin:0;border-left:0;border-top:1px solid #ffffff2c}
-          .house-art{grid-column:3;grid-row:1;width:92px;max-width:100%;margin:-26px -6px -8px 0}
+          .house-art{grid-column:3;grid-row:1;width:138px;max-width:none;margin:-34px -22px -30px -46px;justify-self:end}
           .banner strong{font-size:clamp(14px,4cqw,17px);line-height:1.3}
           .banner-system strong{font-size:14px!important}
         }
@@ -4990,6 +4989,10 @@
         .period-button.since{white-space:nowrap}
         .shell.eco *,.shell.eco *::before,.shell.eco *::after{animation:none!important;filter:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
         .shell.eco .gauge-fill-glow,.shell.eco .tower-halo,.shell.eco .tower-haze,.shell.eco .chart-glow{display:none}.shell.eco .house-smoke,.shell.eco .house-canopy{animation:none!important}
+        .header>.header-house{flex:none;position:relative;z-index:3;align-self:flex-start;width:0;height:0;max-width:none;margin:0;overflow:visible}
+        .header>.header-house .house-scene{position:absolute;right:14px;top:50px;width:176px}
+        @container (max-width:959px){.header>.header-house{order:3;margin-left:auto}.header>.header-house .house-scene{right:0;top:22px;width:116px}}
+
         @media(prefers-reduced-motion:reduce){.card{backdrop-filter:none;-webkit-backdrop-filter:none}.tower-beacon{animation:none}}
 
         .action-grid .action-button.danger{border-color:#ff526d80;background:linear-gradient(145deg,#2c1520,#0d1b2e)}
