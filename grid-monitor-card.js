@@ -3495,14 +3495,13 @@
         // Outage zeros are drawn on the bottom edge; the axis fits only real voltage so small swings stay visible.
         const real = series.map((point) => point.v).filter((value) => value >= CHART_METRICS.voltage.plausible[0]);
         if (!real.length) return { lo: 0, ...this._niceScale(Math.max(...series.map((point) => point.v), 0)) };
-        const low = Math.min(...real); const high = Math.max(...real);
-        for (const step of [5, 10, 20, 25, 50]) {
-          const lo = Math.floor((low - 2) / step) * step;
-          const hi = Math.max(Math.ceil((high + 2) / step) * step, lo + step);
-          if ((hi - lo) / step <= 4) return { lo, max: hi, step, count: (hi - lo) / step };
-        }
-        const step = 50; const lo = Math.floor((low - 2) / step) * step;
-        return { lo, max: lo + 4 * step, step, count: 4 };
+        // Real minimum and maximum with a 2 V margin, rounded outwards to 5 V; grid lines use a coarser round step.
+        const lo = Math.floor((Math.min(...real) - 2) / 5) * 5;
+        const hi = Math.max(Math.ceil((Math.max(...real) + 2) / 5) * 5, lo + 10);
+        const step = [5, 10, 20, 25, 50, 100].find((candidate) => (hi - lo) / candidate <= 5) || 100;
+        const ticks = [];
+        for (let tick = Math.ceil(lo / step) * step; tick <= hi; tick += step) ticks.push(tick);
+        return { lo, max: hi, step, count: ticks.length - 1, ticks };
       }
       return { lo: 0, ...this._niceScale(Math.max(...series.map((point) => point.v), 0)) };
     }
@@ -3658,10 +3657,10 @@
       }));
       const line = this._smoothPath(pathPts, y0, y1);
       const area = `${line} L${pathPts[pathPts.length - 1].x.toFixed(1)} ${y1} L${pathPts[0].x.toFixed(1)} ${y1} Z`;
-      const horizontal = Array.from({ length: scale.count + 1 }, (_, index) => {
-        const tickValue = scale.lo + index * scale.step;
+      const tickValues = scale.ticks || Array.from({ length: scale.count + 1 }, (_, index) => scale.lo + index * scale.step);
+      const horizontal = tickValues.map((tickValue, index) => {
         const y = Y(tickValue);
-        return `<path d="M${x0} ${y.toFixed(1)}H${x1}"/><text x="${x0 - 10}" y="${(y + 4).toFixed(1)}" text-anchor="end">${this._escape(tickValue.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits }))}${index === scale.count ? ` ${unit}` : ''}</text>`;
+        return `<path d="M${x0} ${y.toFixed(1)}H${x1}"/><text x="${x0 - 10}" y="${(y + 4).toFixed(1)}" text-anchor="end">${this._escape(tickValue.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits }))}${index === tickValues.length - 1 ? ` ${unit}` : ''}</text>`;
       }).join('');
       const longRange = range === 'week' || range === 'month' || (range === 'custom' || range === 'since') && rangeMs > 24 * 3600e3;
       const secondPrecision = range === 'custom' && rangeMs < 60e3;
