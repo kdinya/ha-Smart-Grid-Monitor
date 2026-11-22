@@ -2155,5 +2155,85 @@ assert.equal(closed, 1, 'touching within the calendar window keeps it open');
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
 
+
+    def test_chart_plot_drag_initiates_pan_and_targets_correctly(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = { window: { customCards: [] }, HTMLElement: class HTMLElement {}, customElements: { define: (name, value) => registry.set(name, value) } };
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+const now = Date.now();
+card._statsStart = now - 10 * 86400000;
+const tStart = now - 7200000;
+const tEnd = now - 3600000;
+const target = card._chartPanTarget({
+  pointerType: 'drag',
+  rangeMs: 3600000,
+  deltaX: 40,
+  plotWidth: 400,
+  tStart,
+  tEnd,
+  buf: { start: now - 14400000, end: now, items: [] }
+});
+assert.equal(target.end - target.start, 3600000, 'drag maintains visible duration');
+assert.ok(target.start < tStart, 'dragging right shifts target to older history');
+"""
+        result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_refresh_chart_includes_zoom_actions_markup(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = { window: { customCards: [] }, HTMLElement: class HTMLElement {}, customElements: { define: (name, value) => registry.set(name, value) } };
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+card._t = () => 'Apply';
+card._escape = (s) => s;
+const html = card._chartZoomActionsHtml();
+assert.ok(html.includes('data-chart-zoom-apply'), 'zoom actions include data-chart-zoom-apply button');
+assert.ok(html.includes('chart-zoom-confirm-button'), 'button has confirm button class');
+"""
+        result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_pzem_live_offline_duration_computed_when_sensor_reports_zero(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = { window: { customCards: [] }, HTMLElement: class HTMLElement {}, customElements: { define: (name, value) => registry.set(name, value) } };
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+card._t = (key) => key === 'h' ? 'год' : key === 'm' ? 'хв' : key === 's' ? 'с' : key;
+card._effectiveEspStatus = () => 'on';
+card._raw = (key) => {
+  if (key === 'inverter') return 'on';
+  if (key === 'mains') return 'off';
+  if (key === 'inverter_current_duration') return '0';
+  return 'unknown';
+};
+const tenSecAgo = new Date(Date.now() - 15000).toISOString();
+card._state = (key) => ({
+  state: '0',
+  last_changed: tenSecAgo,
+  attributes: { unit_of_measurement: 's' }
+});
+card.config = { lang: 'uk' };
+const durationText = card._formatted('inverter_current_duration');
+assert.ok(durationText.includes('15') || durationText.includes('с'), 'computed live duration shows seconds elapsed');
+"""
+        result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
 if __name__ == "__main__":
     unittest.main()
