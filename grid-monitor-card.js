@@ -4912,7 +4912,6 @@
         }
         @container (max-width:360px){
           .detail-grid:not(.settings-grid){grid-template-columns:1fr}
-          
           .tabs{gap:2px;padding:3px}
           .tab{padding:8px 1px;font-size:10px}
         }
