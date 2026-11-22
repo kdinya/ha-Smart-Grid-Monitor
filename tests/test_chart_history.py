@@ -2344,5 +2344,49 @@ assert.equal(Math.round(newFocalTime), Math.round(focalTime), 'time at 20% posit
         result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False)
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
+class VoltageAxisTests(unittest.TestCase):
+    def test_voltage_axis_ignores_outage_zeros_and_fits_real_values(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = {
+  window: { customCards: [] },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+};
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+const series = (values) => values.map((v, index) => ({ t: index, v }));
+
+// Outage zeros must not stretch the axis down to 0: small swings stay visible.
+const withOutage = card._chartScale(series([229, 0, 233, 231, 0, 227]), 'voltage');
+assert.ok(withOutage.lo >= 220, `axis starts near real voltage, got ${withOutage.lo}`);
+assert.ok(withOutage.max <= 240, `axis ends near real voltage, got ${withOutage.max}`);
+assert.ok(withOutage.lo < 227 && withOutage.max > 233, 'axis covers every real value');
+
+// Same axis as without the zeros.
+const withoutOutage = card._chartScale(series([229, 233, 231, 227]), 'voltage');
+assert.equal(withOutage.lo, withoutOutage.lo);
+assert.equal(withOutage.max, withoutOutage.max);
+assert.equal(withOutage.step, withoutOutage.step);
+
+// Only outage samples: fall back to the plain power-style scale starting at 0.
+const onlyOutage = card._chartScale(series([0, 0]), 'voltage');
+assert.equal(onlyOutage.lo, 0);
+assert.ok(onlyOutage.max > 0);
+"""
+        result = subprocess.run(
+            ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
+            capture_output=True,
+            text=True,
+            check=False,
+            env={**os.environ, "TZ": "UTC"},
+        )
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()
