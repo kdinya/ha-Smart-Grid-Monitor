@@ -204,7 +204,11 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("${this._historyCleanupActions()}", action_grid)
         self.assertEqual(action_grid.count("this._action("), 5)
         cleanup = card.split("    _historyCleanupActions() {", 1)[1].split("    _updateHistoryCleanupControls()", 1)[0]
-        self.assertEqual(cleanup.count('class=\"action-button\"'), 2)
+        self.assertIn('class="action-button danger"', cleanup)
+        self.assertIn("<span>${this._svg(icon)}</span>${this._escape(this._t(labelKey))}", cleanup)
+        self.assertIn("data-actions-toggle", settings)
+        self.assertIn("${this._actionsOpen ? '' : 'hidden'}", settings)
+        self.assertIn("actions_open", card)
         self.assertNotIn("history-delete-button", card)
         self.assertNotIn("history-cleanup-actions", card)
         self.assertIn("history_cleanup_hint", settings)

@@ -152,7 +152,7 @@
       stats_create_helper: 'Створити helper', stats_create_helper_confirm: 'Створити input_text.grid_monitor_statistics_start у Home Assistant? Потрібні права адміністратора. Після створення виберіть дату початку й натисніть «Застосувати».', stats_helper_created: 'Helper створено. Тепер виберіть дату початку статистики й натисніть «Застосувати», щоб зберегти її в Home Assistant.', stats_helper_error: 'Не вдалося створити helper. Переконайтеся, що ви ввійшли як адміністратор. Або створіть Text helper вручну в Settings → Devices & services → Helpers.',
       stats_active: 'Графіки та мін/макс рахуються від', stats_apply: 'Застосувати', stats_clear: 'Скинути', chart_date_error_earlier: 'Дата не може бути раніше виставленого початку статистики',
       history_cleanup_title: 'Історія та статистика Home Assistant', history_cleanup_hint: 'Перед видаленням створіть резервну копію. Кнопки нижче очищують лише сутності, пов’язані з цією карткою, а не всю базу Recorder.',
-      history_purge_button: 'Видалити історію Recorder', history_stats_button: 'Видалити статистику HA',
+      history_purge_button: 'Видалити історію Recorder', history_stats_button: 'Видалити статистику HA', actions_show: 'Показати дії', actions_hide: 'Сховати дії', actions_open: 'Відкрити', actions_warning_title: 'Увага: небезпечні дії', actions_warning: 'У розділі «Дії» є скидання лічильників і подій, перезавантаження пристрою та видалення історії й статистики Home Assistant для сенсорів цієї картки. Видалені дані без резервної копії відновити неможливо, а скинуті лічильники починаються з нуля. Відкрити розділ?',
       history_purge_confirm: 'Буде видалено всю збережену історію станів Recorder для {count} сутностей цієї картки. Цю дію не можна скасувати без резервної копії. Продовжити?',
       history_stats_confirm: 'Буде видалено короткострокову й довготривалу статистику Home Assistant для {count} сенсорів цієї картки. Цю дію не можна скасувати без резервної копії. Продовжити?',
       history_purge_done: 'Запит на очищення історії Recorder для {count} сутностей виконано.', history_stats_done: 'Статистику Home Assistant для {count} сенсорів видалено.',
@@ -220,7 +220,7 @@
       stats_create_helper: 'Create helper', stats_create_helper_confirm: 'Create input_text.grid_monitor_statistics_start in Home Assistant? Administrator permissions are required. After creation, select the statistics start date and press Apply.', stats_helper_created: 'The helper was created. Select a statistics start date and press Apply to save it in Home Assistant.', stats_helper_error: 'Could not create the helper. Make sure you are signed in as a Home Assistant administrator, or create a Text helper manually under Settings → Devices & services → Helpers.',
       stats_active: 'Charts and min/max are calculated from', stats_apply: 'Apply', stats_clear: 'Reset', chart_date_error_earlier: 'Date cannot be earlier than the statistics start time',
       history_cleanup_title: 'Home Assistant history and statistics', history_cleanup_hint: 'Create a backup before deleting data. These buttons target only entities referenced by this card, not the entire Recorder database.',
-      history_purge_button: 'Delete Recorder history', history_stats_button: 'Delete HA statistics',
+      history_purge_button: 'Delete Recorder history', history_stats_button: 'Delete HA statistics', actions_show: 'Show actions', actions_hide: 'Hide actions', actions_open: 'Open', actions_warning_title: 'Warning: risky actions', actions_warning: 'The Actions section can reset counters and events, restart the device, and delete Home Assistant history and statistics for this card\'s sensors. Deleted data cannot be restored without a backup, and reset counters start from zero. Open the section?',
       history_purge_confirm: 'All saved Recorder state history for {count} entities used by this card will be deleted. This cannot be undone without a backup. Continue?',
       history_stats_confirm: 'Home Assistant short-term and long-term statistics for {count} sensors used by this card will be deleted. This cannot be undone without a backup. Continue?',
       history_purge_done: 'Recorder history cleanup was requested for {count} entities.', history_stats_done: 'Home Assistant statistics were deleted for {count} sensors.',
@@ -935,6 +935,7 @@
       this._statsStart = null;
       this._statsStartApplied = false;
       this._statsNeedsPersist = false;
+      this._actionsOpen = false;
       this._statsExtremes = null;
       this._statsExtremesKey = '';
       this._statsExtremesAt = 0;
@@ -1929,7 +1930,58 @@
       const entityIds = this._panelHistoryEntityIds();
       const sensorIds = entityIds.filter((entityId) => entityId.startsWith('sensor.'));
       const disabled = this._historyDeleteInProgress ? 'disabled' : '';
-      return `<button class="action-button" type="button" data-history-delete="recorder" aria-label="${this._escape(this._t('history_purge_button'))}" ${!entityIds.length || disabled}>${this._svg('chart')}<span>${this._escape(this._t('history_purge_button'))}</span></button><button class="action-button" type="button" data-history-delete="statistics" aria-label="${this._escape(this._t('history_stats_button'))}" ${!sensorIds.length || disabled}>${this._svg('chart')}<span>${this._escape(this._t('history_stats_button'))}</span></button>`;
+      const button = (kind, labelKey, icon, count) => `<button class="action-button danger" type="button" data-history-delete="${kind}" ${!count || disabled}><span>${this._svg(icon)}</span>${this._escape(this._t(labelKey))}</button>`;
+      return `${button('recorder', 'history_purge_button', 'chart', entityIds.length)}${button('statistics', 'history_stats_button', 'params', sensorIds.length)}`;
+    }
+
+    _setActionsOpen(open) {
+      this._actionsOpen = Boolean(open);
+      const root = this.shadowRoot;
+      const body = root?.querySelector?.('[data-role="actions-body"]');
+      if (body) body.hidden = !this._actionsOpen;
+      const toggle = root?.querySelector?.('[data-actions-toggle]');
+      if (toggle) toggle.setAttribute('aria-expanded', String(this._actionsOpen));
+      const label = root?.querySelector?.('[data-role="actions-toggle-label"]');
+      if (label) label.textContent = this._t(this._actionsOpen ? 'actions_hide' : 'actions_show');
+    }
+
+    async _toggleActions() {
+      if (this._actionsOpen) { this._setActionsOpen(false); return false; }
+      const confirmed = await this._showDialog({
+        title: this._t('actions_warning_title'),
+        message: this._t('actions_warning'),
+        confirm: true,
+        confirmLabel: this._t('actions_open'),
+      });
+      if (confirmed) this._setActionsOpen(true);
+      return Boolean(confirmed);
+    }
+
+    // Drops cached history after a deletion so charts and min/max reload instead of showing removed data.
+    _resetHistoryCaches() {
+      this._statsExtremes = null;
+      this._statsExtremesKey = '';
+      this._statsExtremesAt = 0;
+      this._statsExtremesToken = '';
+      this._statsExtremesCursor = NaN;
+      this._statsExtremesRequest += 1;
+      this._statsExtremesLoading = false;
+      this._historyRequest += 1;
+      this._historyLoading = false;
+      this._voltageHistoryRequest += 1;
+      this._voltageHistoryLoading = false;
+      this._historyKey = '';
+      this._history = [];
+      this._voltageHistoryKey = '';
+      this._voltageHistory = [];
+      this._clearEnergyHistory();
+      this._applyStatsExtremes();
+      this._ensureStatsExtremes();
+      this._ensureHistory();
+      if (this._activeTab === 'energy') {
+        this._refreshEnergyCharts();
+        this._ensureEnergyHistory();
+      }
     }
 
     _updateHistoryCleanupControls() {
@@ -1969,6 +2021,8 @@
           await this._hass.callService('recorder', 'purge_entities', { entity_id: targets, keep_days: 0 });
         }
         const complete = this._t(isStatistics ? 'history_stats_done' : 'history_purge_done').replace('{count}', String(targets.length));
+        try { this._resetHistoryCaches(); } catch (_error) { /* the deletion itself succeeded */ }
+        if (typeof setTimeout === 'function') setTimeout(() => { try { if (this.isConnected) this._resetHistoryCaches(); } catch (_error) { /* ignore */ } }, 4000);
         await this._showDialog({ title: this._t('history_cleanup_title'), message: complete });
         return true;
       } catch (_error) {
@@ -3820,9 +3874,9 @@
         <div class="detail switch-setting"><span>${this._escape(this._t('two_zone'))}</span><strong data-role="switch-value">${this._escape(twoZone ? this._t('on') : this._t('off'))}</strong><button class="switch-button ${twoZone ? 'on' : ''}" data-switch="two_zone" aria-pressed="${twoZone}">${this._svg('gear')}<span data-role="switch-label">${this._escape(twoZone ? this._t('on') : this._t('off'))}</span></button></div>
       </div>${this._statsStartSetting()}<h2 class="subheading">${this._escape(this._t('diagnostics'))}</h2><div class="detail-grid">
         ${this._detail('wifi_signal', this._t('wifi'), 0)}${this._detail('esp_temperature', this._t('temperature'), 1)}${this._detail('uptime', this._t('uptime'), 0)}${this._detail('ip_address', this._t('ip'), 0)}${this._detail('ssid', this._t('ssid'), 0)}${this._detail('inverter_events', this._t('inverter_events'), 0)}
-      </div><h2 class="subheading">${this._escape(this._t('actions'))}</h2><p class="history-cleanup-hint">${this._escape(this._t('history_cleanup_hint'))}</p><div class="action-grid">
+      </div><h2 class="subheading">${this._escape(this._t('actions'))}</h2><div class="actions-section" data-role="actions-section"><button type="button" class="actions-toggle" data-actions-toggle aria-expanded="${this._actionsOpen ? 'true' : 'false'}" aria-controls="grid-monitor-actions"><span data-role="actions-toggle-label">${this._escape(this._t(this._actionsOpen ? 'actions_hide' : 'actions_show'))}</span><span class="actions-chevron" aria-hidden="true"></span></button><div class="actions-body" id="grid-monitor-actions" data-role="actions-body" ${this._actionsOpen ? '' : 'hidden'}><p class="history-cleanup-hint">${this._escape(this._t('history_cleanup_hint'))}</p><div class="action-grid">
         ${this._action('reset_energy', this._t('reset_energy'))}${this._action('reset_events', this._t('reset_events'))}${this._action('reset_cost', this._t('reset_cost'))}${this._action('reset_stats', this._t('reset_stats'))}${this._action('restart', this._t('restart'))}${this._historyCleanupActions()}
-      </div></section>`;
+      </div></div></div></section>`;
     }
 
     _chipArt() {
@@ -3983,7 +4037,7 @@
         return;
       }
       if (!event.target?.closest?.('.chart-date-range')) this._closeChartDateRangePopover();
-      const target = event.target?.closest?.('[data-scroll-top], [data-tab], [data-period], [data-energy-period], [data-energy-metric], [data-energy-bar], [data-metric], [data-action], [data-number-save], [data-switch], [data-chart-live], [data-chart-zoom], [data-chart-date-toggle], [data-chart-date-apply], [data-stats-start-apply], [data-stats-start-clear], [data-stats-helper-create], [data-history-delete]');
+      const target = event.target?.closest?.('[data-scroll-top], [data-actions-toggle], [data-tab], [data-period], [data-energy-period], [data-energy-metric], [data-energy-bar], [data-metric], [data-action], [data-number-save], [data-switch], [data-chart-live], [data-chart-zoom], [data-chart-date-toggle], [data-chart-date-apply], [data-stats-start-apply], [data-stats-start-clear], [data-stats-helper-create], [data-history-delete]');
       if (!target) return;
       if (target.dataset.scrollTop !== undefined) { this._scrollPageToTop(); return; }
       if (target.dataset.energyBar !== undefined) { this._selectEnergyBar(Number(target.dataset.energyBar)); return; }
@@ -3995,8 +4049,10 @@
         else this._positionChartDateRangePopover(target, panel);
         return;
       }
+      if (target.dataset.actionsToggle !== undefined) { this._toggleActions(); return; }
       if (target.dataset.tab) {
         if (target.dataset.tab === this._activeTab) return;
+        if (this._activeTab === 'settings') this._setActionsOpen(false);
         const wasHome = this._activeTab === 'home';
         if (this._activeTab === 'params' && target.dataset.tab !== 'params') this._clearChartScrub();
         this._activeTab = target.dataset.tab;
@@ -4378,7 +4434,7 @@
       if (changed.has('two_zone')) this._updateEnergyTwoZone();
     }
 
-    _showDialog({ title, message, confirm = false, info = false }) {
+    _showDialog({ title, message, confirm = false, info = false, confirmLabel = '' }) {
       if (this._dialogResolver) this._finishDialog(false);
       return new Promise((resolve) => {
         this._dialogResolver = resolve;
@@ -4390,7 +4446,7 @@
           ? `<button type="button" class="dialog-button secondary" data-dialog-action="cancel">${this._escape(this._t('dialog_cancel'))}</button>`
           : '';
         const primaryAction = confirm ? 'confirm' : 'close';
-        const primaryLabel = confirm ? this._t('dialog_confirm') : this._t('dialog_close');
+        const primaryLabel = confirm ? (confirmLabel || this._t('dialog_confirm')) : this._t('dialog_close');
         dialog.innerHTML = `<section class="app-dialog" role="dialog" aria-modal="true" aria-labelledby="grid-monitor-dialog-title" aria-describedby="grid-monitor-dialog-message">
           <div class="dialog-mark" aria-hidden="true">${confirm ? this._svg('gear') : info ? 'i' : '!'}</div>
           <h2 id="grid-monitor-dialog-title">${this._escape(title)}</h2>
@@ -4974,6 +5030,12 @@
         .shell.eco .gauge-fill-glow,.shell.eco .tower-halo,.shell.eco .tower-haze,.shell.eco .chart-glow{display:none}
         @media(prefers-reduced-motion:reduce){.card{backdrop-filter:none;-webkit-backdrop-filter:none}.tower-beacon{animation:none}}
 
+        .action-grid .action-button.danger{border-color:#ff526d80;background:linear-gradient(145deg,#2c1520,#0d1b2e)}
+        .action-grid .action-button.danger span{color:#ff8a9a}
+        .actions-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px;padding:12px 18px;border:1px solid #ffffff24;border-radius:18px;background:linear-gradient(145deg,#15263b,#0d1b2e);color:#eaf3ff;font:inherit;font-weight:600;cursor:pointer}
+        .actions-chevron{width:10px;height:10px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);transition:transform .2s;margin-top:-4px}
+        .actions-toggle[aria-expanded="true"] .actions-chevron{transform:rotate(-135deg);margin-top:4px}
+        .actions-body{margin-top:12px}.actions-body[hidden]{display:none}
       `;
     }
   }
