@@ -934,6 +934,7 @@
       this._energyHistoryRequests = { energy_total: 0, cost_total: 0 };
       this._statsStart = null;
       this._statsStartApplied = false;
+      this._statsNeedsPersist = false;
       this._statsExtremes = null;
       this._statsExtremesKey = '';
       this._statsExtremesAt = 0;
@@ -1199,6 +1200,7 @@
       this._config = { ...config, entities, name: config.name || null, esp_power_mode: powerMode };
       this._statsStart = this._hass ? this._readStatsStart() : null;
       this._statsStartApplied = Boolean(this._hass);
+      if (this._hass && !Number.isFinite(this._statsStart)) this._migrateStatsStart(true);
       if (this._historyRange === 'since') {
         this._historyRange = 'day';
         this._historyReturnRange = 'day';
@@ -1229,6 +1231,10 @@
         this._statsStart = this._readStatsStart();
         this._statsStartApplied = true;
         statsStartLoaded = true;
+        if (!Number.isFinite(this._statsStart)) {
+          this._migrateStatsStart(true);
+          if (Number.isFinite(this._statsStart) && this._historyRange === 'since') this._historyRange = 'day';
+        }
       }
       const nextSnapshot = this._captureStateSnapshot(this._stateSnapshot);
       if (!this._config || !this._hasRendered || this._renderedLanguage !== this._lang() || statsStartLoaded) {
@@ -1807,7 +1813,7 @@
 
     async _writeStatsStart(value) {
       const helper = this._state('stats_start');
-      if (!helper || helper.state === 'unknown' || helper.state === 'unavailable' || typeof this._hass?.callService !== 'function') return false;
+      if (!helper || helper.state === 'unavailable' || typeof this._hass?.callService !== 'function') return false;
       try {
         await this._hass.callService('input_text', 'set_value', {
           entity_id: this._entity('stats_start'),
@@ -1822,6 +1828,35 @@
     _hasStatsStartHelper() {
       const helper = this._state('stats_start');
       return Boolean(helper);
+    }
+
+    // Older card versions kept the date in the browser; move it into the helper so it survives updates.
+    _legacyStatsStart() {
+      try {
+        const raw = window.localStorage?.getItem(`grid-monitor-card:stats-start:${this._config?.prefix || 'grid_monitor'}`);
+        const value = Number(raw);
+        return raw && Number.isFinite(value) && value > 0 && value < Date.now() ? value : null;
+      } catch (_error) {
+        return null;
+      }
+    }
+
+    _migrateStatsStart(allowLegacy) {
+      const helper = this._state('stats_start');
+      if (!helper || helper.state === 'unavailable' || this._readStatsStart() !== null) return;
+      let candidate = Number.isFinite(this._statsStart) && this._statsNeedsPersist ? this._statsStart : null;
+      let legacy = false;
+      if (candidate === null && allowLegacy) { candidate = this._legacyStatsStart(); legacy = candidate !== null; }
+      if (!Number.isFinite(candidate)) return;
+      if (legacy) this._statsStart = candidate;
+      this._writeStatsStart(candidate).then((saved) => {
+        if (!saved) return;
+        this._statsNeedsPersist = false;
+        if (legacy) {
+          try { window.localStorage?.removeItem(`grid-monitor-card:stats-start:${this._config?.prefix || 'grid_monitor'}`); } catch (_error) { /* ignore */ }
+        }
+        if (this.shadowRoot?.querySelector) this._updateStatsControls();
+      });
     }
 
     _canCreateStatsStartHelper() {
@@ -1985,6 +2020,7 @@
     _setStatsStart(value, persist = true) {
       this._statsStart = value;
       if (persist) this._writeStatsStart(value).then((saved) => {
+        this._statsNeedsPersist = !saved && value !== null;
         const sync = this.shadowRoot.querySelector('[data-role="stats-start-sync"]');
         if (sync) sync.textContent = this._t(saved ? 'stats_sync_saved' : 'stats_sync_missing');
       });
@@ -4093,7 +4129,11 @@
     _updateChanged(changed) {
       if (changed.has('stats_start')) {
         if (this._hasStatsStartHelper()) this._statsHelperCreated = false;
-        const start = this._readStatsStart();
+        let start = this._readStatsStart();
+        if (start === null && this._statsNeedsPersist && Number.isFinite(this._statsStart)) {
+          this._migrateStatsStart(false);
+          start = this._statsStart;
+        }
         if (start !== this._statsStart) this._setStatsStart(start, false);
         this._updateStatsControls();
       }

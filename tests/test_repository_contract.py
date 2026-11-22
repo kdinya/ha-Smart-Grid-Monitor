@@ -156,7 +156,9 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("if (key !== 'stats_start')", card)
         self.assertIn("key === 'stats_start' ? 'grid_monitor'", card)
         self.assertIn("callService('input_text', 'set_value'", card)
-        self.assertNotIn("localStorage", card)
+        self.assertNotIn("localStorage?.setItem", card)
+        self.assertEqual(card.count("localStorage"), 2)  # read and remove, only for migrating the legacy browser value
+        self.assertIn("_migrateStatsStart", card)
         self.assertEqual(package["input_text"]["grid_monitor_statistics_start"]["max"], 32)
 
     def test_scroll_to_top_is_fixed_and_smooth_for_home_assistant_scroll_containers(self):
