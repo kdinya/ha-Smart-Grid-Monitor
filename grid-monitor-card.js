@@ -158,7 +158,7 @@
       history_purge_done: 'Запит на очищення історії Recorder для {count} сутностей виконано.', history_stats_done: 'Статистику Home Assistant для {count} сенсорів видалено.',
       history_delete_error: 'Не вдалося видалити дані. Переконайтеся, що ви ввійшли як адміністратор, Recorder доступний і резервну копію створено.', history_delete_empty: 'Не знайдено сутностей цієї картки, для яких можна видалити дані.',
       stats_error: 'Вкажіть коректні дату й час у минулому.', stats_note: 'Мін/макс від', power_range_period: 'Діапазон потужності за період', max_current_period: 'Максимальний струм за період', peak_power_period: 'Пікова потужність за період', stat_min: 'Мін.', stat_avg: 'Сер.', stat_max: 'Макс.', hour: 'Год', day: 'День', week: 'Тиждень', month: 'Місяць', loading: 'Завантаження історії…', no_history: 'Історія поки недоступна',
-      chart_select_time: 'Повзунком вибирайте час на графіку', chart_zoom_selection: 'Перетягніть мітки на графіку', chart_zoom_apply: 'Збільшити проміжок', chart_zoom_start: 'Початок', chart_zoom_end: 'Кінець', chart_date_range: 'Вибрати період', chart_from: 'Від', chart_to: 'До', chart_apply: 'Показати', chart_calendar_previous: 'Попередній місяць', chart_calendar_next: 'Наступний місяць', chart_date_error: 'Перевірте дати: кінець має бути пізніше початку й не в майбутньому', chart_zoom_in: 'Збільшити масштаб', chart_zoom_out: 'Зменшити масштаб', chart_readings: 'Дані на вибраний час', chart_readings_loading: 'Завантаження вимірювань…', chart_readings_unavailable: 'Історія вимірювань недоступна', chart_live: 'Зараз', active_power: 'Активна потужність',
+      chart_select_time: 'Повзунком вибирайте час на графіку', chart_pan_hint: 'Потягніть для прокручування', chart_zoom_selection: 'Перетягніть мітки на графіку', chart_zoom_apply: 'Збільшити проміжок', chart_zoom_start: 'Початок', chart_zoom_end: 'Кінець', chart_date_range: 'Вибрати період', chart_from: 'Від', chart_to: 'До', chart_apply: 'Показати', chart_calendar_previous: 'Попередній місяць', chart_calendar_next: 'Наступний місяць', chart_date_error: 'Перевірте дати: кінець має бути пізніше початку й не в майбутньому', chart_zoom_in: 'Збільшити масштаб', chart_zoom_out: 'Зменшити масштаб', chart_readings: 'Дані на вибраний час', chart_readings_loading: 'Завантаження вимірювань…', chart_readings_unavailable: 'Історія вимірювань недоступна', chart_live: 'Зараз', active_power: 'Активна потужність',
       mains: 'Зв’язок з PZEM', has_voltage: 'Дані доступні', no_voltage: 'Дані недоступні', source: 'Живлення ESP', from_mains: 'Мережа (не підтверджено)', from_inverter: 'Джерело невідоме', pzem_link: 'Зв’язок з PZEM', active: 'Онлайн', inactive: 'Офлайн', today_consumption: 'Споживання сьогодні',
       esp_power_connection: 'Схема живлення ESP', esp_power_shared: 'Від мережі разом із модулем', esp_power_after_avr: 'Після АВР', esp_power_independent: 'Незалежне живлення', esp_power_avr_note: 'ESP може живитися від інвертора', pzem_grid_note: 'PZEM вимірює мережу в усіх режимах',
       params_title: 'Електричні параметри', range_title: 'Діапазон напруги на графіку', range_now: 'Зараз', energy_title: 'Енергія та вартість', settings_title: 'Налаштування та діагностика',
@@ -226,7 +226,7 @@
       history_purge_done: 'Recorder history cleanup was requested for {count} entities.', history_stats_done: 'Home Assistant statistics were deleted for {count} sensors.',
       history_delete_error: 'Could not delete the data. Make sure you are signed in as an administrator, Recorder is available, and a backup exists.', history_delete_empty: 'No entities used by this card were found to clean up.',
       stats_error: 'Enter a valid date and time in the past.', stats_note: 'Min/max since', power_range_period: 'Power range for the period', max_current_period: 'Peak current for the period', peak_power_period: 'Peak power for the period', stat_min: 'Min', stat_avg: 'Avg', stat_max: 'Max', hour: 'Hour', day: 'Day', week: 'Week', month: 'Month', loading: 'Loading history…', no_history: 'History is not available yet',
-      chart_select_time: 'Select a time on the chart', chart_zoom_selection: 'Drag the handles on the chart', chart_zoom_apply: 'Zoom to range', chart_zoom_start: 'Start', chart_zoom_end: 'End', chart_date_range: 'Select period', chart_from: 'From', chart_to: 'To', chart_apply: 'Show', chart_calendar_previous: 'Previous month', chart_calendar_next: 'Next month', chart_date_error: 'Check dates: the end must be after the start and not in the future', chart_zoom_in: 'Zoom in', chart_zoom_out: 'Zoom out', chart_readings: 'Readings at selected time', chart_readings_loading: 'Loading readings…', chart_readings_unavailable: 'Measurement history is unavailable', chart_live: 'Now', active_power: 'Active power',
+      chart_select_time: 'Select a time on the chart', chart_pan_hint: 'Drag to scroll', chart_zoom_selection: 'Drag the handles on the chart', chart_zoom_apply: 'Zoom to range', chart_zoom_start: 'Start', chart_zoom_end: 'End', chart_date_range: 'Select period', chart_from: 'From', chart_to: 'To', chart_apply: 'Show', chart_calendar_previous: 'Previous month', chart_calendar_next: 'Next month', chart_date_error: 'Check dates: the end must be after the start and not in the future', chart_zoom_in: 'Zoom in', chart_zoom_out: 'Zoom out', chart_readings: 'Readings at selected time', chart_readings_loading: 'Loading readings…', chart_readings_unavailable: 'Measurement history is unavailable', chart_live: 'Now', active_power: 'Active power',
       mains: 'PZEM connection', has_voltage: 'Data available', no_voltage: 'Data unavailable', source: 'ESP power source', from_mains: 'Mains (not confirmed)', from_inverter: 'Source unknown', pzem_link: 'PZEM connection', active: 'Online', inactive: 'Offline', today_consumption: 'Consumption today',
       esp_power_connection: 'ESP power arrangement', esp_power_shared: 'Mains shared with the module', esp_power_after_avr: 'After AVR', esp_power_independent: 'Independent power', esp_power_avr_note: 'ESP may be powered by the inverter', pzem_grid_note: 'PZEM measures mains in every mode',
       params_title: 'Electrical parameters', range_title: 'Voltage range on chart', range_now: 'Now', energy_title: 'Energy and cost', settings_title: 'Settings and diagnostics',
@@ -1031,7 +1031,7 @@
       this.shadowRoot.addEventListener('pointerdown', (event) => this._handleChartDatePointerDown(event), true);
       this.shadowRoot.addEventListener('pointerdown', (event) => this._chartPointerDown(event));
       this.shadowRoot.addEventListener('pointermove', (event) => {
-        if (this._chartZoomDrag?.pointerId === event.pointerId) { this._chartZoomSelectionMove(event); return; }
+        if (this._chartZoomDrag?.pointerId === event.pointerId) { this._queueChartZoomSelectionMove(event); return; }
         if (this._chartPan) { this._chartPointerMove(event); return; }
         if (this._chartTouchScrubbing === event.pointerId) {
           if (this._chartPointers.has(event.pointerId)) this._chartPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
@@ -2588,8 +2588,8 @@
       return `<div class="chart-zoom-actions" data-chart-zoom-actions><div class="chart-zoom-summary"><span>${this._escape(this._t('chart_zoom_selection'))}</span><strong><time data-chart-zoom-start-label>${Number.isFinite(start) ? this._escape(this._formatChartTimestamp(start)) : ''}</time><i aria-hidden="true">→</i><time data-chart-zoom-end-label>${Number.isFinite(end) ? this._escape(this._formatChartTimestamp(end)) : ''}</time></strong></div><button type="button" class="chart-zoom-selection-button" data-chart-zoom-apply${disabled ? ' disabled' : ''}>${this._escape(this._t('chart_zoom_apply'))}</button></div>`;
     }
 
-    _chartZoomSelectionBounds() {
-      const chart = this.shadowRoot?.querySelector?.('[data-role="chart-plot"] svg.chart');
+    _chartZoomSelectionBounds(chartOverride = null) {
+      const chart = chartOverride || this.shadowRoot?.querySelector?.('[data-role="chart-plot"] svg.chart');
       const chartStart = Number(chart?.dataset?.chartStart);
       const chartEnd = Number(chart?.dataset?.chartEnd);
       if (Number.isFinite(chartStart) && Number.isFinite(chartEnd) && chartEnd > chartStart) return { start: chartStart, end: chartEnd };
@@ -2597,69 +2597,119 @@
       return Number.isFinite(fallback?.start) && Number.isFinite(fallback?.end) && fallback.end > fallback.start ? fallback : null;
     }
 
-    _updateChartZoomSelection() {
-      const chart = this.shadowRoot?.querySelector?.('[data-role="chart-plot"] svg.chart');
-      const bounds = this._chartZoomSelectionBounds();
+    _updateChartZoomSelection(drag = null, forceLabels = false) {
+      const chart = drag?.chart || this.shadowRoot?.querySelector?.('[data-role="chart-plot"] svg.chart');
+      const bounds = drag?.bounds || this._chartZoomSelectionBounds(chart);
       if (!chart || !bounds || bounds.end - bounds.start < 1000) return;
       const state = this._chartZoomWindow;
       if (!state || !state.dirty) this._chartZoomWindow = { start: bounds.start, end: bounds.end, dirty: false };
       const selection = this._chartZoomWindow;
       selection.start = Math.max(bounds.start, Math.min(bounds.end - 1000, Number(selection.start) || bounds.start));
       selection.end = Math.max(selection.start + 1000, Math.min(bounds.end, Number(selection.end) || bounds.end));
-      const x0 = Number(chart.dataset.chartX0) || 0;
-      const x1 = Number(chart.dataset.chartX1) || Number(chart.dataset.chartW) || 0;
+      const x0 = drag ? drag.x0 : (Number(chart.dataset.chartX0) || 0);
+      const x1 = drag ? drag.x1 : (Number(chart.dataset.chartX1) || Number(chart.dataset.chartW) || 0);
       const y0 = Number(chart.dataset.chartY0) || 0;
       const y1 = Number(chart.dataset.chartY1) || 0;
       const range = bounds.end - bounds.start;
       const startX = x0 + ((selection.start - bounds.start) / range) * (x1 - x0);
       const endX = x0 + ((selection.end - bounds.start) / range) * (x1 - x0);
-      const band = chart.querySelector('[data-chart-zoom-band]');
-      if (band) { band.setAttribute('x', startX.toFixed(2)); band.setAttribute('width', Math.max(0, endX - startX).toFixed(2)); band.setAttribute('y', String(y0)); band.setAttribute('height', String(y1 - y0)); }
-      const startEdge = chart.querySelector('[data-chart-zoom-start-edge]');
-      const endEdge = chart.querySelector('[data-chart-zoom-end-edge]');
-      if (startEdge) { startEdge.setAttribute('x1', startX.toFixed(2)); startEdge.setAttribute('x2', startX.toFixed(2)); }
-      if (endEdge) { endEdge.setAttribute('x1', endX.toFixed(2)); endEdge.setAttribute('x2', endX.toFixed(2)); }
+      const nodes = drag?.nodes || null;
+      const find = (name, selector, root = chart) => nodes ? nodes[name] : root.querySelector(selector);
+      const setAttributeIfChanged = (node, name, value) => {
+        const next = String(value);
+        if (node && node.getAttribute(name) !== next) node.setAttribute(name, next);
+      };
+      const band = find('band', '[data-chart-zoom-band]');
+      setAttributeIfChanged(band, 'x', startX.toFixed(2));
+      setAttributeIfChanged(band, 'width', Math.max(0, endX - startX).toFixed(2));
+      setAttributeIfChanged(band, 'y', y0);
+      setAttributeIfChanged(band, 'height', y1 - y0);
+      const startEdge = find('startEdge', '[data-chart-zoom-start-edge]');
+      setAttributeIfChanged(startEdge, 'x1', startX.toFixed(2));
+      setAttributeIfChanged(startEdge, 'x2', startX.toFixed(2));
+      const endEdge = find('endEdge', '[data-chart-zoom-end-edge]');
+      setAttributeIfChanged(endEdge, 'x1', endX.toFixed(2));
+      setAttributeIfChanged(endEdge, 'x2', endX.toFixed(2));
       const updateHandle = (side, x, timestamp, min, max) => {
-        const handle = chart.querySelector(`[data-chart-zoom-handle="${side}"]`);
-        if (!handle) return;
-        handle.setAttribute('transform', `translate(${x.toFixed(2)} 0)`);
-        handle.setAttribute('aria-valuemin', String(Math.round(min)));
-        handle.setAttribute('aria-valuemax', String(Math.round(max)));
-        handle.setAttribute('aria-valuenow', String(Math.round(timestamp)));
+        const handle = find(`${side}Handle`, `[data-chart-zoom-handle="${side}"]`);
+        setAttributeIfChanged(handle, 'transform', `translate(${x.toFixed(2)} 0)`);
+        setAttributeIfChanged(handle, 'aria-valuemin', Math.round(min));
+        setAttributeIfChanged(handle, 'aria-valuemax', Math.round(max));
+        setAttributeIfChanged(handle, 'aria-valuenow', Math.round(timestamp));
       };
       updateHandle('start', startX, selection.start, bounds.start, selection.end - 1000);
       updateHandle('end', endX, selection.end, selection.start + 1000, bounds.end);
-      const actions = this.shadowRoot.querySelector('[data-chart-zoom-actions]');
-      const startLabel = actions?.querySelector('[data-chart-zoom-start-label]');
-      const endLabel = actions?.querySelector('[data-chart-zoom-end-label]');
-      const button = actions?.querySelector('[data-chart-zoom-apply]');
-      if (startLabel) startLabel.textContent = this._formatChartTimestamp(selection.start);
-      if (endLabel) endLabel.textContent = this._formatChartTimestamp(selection.end);
+      const actions = nodes ? null : this.shadowRoot.querySelector('[data-chart-zoom-actions]');
+      const startLabel = nodes ? nodes.startLabel : actions?.querySelector('[data-chart-zoom-start-label]');
+      const endLabel = nodes ? nodes.endLabel : actions?.querySelector('[data-chart-zoom-end-label]');
+      const applyButton = nodes ? nodes.applyButton : actions?.querySelector('[data-chart-zoom-apply]');
+      const now = Date.now();
+      const updateLabels = !drag || forceLabels || now - (drag.labelsAt || 0) >= 100;
+      if (updateLabels) {
+        const startText = this._formatChartTimestamp(selection.start);
+        const endText = this._formatChartTimestamp(selection.end);
+        if (startLabel && startLabel.textContent !== startText) startLabel.textContent = startText;
+        if (endLabel && endLabel.textContent !== endText) endLabel.textContent = endText;
+        if (drag) drag.labelsAt = now;
+      }
       const fullRange = selection.start <= bounds.start + 999 && selection.end >= bounds.end - 999;
-      if (button) button.disabled = fullRange;
+      if (applyButton && applyButton.disabled !== fullRange) applyButton.disabled = fullRange;
+    }
+
+    _queueChartZoomSelectionMove(event) {
+      const drag = this._chartZoomDrag;
+      if (!drag || drag.pointerId !== event.pointerId) return;
+      drag.pendingX = event.clientX;
+      event.preventDefault?.();
+      if (drag.frame !== null) return;
+      const renderLatest = () => {
+        drag.frame = null;
+        drag.frameKind = null;
+        if (this._chartZoomDrag === drag) this._applyChartZoomSelectionMove(drag, drag.pendingX);
+      };
+      if (typeof window.requestAnimationFrame === 'function') {
+        drag.frameKind = 'raf';
+        drag.frame = window.requestAnimationFrame(renderLatest);
+      } else {
+        drag.frameKind = 'timeout';
+        drag.frame = window.setTimeout(renderLatest, 16);
+      }
+    }
+
+    _cancelChartZoomSelectionFrame(drag) {
+      if (!drag || drag.frame === null || drag.frame === undefined) return;
+      if (drag.frameKind === 'raf' && typeof window.cancelAnimationFrame === 'function') window.cancelAnimationFrame(drag.frame);
+      else window.clearTimeout(drag.frame);
+      drag.frame = null;
+      drag.frameKind = null;
     }
 
     _chartZoomSelectionMove(event) {
       const drag = this._chartZoomDrag;
-      const chart = drag?.plot?.querySelector?.('svg.chart');
-      const bounds = this._chartZoomSelectionBounds();
-      if (!drag || !chart || !bounds) return;
-      const rect = chart.getBoundingClientRect();
-      if (!rect.width) return;
-      const chartWidth = Number(chart.dataset.chartW) || rect.width;
-      const x0 = Number(chart.dataset.chartX0) || 0;
-      const x1 = Number(chart.dataset.chartX1) || chartWidth;
-      const chartX = (event.clientX - rect.left) * chartWidth / rect.width;
-      const normalized = Math.max(0, Math.min(1, (chartX - x0) / (x1 - x0)));
-      const raw = bounds.start + normalized * (bounds.end - bounds.start);
-      const snapped = Math.max(bounds.start, Math.min(bounds.end, Math.round(raw / 1000) * 1000));
-      const state = this._chartZoomWindow || { start: bounds.start, end: bounds.end, dirty: false };
-      if (drag.handle === 'start') state.start = Math.max(bounds.start, Math.min(state.end - 1000, snapped));
-      else state.end = Math.min(bounds.end, Math.max(state.start + 1000, snapped));
+      if (!drag || drag.pointerId !== event.pointerId) return;
+      this._cancelChartZoomSelectionFrame(drag);
+      drag.pendingX = event.clientX;
+      this._applyChartZoomSelectionMove(drag, event.clientX, true);
+      event.preventDefault?.();
+    }
+
+    _applyChartZoomSelectionMove(drag, clientX, forceLabels = false) {
+      if (!drag || this._chartZoomDrag !== drag || !drag.chart || !drag.bounds || !drag.rectWidth || drag.x1 <= drag.x0 || !Number.isFinite(clientX)) return;
+      if (drag.lastX === clientX) {
+        if (forceLabels) this._updateChartZoomSelection(drag, true);
+        return;
+      }
+      drag.lastX = clientX;
+      const chartX = (clientX - drag.rectLeft) * drag.chartWidth / drag.rectWidth;
+      const normalized = Math.max(0, Math.min(1, (chartX - drag.x0) / (drag.x1 - drag.x0)));
+      const raw = drag.bounds.start + normalized * (drag.bounds.end - drag.bounds.start);
+      const snapped = Math.max(drag.bounds.start, Math.min(drag.bounds.end, Math.round(raw / 1000) * 1000));
+      const state = this._chartZoomWindow || { start: drag.bounds.start, end: drag.bounds.end, dirty: false };
+      if (drag.handle === 'start') state.start = Math.max(drag.bounds.start, Math.min(state.end - 1000, snapped));
+      else state.end = Math.min(drag.bounds.end, Math.max(state.start + 1000, snapped));
       state.dirty = true;
       this._chartZoomWindow = state;
-      this._updateChartZoomSelection();
-      event.preventDefault?.();
+      this._updateChartZoomSelection(drag, forceLabels);
     }
 
     _applyChartZoomSelection() {
@@ -2861,8 +2911,30 @@
       const handle = event.target?.closest?.('[data-chart-zoom-handle]');
       if (handle) {
         const plot = handle.closest?.('[data-role="chart-plot"]');
-        if (!plot) return;
-        this._chartZoomDrag = { plot, handle: handle.dataset.chartZoomHandle, pointerId: event.pointerId };
+        const chart = plot?.querySelector?.('svg.chart');
+        const rect = chart?.getBoundingClientRect?.();
+        const bounds = this._chartZoomSelectionBounds(chart);
+        if (!plot || !chart || !rect?.width || !bounds) return;
+        const chartWidth = Number(chart.dataset.chartW) || rect.width;
+        const x0 = Number(chart.dataset.chartX0) || 0;
+        const x1 = Number(chart.dataset.chartX1) || chartWidth;
+        if (x1 <= x0) return;
+        const actions = this.shadowRoot.querySelector('[data-chart-zoom-actions]');
+        this._chartZoomDrag = {
+          plot, chart, handle: handle.dataset.chartZoomHandle, pointerId: event.pointerId,
+          rectLeft: rect.left, rectWidth: rect.width, chartWidth, x0, x1, bounds,
+          frame: null, frameKind: null, pendingX: event.clientX, lastX: null, labelsAt: 0,
+          nodes: {
+            band: chart.querySelector('[data-chart-zoom-band]'),
+            startEdge: chart.querySelector('[data-chart-zoom-start-edge]'),
+            endEdge: chart.querySelector('[data-chart-zoom-end-edge]'),
+            startHandle: chart.querySelector('[data-chart-zoom-handle="start"]'),
+            endHandle: chart.querySelector('[data-chart-zoom-handle="end"]'),
+            startLabel: actions?.querySelector('[data-chart-zoom-start-label]'),
+            endLabel: actions?.querySelector('[data-chart-zoom-end-label]'),
+            applyButton: actions?.querySelector('[data-chart-zoom-apply]'),
+          },
+        };
         try { plot.setPointerCapture(event.pointerId); } catch (_error) {}
         event.preventDefault?.();
         return;
@@ -3250,6 +3322,12 @@
       });
     }
 
+    _chartPanAxisHtml(x0, x1, y, height) {
+      const centerX = (x0 + x1) / 2;
+      const baseline = y + height / 2 + 3.5;
+      return `<rect class="chart-pan-axis" data-chart-pan-axis="true" x="${x0}" y="${y}" width="${x1 - x0}" height="${height}" aria-hidden="true"/><text class="chart-pan-hint" x="${centerX.toFixed(1)}" y="${baseline.toFixed(1)}" text-anchor="middle" aria-hidden="true">↔ ${this._escape(this._t('chart_pan_hint'))}</text>`;
+    }
+
     _chartSvg(metricKey = this._chartMetric || 'power', history = this._history, scope = 'params', loading = this._historyLoading) {
       if (loading && !history.length) return `<div class="chart-empty">${this._escape(this._t('loading'))}</div>`;
       const isEnergy = scope === 'energy';
@@ -3258,8 +3336,10 @@
       const bounds = isEnergy ? this._energyHistoryBounds() : this._historyBounds();
       const width = Math.max(280, Math.round(this._chartW || 985));
       const narrow = width < 520;
-      const height = narrow ? 200 : 228;
-      const x0 = narrow ? 56 : 70; const x1 = width - (narrow ? 14 : 20); const y0 = 26; const y1 = height - 30;
+      const panStripHeight = 26;
+      const height = (narrow ? 200 : 228) + panStripHeight;
+      const x0 = narrow ? 56 : 70; const x1 = width - (narrow ? 14 : 20); const y0 = 26;
+      const panStripY = height - panStripHeight; const y1 = panStripY - 30;
       const data = this._chartData(history, metricKey, { range, customRange, bounds, includeCurrent: !isEnergy });
       if (!data) {
         if (!isEnergy) this._chartPts = [];
@@ -3287,7 +3367,7 @@
         const time = new Date(tStart + rangeMs * index / 4);
         const label = longRange ? time.toLocaleDateString(this._locale(), { day: '2-digit', month: '2-digit' }) : time.toLocaleTimeString(this._locale(), { hour: '2-digit', minute: '2-digit', ...(secondPrecision ? { second: '2-digit' } : {}), hour12: false });
         const show = !narrow || index % 2 === 0;
-        return `<path d="M${x.toFixed(1)} ${y0}V${y1}"/>${show ? `<text data-time-tick="${index}" x="${x.toFixed(1)}" y="${height - 8}" text-anchor="${index === 0 ? 'start' : index === 4 ? 'end' : 'middle'}">${this._escape(label)}</text>` : ''}`;
+        return `<path d="M${x.toFixed(1)} ${y0}V${y1}"/>${show ? `<text data-time-tick="${index}" x="${x.toFixed(1)}" y="${panStripY - 8}" text-anchor="${index === 0 ? 'start' : index === 4 ? 'end' : 'middle'}">${this._escape(label)}</text>` : ''}`;
       }).join('');
       const last = pts[pts.length - 1];
       const current = isEnergy ? (series[series.length - 1]?.v ?? null) : this._num(metricKey);
@@ -3299,7 +3379,7 @@
       const svgId = (name) => this._id(isEnergy ? `energy-${metricKey}-${name}` : name);
       const chartTitle = isEnergy ? (metricKey === 'energy_total' ? this._t('energy_chart_title') : this._t('cost_chart_title')) : this._t('chart_title');
       const zoomOverlay = !isEnergy ? this._chartZoomSelectionSvg(tStart, tEnd, x0, x1, y0, y1) : '';
-      const panAxis = `<rect class="chart-pan-axis" data-chart-pan-axis="true" x="${x0}" y="${y1 + 1}" width="${x1 - x0}" height="${height - y1 - 1}" aria-hidden="true"/>`;
+      const panAxis = this._chartPanAxisHtml(x0, x1, panStripY, panStripHeight);
       return `<svg class="chart" data-chart-scope="${scope}" data-chart-min="${scale.lo}" data-chart-max="${scale.max}" data-chart-start="${tStart}" data-chart-end="${tEnd}" data-chart-w="${width}" data-chart-h="${height}" data-chart-x0="${x0}" data-chart-x1="${x1}" data-chart-y0="${y0}" data-chart-y1="${y1}" viewBox="0 0 ${width} ${height}" role="group" aria-label="${this._escape(chartTitle)}"><defs><linearGradient id="${svgId('area')}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#0a96ff" stop-opacity=".5"/><stop offset="1" stop-color="#0a96ff" stop-opacity=".02"/></linearGradient><filter id="${svgId('line-glow')}" x="-5%" y="-30%" width="110%" height="160%"><feGaussianBlur stdDeviation="3"/></filter><clipPath id="${svgId('plot-clip')}"><rect x="${x0}" y="0" width="${x1 - x0}" height="${height}"/></clipPath></defs><g class="chart-grid">${horizontal}${vertical}</g><g class="chart-data" data-role="chart-data" clip-path="url(#${svgId('plot-clip')})"><path d="${area}" fill="url(#${svgId('area')})"/><path d="${line}" class="chart-glow" filter="url(#${svgId('line-glow')})"/><path d="${line}" class="chart-line"/></g><path class="chart-cross" data-role="chart-cross" d="M${last.x.toFixed(1)} ${y0}V${y1}" visibility="hidden"/><circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="6" class="chart-dot" data-role="chart-dot" visibility="${hasCurrent ? 'visible' : 'hidden'}"/><rect x="${tagX.toFixed(1)}" y="${tagY.toFixed(1)}" width="84" height="30" rx="10" class="chart-tag" data-role="chart-tag" visibility="${hasCurrent ? 'visible' : 'hidden'}"/><text x="${(tagX + 42).toFixed(1)}" y="${(tagY + 20).toFixed(1)}" text-anchor="middle" class="chart-tag-text" data-role="chart-tag-text" visibility="${hasCurrent ? 'visible' : 'hidden'}">${this._escape(latest)}</text><text x="${(tagX + 42).toFixed(1)}" y="${(tagY + 37).toFixed(1)}" text-anchor="middle" class="chart-tag-sub" data-role="chart-tag-sub" visibility="hidden"></text>${zoomOverlay}${panAxis}</svg>`;
     }
 
@@ -3436,11 +3516,13 @@
       const scale = this._energyBarScale(maximum, metricKey);
       const width = Math.max(280, Math.round(this._chartW || 985));
       const narrow = width < 520;
-      const height = narrow ? 200 : 228;
+      const panStripHeight = 26;
+      const height = (narrow ? 200 : 228) + panStripHeight;
       const x0 = narrow ? 56 : 70;
       const x1 = width - (narrow ? 14 : 20);
       const y0 = 26;
-      const y1 = height - 30;
+      const panStripY = height - panStripHeight;
+      const y1 = panStripY - 30;
       const plotWidth = x1 - x0;
       const slot = plotWidth / bars.length;
       const barWidth = Math.max(2, Math.min(24, slot * 0.68));
@@ -3455,7 +3537,7 @@
       const vertical = bars.map((bar, index) => {
         const center = x0 + (index + 0.5) * slot;
         const show = index === 0 || index === bars.length - 1 || index % labelStep === 0;
-        return show ? `<text x="${center.toFixed(1)}" y="${height - 8}" text-anchor="middle">${this._escape(bar.label)}</text>` : '';
+        return show ? `<text x="${center.toFixed(1)}" y="${panStripY - 8}" text-anchor="middle">${this._escape(bar.label)}</text>` : '';
       }).join('');
       const fill = metricKey === 'cost_total' ? '#f5b94c' : '#16b5ff';
       const rects = bars.map((bar, index) => {
@@ -3470,7 +3552,7 @@
       const title = metricKey === 'energy_total' ? this._t('energy_chart_title') : this._t('cost_chart_title');
       const clipId = this._id(`energy-${metricKey}-plot-clip`);
       const plotClip = `<clipPath id="${clipId}"><rect x="${x0}" y="0" width="${plotWidth}" height="${height}"/></clipPath>`;
-      return `<svg class="energy-bars" data-chart-scope="energy" data-chart-start="${bounds.start}" data-chart-end="${bounds.end}" data-chart-w="${width}" data-chart-h="${height}" data-chart-x0="${x0}" data-chart-x1="${x1}" data-chart-y0="${y0}" data-chart-y1="${y1}" data-energy-bar-count="${bars.length}" data-energy-start="${bounds.start}" data-energy-end="${bounds.end}" viewBox="0 0 ${width} ${height}" role="group" aria-label="${this._escape(title)}" style="width:100%;height:auto;display:block;overflow:visible"><defs>${plotClip}</defs><g class="chart-grid">${horizontal}</g><g class="chart-data energy-bars-data" data-role="chart-data" clip-path="url(#${clipId})">${vertical}${rects}</g><rect class="chart-pan-axis" data-chart-pan-axis="true" x="${x0}" y="${y1 + 1}" width="${plotWidth}" height="${height - y1 - 1}" aria-hidden="true"/></svg>`;
+      return `<svg class="energy-bars" data-chart-scope="energy" data-chart-start="${bounds.start}" data-chart-end="${bounds.end}" data-chart-w="${width}" data-chart-h="${height}" data-chart-x0="${x0}" data-chart-x1="${x1}" data-chart-y0="${y0}" data-chart-y1="${y1}" data-energy-bar-count="${bars.length}" data-energy-start="${bounds.start}" data-energy-end="${bounds.end}" viewBox="0 0 ${width} ${height}" role="group" aria-label="${this._escape(title)}" style="width:100%;height:auto;display:block;overflow:visible"><defs>${plotClip}</defs><g class="chart-grid">${horizontal}</g><g class="chart-data energy-bars-data" data-role="chart-data" clip-path="url(#${clipId})">${vertical}${rects}</g>${this._chartPanAxisHtml(x0, x1, panStripY, panStripHeight)}</svg>`;
     }
 
     _setChartMarker(chart, x, y, text, sub = '') {
@@ -5398,7 +5480,7 @@
         .chart-zoom-handle-mark{fill:#14a8e8;stroke:#e5f7ff;stroke-width:1.5;pointer-events:none;filter:drop-shadow(0 2px 4px #00101d)}
         .chart-zoom-handle-end .chart-zoom-handle-mark{fill:#9257ff}
         .chart-zoom-handle:focus .chart-zoom-handle-mark{stroke:#fff;stroke-width:2.5}
-        .chart-pan-axis{fill:transparent;pointer-events:all;cursor:grab;touch-action:none}
+        .chart-pan-axis{fill:#128bd019;stroke:#2b9fe466;stroke-width:1;stroke-dasharray:4 3;pointer-events:all;cursor:grab;touch-action:none}.chart-pan-axis:hover{fill:#128bd02c;stroke:#43bcff}.chart-pan-hint{fill:#80ccf4;font-size:10px;font-weight:650;letter-spacing:.2px;pointer-events:none;user-select:none}.chart-plot.is-panning .chart-pan-axis{fill:#128bd040;stroke:#58d1ff;cursor:grabbing}.chart-plot.is-panning .chart-pan-hint{fill:#d0f1ff}
         .chart-plot{touch-action:none;user-select:none;-webkit-user-select:none;cursor:crosshair}
         .chart-plot.is-panning{cursor:grabbing}
         @container (max-width:760px){
@@ -5440,8 +5522,8 @@
         .shell.eco *,.shell.eco *::before,.shell.eco *::after{animation:none!important;filter:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
         .shell.eco .gauge-fill-glow,.shell.eco .tower-halo,.shell.eco .tower-haze,.shell.eco .chart-glow{display:none}.shell.eco .house-smoke,.shell.eco .house-canopy{animation:none!important}
         .header>.header-house{flex:none;position:relative;z-index:3;align-self:flex-start;width:0;height:0;max-width:none;margin:0;overflow:visible}
-        .header>.header-house .house-scene{position:absolute;right:-56px;top:50px;width:264px}
-        @container (max-width:959px){.header>.header-house{order:3;margin-left:auto}.header>.header-house .house-scene{right:-30px;top:22px;width:174px}}
+        .header>.header-house .house-scene{position:absolute;right:-56px;top:50px;width:264px;transform:translateX(30px) scale(1.3);transform-origin:center center}
+        @container (max-width:959px){.header>.header-house{order:3;margin-left:auto}.header>.header-house .house-scene{right:-30px;top:22px;width:174px;transform:translateX(30px) scale(1.3);transform-origin:center center}}
 
         @media(prefers-reduced-motion:reduce){.card{backdrop-filter:none;-webkit-backdrop-filter:none}.tower-beacon{animation:none}}
 
