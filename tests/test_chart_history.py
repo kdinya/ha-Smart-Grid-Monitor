@@ -2367,9 +2367,14 @@ const series = (values) => values.map((v, index) => ({ t: index, v }));
 
 // Outage zeros must not stretch the axis down to 0: small swings stay visible.
 const withOutage = card._chartScale(series([229, 0, 233, 231, 0, 227]), 'voltage');
-assert.ok(withOutage.lo >= 220, `axis starts near real voltage, got ${withOutage.lo}`);
-assert.ok(withOutage.max <= 240, `axis ends near real voltage, got ${withOutage.max}`);
-assert.ok(withOutage.lo < 227 && withOutage.max > 233, 'axis covers every real value');
+assert.equal(withOutage.lo, 225, 'real minimum 227 minus 2 V, rounded down to 5 V');
+assert.equal(withOutage.max, 235, 'real maximum 233 plus 2 V, rounded up to 5 V');
+
+// Day-like spread 201..239 V: 195..245 V, not stretched to 180..260 V.
+const wide = card._chartScale(series([201, 0, 239, 230, 0, 215]), 'voltage');
+assert.equal(wide.lo, 195);
+assert.equal(wide.max, 245);
+assert.ok(wide.ticks.every((tick) => tick >= wide.lo && tick <= wide.max) && wide.ticks.length >= 2 && wide.ticks.length <= 6, 'readable ticks inside the axis');
 
 // Same axis as without the zeros.
 const withoutOutage = card._chartScale(series([229, 233, 231, 227]), 'voltage');
