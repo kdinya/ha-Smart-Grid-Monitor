@@ -3737,6 +3737,12 @@
               <stop offset="90%" stop-color="#946200"/>
               <stop offset="100%" stop-color="#593b00"/>
             </radialGradient>
+            <linearGradient id="hrnGold" x1="0" y1="0" x2="0.35" y2="1">
+              <stop offset="0%" stop-color="#fff8cc"/>
+              <stop offset="35%" stop-color="#ffd54f"/>
+              <stop offset="70%" stop-color="#d9981a"/>
+              <stop offset="100%" stop-color="#a86f06"/>
+            </linearGradient>
             <linearGradient id="coinRim" x1="0" y1="0" x2="1" y2="1">
               <stop offset="0%" stop-color="#ffe885"/>
               <stop offset="50%" stop-color="#b8800a"/>
@@ -3770,17 +3776,12 @@
           <circle cx="65" cy="63" r="38" fill="none" stroke="#ffea8a" stroke-width="1.2" opacity="0.6"/>
           <circle cx="65" cy="63" r="35" fill="none" stroke="#996300" stroke-width="0.8" opacity="0.7"/>
 
-          <!-- 3D Embossed Hryvnia Symbol ₴ -->
+          <!-- 3D Embossed Hryvnia Symbol ₴ (outline of the real glyph) -->
           <g filter="url(#goldGlow)" transform="translate(65, 63)">
-            <!-- Symbol Shadow -->
-            <path d="M-10 -18 C4 -24 16 -18 15 -7 C14 2 2 4 4 15 C6 24 16 22 17 21" fill="none" stroke="#543700" stroke-width="6.5" stroke-linecap="round"/>
-            <line x1="-15" y1="-3" x2="17" y2="-3" stroke="#543700" stroke-width="5" stroke-linecap="round"/>
-            <line x1="-15" y1="5" x2="17" y2="5" stroke="#543700" stroke-width="5" stroke-linecap="round"/>
-
-            <!-- Symbol Highlight Surface -->
-            <path d="M-10 -19 C4 -25 16 -19 15 -8 C14 1 2 3 4 14 C6 23 16 21 17 20" fill="none" stroke="#fff8d1" stroke-width="4.5" stroke-linecap="round"/>
-            <line x1="-15" y1="-4" x2="17" y2="-4" stroke="#fff8d1" stroke-width="3.5" stroke-linecap="round"/>
-            <line x1="-15" y1="4" x2="17" y2="4" stroke="#fff8d1" stroke-width="3.5" stroke-linecap="round"/>
+            <path d="M19.7 8.5V1.7H-19.7V8.5H-15.1C-16.3 10 -17 11.9 -17 13.8C-17 21.4 -11.1 26 0.1 26C11.8 26 17.3 21.8 17.8 12.3H7.2C7 16.2 4.3 17.6 0.1 17.6C-4.1 17.6 -6.6 15.9 -6.6 13.1C-6.6 11.5 -5.9 9.8 -4.6 8.5ZM0.3 -17.5C4.2 -17.5 6.1 -16 6.1 -13.6C6.1 -11.8 5.4 -10.4 4.1 -9.1H-19.7V-2.1H19.7V-9.1H14.6C15.7 -10.6 16.4 -12.4 16.4 -14.4C16.4 -21.4 10.6 -26 0.2 -26C-10.5 -26 -15.8 -21.2 -16.3 -12.8H-5.8C-5.7 -14.9 -4.5 -17.5 0.3 -17.5Z" fill="#3d2800" transform="translate(1.7 2.3)"/>
+            <path d="M19.7 8.5V1.7H-19.7V8.5H-15.1C-16.3 10 -17 11.9 -17 13.8C-17 21.4 -11.1 26 0.1 26C11.8 26 17.3 21.8 17.8 12.3H7.2C7 16.2 4.3 17.6 0.1 17.6C-4.1 17.6 -6.6 15.9 -6.6 13.1C-6.6 11.5 -5.9 9.8 -4.6 8.5ZM0.3 -17.5C4.2 -17.5 6.1 -16 6.1 -13.6C6.1 -11.8 5.4 -10.4 4.1 -9.1H-19.7V-2.1H19.7V-9.1H14.6C15.7 -10.6 16.4 -12.4 16.4 -14.4C16.4 -21.4 10.6 -26 0.2 -26C-10.5 -26 -15.8 -21.2 -16.3 -12.8H-5.8C-5.7 -14.9 -4.5 -17.5 0.3 -17.5Z" fill="#7a5000" stroke="#7a5000" stroke-width="1.4" stroke-linejoin="round" transform="translate(.8 1.1)"/>
+            <path d="M19.7 8.5V1.7H-19.7V8.5H-15.1C-16.3 10 -17 11.9 -17 13.8C-17 21.4 -11.1 26 0.1 26C11.8 26 17.3 21.8 17.8 12.3H7.2C7 16.2 4.3 17.6 0.1 17.6C-4.1 17.6 -6.6 15.9 -6.6 13.1C-6.6 11.5 -5.9 9.8 -4.6 8.5ZM0.3 -17.5C4.2 -17.5 6.1 -16 6.1 -13.6C6.1 -11.8 5.4 -10.4 4.1 -9.1H-19.7V-2.1H19.7V-9.1H14.6C15.7 -10.6 16.4 -12.4 16.4 -14.4C16.4 -21.4 10.6 -26 0.2 -26C-10.5 -26 -15.8 -21.2 -16.3 -12.8H-5.8C-5.7 -14.9 -4.5 -17.5 0.3 -17.5Z" fill="url(#hrnGold)" stroke="#fff3b0" stroke-width=".7" stroke-linejoin="round"/>
+            <path d="M19.7 8.5V1.7H-19.7V8.5H-15.1C-16.3 10 -17 11.9 -17 13.8C-17 21.4 -11.1 26 0.1 26C11.8 26 17.3 21.8 17.8 12.3H7.2C7 16.2 4.3 17.6 0.1 17.6C-4.1 17.6 -6.6 15.9 -6.6 13.1C-6.6 11.5 -5.9 9.8 -4.6 8.5ZM0.3 -17.5C4.2 -17.5 6.1 -16 6.1 -13.6C6.1 -11.8 5.4 -10.4 4.1 -9.1H-19.7V-2.1H19.7V-9.1H14.6C15.7 -10.6 16.4 -12.4 16.4 -14.4C16.4 -21.4 10.6 -26 0.2 -26C-10.5 -26 -15.8 -21.2 -16.3 -12.8H-5.8C-5.7 -14.9 -4.5 -17.5 0.3 -17.5Z" fill="none" stroke="#fffbe0" stroke-width=".35" opacity=".85" transform="translate(-.5 -.6)"/>
           </g>
 
           <!-- Electric Energy Spark in Corner -->
