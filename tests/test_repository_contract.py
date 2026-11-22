@@ -530,5 +530,33 @@ class RepositoryContractTests(unittest.TestCase):
         # Mobile/tablet navigation matches home tab bar position at top of card
         self.assertIn("order:-1;flex:1 0 100%;width:100%;min-width:0;max-width:none;margin:0 0 10px;grid-template-columns:repeat(4,minmax(0,1fr))", card)
 
+    def test_chart_zoom_handles_coalesce_pointer_moves_and_cache_dom_nodes(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        pointermove = card.split("this.shadowRoot.addEventListener('pointermove'", 1)[1].split("this.shadowRoot.addEventListener('pointerup'", 1)[0]
+        zoom_move = card.split("    _queueChartZoomSelectionMove(event)", 1)[1].split("    _applyChartZoomSelection()", 1)[0]
+        self.assertIn("this._queueChartZoomSelectionMove(event)", pointermove)
+        self.assertIn("window.requestAnimationFrame(renderLatest)", zoom_move)
+        self.assertIn("drag.pendingX = event.clientX", zoom_move)
+        self.assertIn("nodes: {", card)
+        self.assertIn("setAttributeIfChanged", card)
+        self.assertNotIn("_refreshChart(", zoom_move)
+        self.assertNotIn("_render(", zoom_move)
+
+    def test_chart_pan_strip_is_visible_on_both_chart_types(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        self.assertEqual(card.count("this._chartPanAxisHtml(x0, x1, panStripY, panStripHeight)"), 2)
+        self.assertIn("chart-pan-hint", card)
+        self.assertIn("chart-pan-axis:hover", card)
+        self.assertIn("chart_pan_hint: 'Потягніть для прокручування'", card)
+        self.assertIn("chart_pan_hint: 'Drag to scroll'", card)
+        self.assertGreaterEqual(card.count("const panStripHeight = 26;"), 2)
+
+    def test_detail_header_house_moves_right_and_scales_without_affecting_home_art(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        self.assertEqual(card.count("transform:translateX(30px) scale(1.3);transform-origin:center center"), 2)
+        self.assertIn(".header>.header-house .house-scene", card)
+        self.assertIn("width:264px;transform:translateX(30px) scale(1.3)", card)
+        self.assertIn("width:174px;transform:translateX(30px) scale(1.3)", card)
+
 if __name__ == "__main__":
     unittest.main()
