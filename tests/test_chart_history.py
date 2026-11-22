@@ -1376,5 +1376,83 @@ assert.ok(html.includes('Вибрати період'), 'button is renamed to В
         )
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
+    def test_chart_date_range_picker_date_only_and_single_day_support(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = {
+  window: { customCards: [] },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+};
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+
+card._t = (key) => ({
+  chart_date_range: 'Вибрати період',
+  chart_from: 'Від',
+  chart_to: 'До',
+  chart_apply: 'Показати',
+  chart_date_error: 'Помилка дати',
+})[key] || key;
+card._escape = (s) => s;
+card._instanceId = 'test1';
+card._historyRange = 'day';
+card._energyHistoryRange = 'day';
+card._statsStart = Date.parse('2026-11-10T12:00:00Z');
+card._historyBounds = () => ({ start: Date.parse('2026-11-20T00:00:00Z'), end: Date.parse('2026-11-21T00:00:00Z') });
+card._energyHistoryBounds = () => ({ start: Date.parse('2026-11-20T00:00:00Z'), end: Date.parse('2026-11-21T00:00:00Z') });
+
+// 1. HTML generation: date inputs, min/max constraints
+const html = card._chartDateRangeHtml('params');
+assert.ok(html.includes('type="date"'), 'uses date-only inputs without hours/minutes');
+assert.ok(!html.includes('type="datetime-local"'), 'does not use datetime-local');
+assert.ok(html.includes('min="'), 'includes min attribute from statsStart');
+assert.ok(html.includes('max="'), 'includes max attribute for today');
+
+// 2. Single day range application (same start and end date -> 24h span)
+let appliedStart = null, appliedEnd = null, appliedScope = null;
+card._setCustomChartRange = (s, e, sc) => { appliedStart = s; appliedEnd = e; appliedScope = sc; };
+const mockPanel = {
+  querySelector: () => ({ textContent: '' }),
+};
+card.shadowRoot = {
+  querySelector: (sel) => {
+    if (sel === '[data-chart-date-start]') return { value: '2026-11-20' };
+    if (sel === '[data-chart-date-end]') return { value: '2026-11-20' };
+    if (sel.includes('.chart-date-range-panel')) return mockPanel;
+    return null;
+  },
+};
+card._applyChartDateRange('params');
+assert.ok(appliedStart !== null, 'range applied');
+assert.equal(new Date(appliedStart).toISOString().slice(0, 10), '2026-11-20');
+const span = appliedEnd - appliedStart;
+assert.equal(span, 24 * 3600 * 1000, 'single day selection spans exactly 24 hours');
+
+// 3. Clamping to _statsStart if user selects earlier date
+card.shadowRoot = {
+  querySelector: (sel) => {
+    if (sel === '[data-chart-date-start]') return { value: '2026-11-05' };
+    if (sel === '[data-chart-date-end]') return { value: '2026-11-15' };
+    if (sel.includes('.chart-date-range-panel')) return mockPanel;
+    return null;
+  },
+};
+card._applyChartDateRange('params');
+assert.ok(appliedStart >= card._statsStart, 'start is clamped to statsStart');
+"""
+        result = subprocess.run(
+            ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
+            capture_output=True,
+            text=True,
+            check=False,
+            env={**os.environ, "TZ": "UTC"},
+        )
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
 if __name__ == "__main__":
     unittest.main()
