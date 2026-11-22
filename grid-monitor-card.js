@@ -5220,7 +5220,7 @@
         .actions-chevron{width:10px;height:10px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);transition:transform .2s;margin-top:-4px}
         .actions-toggle[aria-expanded="true"] .actions-chevron{transform:rotate(-135deg);margin-top:4px}
         .actions-body{margin-top:12px}.actions-body[hidden]{display:none}
-        @container (max-width:760px){
+        @container (max-width:959px){
           .periods.chart-range-periods{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:stretch;width:100%;min-width:0;margin:0;padding:4px;gap:4px}
           .periods.chart-range-periods>.period-button{width:100%;min-width:0;padding:8px 2px;font-size:clamp(10px,3.1cqw,12px);line-height:1.2;white-space:nowrap}
           .periods.chart-range-periods>.chart-date-range{grid-column:1/-1;width:100%;min-width:0}

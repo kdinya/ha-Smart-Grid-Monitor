@@ -367,6 +367,7 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertGreaterEqual(card.count('class="periods chart-range-periods"'), 2)
         self.assertGreaterEqual(card.count('class="periods chart-metric-periods"'), 2)
         self.assertIn(".periods.chart-range-periods{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))", card)
+        self.assertIn("@container (max-width:959px){\n          .periods.chart-range-periods", card)
         self.assertIn(".periods.chart-range-periods>.chart-date-range{grid-column:1/-1", card)
         self.assertIn('.shell:not(.home-active)>.header>.tabs-top .tab[data-tab="home"] .tab-icon{display:none}', card)
         self.assertIn("document.addEventListener('pointerdown', this._chartDateDocumentPointerDownHandler, true)", card)
