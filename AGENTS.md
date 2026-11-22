@@ -65,8 +65,14 @@ Also run the ESPHome-secret-aware YAML parser and dashboard/entity coverage chec
 ## HACS update delivery
 
 - A merge to `main` alone does not update an existing HACS installation. Because this repository publishes releases, HACS takes the plugin files and remote version from the latest full GitHub Release and its tag; changes only on the branch are not enough.
-- **Mandatory tag/release sync on every card update:** Whenever `grid-monitor-card.js` or HACS-related configuration is modified and merged into `main`, the agent MUST immediately update the current release tag (or publish a new release if requested by the owner) so it points directly to the latest merge commit on `main`. Without this, HACS and Home Assistant will continue serving the old version and will not see any changes.
-- Unless the owner explicitly specifies a new release version number, reuse and retag the latest existing release/tag to point to the new `main` commit. Verify that the release tag resolves to the intended merge commit and contains the updated root `grid-monitor-card.js`.
+- **Mandatory tag/release sync on every card update:** Whenever `grid-monitor-card.js` or HACS-related configuration is modified and merged into `main`, the agent MUST immediately make the merged files available through the HACS release source. A merge to `main` alone is never delivery.
+- **When the owner does not request a new release:** Do NOT create a GitHub Release, increment the version, or leave the existing release tag on an old commit. Keep the existing latest Release entry and version, then move its existing tag to the new merge commit on `main`, exactly as follows (replace placeholders with the actual tag and full commit SHA):
+  ```bash
+  git tag -f <existing-version> <main-merge-commit>
+  git push origin refs/tags/<existing-version> --force
+  ```
+  This intentionally re-targets the existing release tag; it is not a new Release or version. HACS downloads the source at that tag, so a reinstall/redownload from the existing HACS repository then includes the merged changes. Do not substitute a `main`-branch install or ask the owner to perform the retagging when this workflow is requested.
+- If the owner explicitly requests a new release/version, publish that requested version instead. Otherwise reuse and retag the latest existing release/tag as above. After either path, verify that the release tag resolves to the intended merge commit and that it contains the updated root `grid-monitor-card.js`.
 - Do not report HACS delivery complete after merging or refreshing repository metadata alone. Tell the owner to use HACS → repository menu → **Update information**, then **Redownload** (or **Update**) the Dashboard repository; metadata refresh does not download the JavaScript. Also remind the owner to hard-refresh the browser or reload Home Assistant resources (`Ctrl+F5` / `Cmd+Shift+R`) to bust the Lovelace cache.
 - For manual/private testing, add the GitHub repository in HACS as a custom repository of type **Dashboard**. Do not claim that this makes the repository searchable in the default HACS catalog; default-catalog inclusion requires a separate submission and acceptance by `hacs/default`.
 
