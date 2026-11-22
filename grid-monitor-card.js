@@ -142,7 +142,7 @@
       stats_hint: 'Оберіть дату й час: графіки та мінімум/максимум рахуватимуться від цього моменту. Без значення діють добові дані.',
       stats_active: 'Графіки та мін/макс рахуються від', stats_apply: 'Застосувати', stats_clear: 'Скинути', chart_date_error_earlier: 'Дата не може бути раніше виставленого початку статистики',
       stats_error: 'Вкажіть коректні дату й час у минулому.', stats_note: 'Мін/макс від', power_range_period: 'Діапазон потужності за період', max_current_period: 'Максимальний струм за період', peak_power_period: 'Пікова потужність за період', stat_min: 'Мін.', stat_avg: 'Сер.', stat_max: 'Макс.', hour: 'Год', day: 'День', week: 'Тиждень', month: 'Місяць', loading: 'Завантаження історії…', no_history: 'Історія поки недоступна',
-      chart_select_time: 'Перетягуйте графік; двома пальцями масштабуйте, повзунком вибирайте час', chart_date_range: 'Вибрати період', chart_from: 'Від', chart_to: 'До', chart_apply: 'Показати', chart_date_error: 'Перевірте дати: кінець має бути пізніше початку й не в майбутньому', chart_zoom_in: 'Збільшити масштаб', chart_zoom_out: 'Зменшити масштаб', chart_readings: 'Дані на вибраний час', chart_readings_loading: 'Завантаження вимірювань…', chart_readings_unavailable: 'Історія вимірювань недоступна', chart_live: 'Зараз', active_power: 'Активна потужність',
+      chart_select_time: 'Перетягуйте графік; двома пальцями масштабуйте, повзунком вибирайте час', chart_metric_energy: 'Енергія, кВт·год', chart_metric_cost: 'Вартість, грн', energy_today_label: 'Енергія сьогодні', chart_date_range: 'Вибрати період', chart_from: 'Від', chart_to: 'До', chart_apply: 'Показати', chart_date_error: 'Перевірте дати: кінець має бути пізніше початку й не в майбутньому', chart_zoom_in: 'Збільшити масштаб', chart_zoom_out: 'Зменшити масштаб', chart_readings: 'Дані на вибраний час', chart_readings_loading: 'Завантаження вимірювань…', chart_readings_unavailable: 'Історія вимірювань недоступна', chart_live: 'Зараз', active_power: 'Активна потужність',
       mains: 'Зв’язок з PZEM', has_voltage: 'Дані доступні', no_voltage: 'Дані недоступні', source: 'Живлення ESP', from_mains: 'Мережа (не підтверджено)', from_inverter: 'Джерело невідоме', pzem_link: 'Зв’язок з PZEM', active: 'Онлайн', inactive: 'Офлайн', today_consumption: 'Споживання сьогодні',
       esp_power_connection: 'Схема живлення ESP', esp_power_shared: 'Від мережі разом із модулем', esp_power_after_avr: 'Після АВР', esp_power_independent: 'Незалежне живлення', esp_power_avr_note: 'ESP може живитися від інвертора', pzem_grid_note: 'PZEM вимірює мережу в усіх режимах',
       params_title: 'Електричні параметри', range_title: 'Діапазон напруги на графіку', range_now: 'Зараз', energy_title: 'Енергія та вартість', settings_title: 'Налаштування та діагностика',
@@ -187,7 +187,7 @@
       stats_hint: 'Pick a date and time: charts and min/max will be calculated from that moment. Empty means daily values.',
       stats_active: 'Charts and min/max are calculated from', stats_apply: 'Apply', stats_clear: 'Reset', chart_date_error_earlier: 'Date cannot be earlier than the statistics start time',
       stats_error: 'Enter a valid date and time in the past.', stats_note: 'Min/max since', power_range_period: 'Power range for the period', max_current_period: 'Peak current for the period', peak_power_period: 'Peak power for the period', stat_min: 'Min', stat_avg: 'Avg', stat_max: 'Max', hour: 'Hour', day: 'Day', week: 'Week', month: 'Month', loading: 'Loading history…', no_history: 'History is not available yet',
-      chart_select_time: 'Drag the chart to pan; pinch to zoom, or use the slider to select a time', chart_date_range: 'Select period', chart_from: 'From', chart_to: 'To', chart_apply: 'Show', chart_date_error: 'Check dates: the end must be after the start and not in the future', chart_zoom_in: 'Zoom in', chart_zoom_out: 'Zoom out', chart_readings: 'Readings at selected time', chart_readings_loading: 'Loading readings…', chart_readings_unavailable: 'Measurement history is unavailable', chart_live: 'Now', active_power: 'Active power',
+      chart_select_time: 'Drag the chart to pan; pinch to zoom, or use the slider to select a time', chart_metric_energy: 'Energy, kWh', chart_metric_cost: 'Cost, UAH', energy_today_label: 'Energy today', chart_date_range: 'Select period', chart_from: 'From', chart_to: 'To', chart_apply: 'Show', chart_date_error: 'Check dates: the end must be after the start and not in the future', chart_zoom_in: 'Zoom in', chart_zoom_out: 'Zoom out', chart_readings: 'Readings at selected time', chart_readings_loading: 'Loading readings…', chart_readings_unavailable: 'Measurement history is unavailable', chart_live: 'Now', active_power: 'Active power',
       mains: 'PZEM connection', has_voltage: 'Data available', no_voltage: 'Data unavailable', source: 'ESP power source', from_mains: 'Mains (not confirmed)', from_inverter: 'Source unknown', pzem_link: 'PZEM connection', active: 'Online', inactive: 'Offline', today_consumption: 'Consumption today',
       esp_power_connection: 'ESP power arrangement', esp_power_shared: 'Mains shared with the module', esp_power_after_avr: 'After AVR', esp_power_independent: 'Independent power', esp_power_avr_note: 'ESP may be powered by the inverter', pzem_grid_note: 'PZEM measures mains in every mode',
       params_title: 'Electrical parameters', range_title: 'Voltage range on chart', range_now: 'Now', energy_title: 'Energy and cost', settings_title: 'Settings and diagnostics',
@@ -227,7 +227,10 @@
   const CHART_METRICS = {
     power: { digits: 0, plausible: [0, MAX_PLAUSIBLE_POWER_W], unit: (lang) => (lang === 'uk' ? 'Вт' : 'W') },
     voltage: { digits: 1, plausible: [50, 400], unit: (lang) => (lang === 'uk' ? 'В' : 'V') },
+    energy_today: { digits: 2, plausible: [0, 1e6], scale: 'fine', label: 'chart_metric_energy', unit: (lang) => (lang === 'uk' ? 'кВт·год' : 'kWh') },
+    cost_today: { digits: 2, plausible: [0, 1e8], scale: 'fine', label: 'chart_metric_cost', unit: (lang) => (lang === 'uk' ? 'грн' : 'UAH') },
   };
+  const CHART_TAB_METRICS = { params: ['power', 'voltage'], energy: ['energy_today', 'cost_today'] };
   const CHART_READINGS = [
     { key: 'current', label: 'current', digits: 2, plausible: [0, 100] },
     { key: 'power', label: 'active_power', digits: 1, plausible: [0, MAX_PLAUSIBLE_POWER_W] },
@@ -235,6 +238,13 @@
     { key: 'phase_angle', label: 'phase', digits: 1, plausible: [0, 180] },
     { key: 'reactive_power', label: 'reactive', digits: 1, plausible: [0, MAX_PLAUSIBLE_POWER_W] },
     { key: 'power_factor', label: 'pf', digits: 2, plausible: [0, 1] },
+  ];
+  const ENERGY_CHART_READINGS = [
+    { key: 'energy_today', label: 'energy_today_label', digits: 2, plausible: [0, 1e6] },
+    { key: 'cost_today', label: 'cost_today', digits: 2, plausible: [0, 1e8] },
+    { key: 'power', label: 'active_power', digits: 1, plausible: [0, MAX_PLAUSIBLE_POWER_W] },
+    { key: 'cost_rate', label: 'cost_rate', digits: 2, plausible: [0, 1e6] },
+    { key: 'tariff', label: 'tariff', digits: 2, plausible: [0, 1e4] },
   ];
   // One shared geometry keeps the arc, ticks, tower and marker concentric.
   const GAUGE = { cx: 250, cy: 205, r: 185, start: 150, span: 240, min: 150, max: 280 };
@@ -1558,10 +1568,28 @@
       return `<div class="card metric ${extraClass}"><div class="metric-icon">${this._svg(icon)}</div><div class="metric-value${value === null ? ' empty' : ''}" data-metric-key="${key}" data-metric-digits="${digits}"><span data-role="metric-number">${display}</span><span class="unit" data-role="metric-unit" style="${unit ? '' : 'display:none'}">${this._escape(unit)}</span></div><div class="metric-label">${this._escape(this._t(key === 'power_factor' ? 'pf' : key))}</div>${rangeHtml}</div>`;
     }
 
+    _hasChartTab() { return this._activeTab === 'params' || this._activeTab === 'energy'; }
+
+    _chartMetricsForTab() { return CHART_TAB_METRICS[this._activeTab] || CHART_TAB_METRICS.params; }
+
+    _chartReadingsList() { return this._activeTab === 'energy' ? ENERGY_CHART_READINGS : CHART_READINGS; }
+
+    // Params and Energy share one chart: each tab offers its own metrics, so switch to a valid one.
+    _ensureChartMetric() {
+      const allowed = this._chartMetricsForTab();
+      if (allowed.includes(this._chartMetric)) return;
+      this._historyRequest += 1;
+      this._historyLoading = false;
+      this._chartMetric = allowed[0];
+      this._historyKey = '';
+      this._history = [];
+    }
+
     _chart() {
+      this._ensureChartMetric();
       const labels = ['hour', 'day', 'week', 'month'];
       const buttons = labels.map((period) => `<button class="period-button ${this._historyRange === period ? 'active' : ''}" data-period="${period}" aria-pressed="${this._historyRange === period}">${this._escape(this._t(period))}</button>`).join('');
-      const metricButtons = Object.keys(CHART_METRICS).map((metric) => `<button class="period-button ${this._chartMetric === metric ? 'active' : ''}" data-metric="${metric}" aria-pressed="${this._chartMetric === metric}">${this._escape(this._t(metric))}</button>`).join('');
+      const metricButtons = this._chartMetricsForTab().map((metric) => `<button class="period-button ${this._chartMetric === metric ? 'active' : ''}" data-metric="${metric}" aria-pressed="${this._chartMetric === metric}">${this._escape(this._t(CHART_METRICS[metric].label || metric))}</button>`).join('');
       return `<section class="card chart-card detailed-chart"><div class="chart-head"><h2><span class="chart-icon">${this._svg('chart')}</span>${this._escape(this._t('chart_title'))}</h2><div class="periods" role="group" aria-label="${this._escape(this._t('chart_title'))}">${metricButtons}</div><div class="periods" role="group" aria-label="${this._escape(this._t('hour'))}">${buttons}${this._chartDateRangeHtml()}</div></div><div class="chart-stats" data-role="chart-stats">${this._chartStatsHtml()}</div><div class="chart-plot" data-role="chart-plot">${this._chartSvg()}</div>${this._chartScrubberHtml()}${this._chartReadingsHtml()}</section>`;
     }
 
@@ -1771,10 +1799,43 @@
     }
 
     _chartDateRangeHtml() {
+      const isCustom = this._historyRange === 'custom';
+      return `<span class="chart-date-range ${isCustom ? 'active' : ''}"><button type="button" class="period-button ${isCustom ? 'active' : ''}" data-chart-date-open aria-haspopup="dialog">${this._escape(this._t('chart_date_range'))}</button></span>`;
+    }
+
+    // The picker is a modal on the shadow root, so no card, clip or stacking context can cover it.
+    _openChartDateDialog() {
+      if (this.shadowRoot.querySelector('[data-chart-date-root]')) return;
       const { start, end } = this._historyBounds();
       const minAttr = Number.isFinite(this._statsStart) ? ` min="${this._formatDateTimeInput(this._statsStart)}"` : '';
-      const isCustom = this._historyRange === 'custom';
-      return `<details class="chart-date-range ${isCustom ? 'active' : ''}"><summary class="period-button ${isCustom ? 'active' : ''}" role="button" aria-haspopup="dialog" aria-expanded="false">${this._escape(this._t('chart_date_range'))}</summary><div class="chart-date-range-panel" role="region"><label>${this._escape(this._t('chart_from'))}<input type="datetime-local" data-chart-date-start${minAttr} value="${this._formatDateTimeInput(start)}"></label><label>${this._escape(this._t('chart_to'))}<input type="datetime-local" data-chart-date-end${minAttr} value="${this._formatDateTimeInput(end)}"></label><button type="button" class="chart-date-apply" data-chart-date-apply>${this._escape(this._t('chart_apply'))}</button><small data-role="chart-date-error" aria-live="polite"></small></div></details>`;
+      const root = document.createElement('div');
+      root.className = 'app-dialog-backdrop';
+      root.dataset.chartDateRoot = '';
+      root.innerHTML = `<section class="app-dialog chart-date-dialog" role="dialog" aria-modal="true" aria-labelledby="grid-monitor-date-title">
+        <h2 id="grid-monitor-date-title">${this._escape(this._t('chart_date_range'))}</h2>
+        <label>${this._escape(this._t('chart_from'))}<input type="datetime-local" data-chart-date-start${minAttr} value="${this._formatDateTimeInput(start)}"></label>
+        <label>${this._escape(this._t('chart_to'))}<input type="datetime-local" data-chart-date-end${minAttr} value="${this._formatDateTimeInput(end)}"></label>
+        <div class="chart-date-error" data-role="chart-date-error" role="alert" aria-live="polite"></div>
+        <div class="dialog-actions"><button type="button" class="dialog-button secondary" data-chart-date-close>${this._escape(this._t('dialog_cancel'))}</button><button type="button" class="dialog-button primary" data-chart-date-apply>${this._escape(this._t('chart_apply'))}</button></div>
+      </section>`;
+      root.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          this._closeChartDateDialog();
+        }
+      });
+      this._chartDateReturnFocus = this.shadowRoot.activeElement;
+      this.shadowRoot.append(root);
+      root.querySelector('[data-chart-date-start]')?.focus();
+    }
+
+    _closeChartDateDialog() {
+      const root = this.shadowRoot?.querySelector('[data-chart-date-root]');
+      if (!root) return;
+      root.remove();
+      const returnFocus = this._chartDateReturnFocus;
+      this._chartDateReturnFocus = null;
+      if (returnFocus?.isConnected) returnFocus.focus();
     }
 
     _updateChartDateRangeControls() {
@@ -1823,8 +1884,7 @@
       this._historyRange = 'custom';
       this._clearChartScrub();
       this._updateChartDateRangeControls();
-      const picker = this.shadowRoot.querySelector('.chart-date-range');
-      if (picker) picker.open = false;
+      this._closeChartDateDialog();
       this._reloadChartHistory();
     }
 
@@ -1854,7 +1914,7 @@
 
     _chartReadingsHtml() {
       const selected = this._scrubTime !== null;
-      const readings = CHART_READINGS.map(({ key, label, digits }) => `<div class="chart-reading"><span>${this._escape(this._t(label))}</span><strong data-chart-reading="${key}">${this._escape(this._formatChartReading(key, digits))}</strong></div>`).join('');
+      const readings = this._chartReadingsList().map(({ key, label, digits }) => `<div class="chart-reading"><span>${this._escape(this._t(label))}</span><strong data-chart-reading="${key}">${this._escape(this._formatChartReading(key, digits))}</strong></div>`).join('');
       return `<section class="chart-readings" data-role="chart-readings" aria-live="polite" ${selected ? '' : 'hidden'}><div class="chart-readings-head"><h3>${this._escape(this._t('chart_readings'))}</h3><span data-role="chart-readings-time">${selected ? this._escape(this._formatChartTimestamp(this._scrubTime)) : ''}</span><span class="chart-readings-status" data-role="chart-readings-status"></span></div><div class="chart-reading-grid">${readings}</div></section>`;
     }
 
@@ -1898,13 +1958,13 @@
       if (!selected) return;
       const time = panel.querySelector('[data-role="chart-readings-time"]');
       if (time) time.textContent = this._formatChartTimestamp(this._scrubTime);
-      CHART_READINGS.forEach(({ key, digits }) => {
+      this._chartReadingsList().forEach(({ key, digits }) => {
         const node = panel.querySelector(`[data-chart-reading="${key}"]`);
         if (node) node.textContent = this._formatChartReading(key, digits);
       });
       const status = panel.querySelector('[data-role="chart-readings-status"]');
       if (!status) return;
-      const hasValue = CHART_READINGS.some(({ key }) => Number.isFinite(this._chartReadings?.[key]));
+      const hasValue = this._chartReadingsList().some(({ key }) => Number.isFinite(this._chartReadings?.[key]));
       const loading = this._chartReadingsLoading && this._chartReadingsRequestTime === this._scrubTime;
       status.textContent = loading || this._chartReadingsAt !== this._scrubTime && !this._chartReadingsError
         ? this._t('chart_readings_loading')
@@ -2174,8 +2234,7 @@
         pan.committed = true;
         this._clearChartScrub();
         this._updateChartDateRangeControls();
-        const picker = this.shadowRoot.querySelector('.chart-date-range');
-        if (picker) picker.open = false;
+        this._closeChartDateDialog();
       }
     }
 
@@ -2251,6 +2310,9 @@
     }
 
     _chartScale(series) {
+      if (CHART_METRICS[this._chartMetric || 'power']?.scale === 'fine') {
+        return { lo: 0, ...this._niceScaleFine(Math.max(...series.map((point) => point.v), 0)) };
+      }
       if (this._chartMetric === 'voltage') {
         const values = series.map((point) => point.v);
         const low = Math.min(...values); const high = Math.max(...values);
@@ -2263,6 +2325,19 @@
         return { lo, max: lo + 4 * step, step, count: 4 };
       }
       return { lo: 0, ...this._niceScale(Math.max(...series.map((point) => point.v), 0)) };
+    }
+
+    // Axis for small decimal quantities (kWh, UAH): 1-2-2.5-5 steps at the right magnitude, at most four intervals.
+    _niceScaleFine(maximum) {
+      const target = Math.max(maximum * 1.06, 0.1);
+      const magnitude = 10 ** Math.floor(Math.log10(target / 4));
+      for (const factor of [1, 2, 2.5, 5, 10]) {
+        const step = factor * magnitude;
+        const count = Math.ceil(target / step - 1e-9);
+        if (count <= 4) return { step, count: Math.max(2, count), max: Math.max(2, count) * step };
+      }
+      const step = 10 * magnitude;
+      return { step, count: 4, max: step * 4 };
     }
 
     _niceScale(maximum) {
@@ -2508,7 +2583,7 @@
       const request = ++this._chartReadingsRequest;
       const requestTime = timestamp;
       const hass = this._hass;
-      const keys = CHART_READINGS.map(({ key }) => key);
+      const keys = this._chartReadingsList().map(({ key }) => key);
       const entityIds = keys.map((key) => this._entity(key)).filter((entityId) => hass.states?.[entityId]);
       this._chartReadingsLoading = true;
       this._chartReadingsRequestTime = requestTime;
@@ -2530,7 +2605,7 @@
           if (entityId) byEntity.set(entityId, group);
         });
         const values = {};
-        CHART_READINGS.forEach(({ key, plausible }) => {
+        this._chartReadingsList().forEach(({ key, plausible }) => {
           const entityId = this._entity(key);
           let latest = null;
           (byEntity.get(entityId) || []).forEach((item) => {
@@ -2587,7 +2662,8 @@
     }
 
     _ensureHistory() {
-      if (!this._hass || !this._config || this._activeTab !== 'params' || this._chartPan || !this._isActive()) return;
+      if (!this._hass || !this._config || !this._hasChartTab() || this._chartPan || !this._isActive()) return;
+      this._ensureChartMetric();
       const metricKey = this._chartMetric || 'power';
       const key = `${this._historyRange}${this._historyWindowToken()}:${metricKey}:${this._entity(metricKey)}`;
       if (key !== this._historyKey || Date.now() - this._historyAt >= 60000) this._loadHistory(key);
@@ -2840,6 +2916,7 @@
           <article class="energy-visual energy-coin"><span class="eyebrow">${this._escape(this._t('today'))}</span><strong class="hero-number" data-value-key="energy_today" data-value-digits="2">${this._escape(this._formatted('energy_today', 2))}</strong><small>${this._escape(this._t('estimated_cost'))} · <span data-value-key="cost_today" data-value-digits="2">${this._escape(this._formatted('cost_today', 2))}</span></small>${this._energyCoinArt()}</article>
           <article class="energy-visual energy-load"><span class="eyebrow">${this._escape(this._t('current_load'))}</span><strong class="hero-number" data-value-key="power" data-value-digits="0">${this._escape(this._formatted('power', 0))}</strong><small>${this._escape(this._t('cost_rate'))} · <span data-value-key="cost_rate" data-value-digits="2">${this._escape(this._formatted('cost_rate', 2))}</span></small>${this._plugArt()}</article>
         </div>
+        ${this._chart()}
         <div class="detail-grid energy-grid">
           ${this._detail('energy_today', this._t('today'), 3)}${this._detail('energy_month', this._t('energy_month'), 2)}${this._detail('energy_total', this._t('energy_total'), 3)}
           ${this._detail('cost_today', this._t('cost_today'), 2)}${this._detail('cost_month', this._t('cost_month'), 2)}${this._detail('cost_total', this._t('cost_total'), 2)}
@@ -3132,16 +3209,16 @@
         this._finishDialog(dialogAction.dataset.dialogAction === 'confirm' || dialogAction.dataset.dialogAction === 'close');
         return;
       }
-      if (!event.target?.closest?.('.chart-date-range')) {
-        const picker = this.shadowRoot.querySelector('.chart-date-range[open]');
-        if (picker) picker.open = false;
+      if (event.target?.matches?.('[data-chart-date-root]')) {
+        this._closeChartDateDialog();
+        return;
       }
-      const target = event.target?.closest?.('[data-tab], [data-period], [data-metric], [data-action], [data-number-save], [data-switch], [data-chart-live], [data-chart-zoom], [data-chart-date-apply], [data-stats-start-apply], [data-stats-start-clear]');
+      const target = event.target?.closest?.('[data-tab], [data-period], [data-metric], [data-action], [data-number-save], [data-switch], [data-chart-live], [data-chart-zoom], [data-chart-date-open], [data-chart-date-close], [data-chart-date-apply], [data-stats-start-apply], [data-stats-start-clear]');
       if (!target) return;
       if (target.dataset.tab) {
         if (target.dataset.tab === this._activeTab) return;
         const wasHome = this._activeTab === 'home';
-        if (this._activeTab === 'params' && target.dataset.tab !== 'params') this._clearChartScrub();
+        if (this._hasChartTab() && target.dataset.tab !== this._activeTab) this._clearChartScrub();
         this._activeTab = target.dataset.tab;
         if (wasHome !== (this._activeTab === 'home')) {
           this._render();
@@ -3182,6 +3259,8 @@
         return;
       }
       if (target.dataset.chartZoom) { this._zoomChart(target.dataset.chartZoom); return; }
+      if (target.dataset.chartDateOpen !== undefined) { this._openChartDateDialog(); return; }
+      if (target.dataset.chartDateClose !== undefined) { this._closeChartDateDialog(); return; }
       if (target.dataset.chartDateApply !== undefined) { this._applyChartDateRange(); return; }
       if (target.dataset.statsStartApply !== undefined) { this._applyStatsStartInput(); return; }
       if (target.dataset.statsStartClear !== undefined) { this._setStatsStart(null); return; }
@@ -3275,7 +3354,10 @@
         this._updateRange();
         if (changed.has(this._chartMetric || 'power')) this._refreshChart();
       }
-      if (this._activeTab === 'energy') this._updateEnergy(changed);
+      if (this._activeTab === 'energy') {
+        this._updateEnergy(changed);
+        if (changed.has(this._chartMetric || 'power')) this._refreshChart();
+      }
       if (this._activeTab === 'settings') this._updateSettings(changed);
     }
 
@@ -3629,7 +3711,7 @@
         .energy-visual-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;margin-top:14px}.visual-card{padding:18px;border-radius:18px;background:linear-gradient(145deg,#1b334ff5,#0a1728fa);border:1px solid #69a4d944;box-shadow:inset 0 1px 0 #ffffff1e,0 11px 24px #0005}.visual-card h3{margin:0 0 15px;font-size:17px}.bar-list{display:grid;gap:14px}.bar-row{display:grid;grid-template-columns:64px minmax(36px,1fr) minmax(80px,auto);gap:11px;align-items:center;color:var(--muted);font-size:13px}.bar-row b{color:var(--text);font-size:14px;text-align:right}.bar-track{height:9px;border-radius:9px;overflow:hidden;background:#263c56;box-shadow:inset 0 2px 3px #0008}.bar-track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#078bff,#16d6e8);box-shadow:0 0 12px #0aaaff62;transition:width .55s ease}.bar-track i.night-rate{background:linear-gradient(90deg,#8057d8,#c07aff);box-shadow:0 0 12px #a875ff62}.rate-pulse{display:inline-flex;align-items:center;gap:7px;margin-top:13px;padding:6px 10px;border-radius:18px;background:#0b3440;border:1px solid #28bdc457;color:#69e6d4;font-size:12px;max-width:100%;flex-wrap:wrap}.rate-pulse .icon{width:17px;height:17px}.current-tariff{display:flex;flex-direction:column;justify-content:center;align-items:flex-start}.current-tariff .big-number{font-size:clamp(27px,3.5cqw,40px);overflow-wrap:anywhere}
         .settings-hero{display:flex;align-items:center;gap:15px;padding:14px 18px;margin:0 0 15px;border-radius:18px;background:linear-gradient(110deg,#163c5ff2,#17224bf2);border:1px solid #70aee24a;box-shadow:inset 0 1px 0 #ffffff27,0 14px 28px #0005}.chip-art{width:68px;height:68px;flex:none;filter:drop-shadow(0 6px 12px #0008) drop-shadow(0 0 10px #078fff35)}.device-copy{min-width:0}.device-copy strong{display:block;font-size:17px}.device-copy span{display:block;margin-top:4px;color:#a9bfdc;font-size:12px}.device-status{margin-left:auto;display:flex;align-items:center;gap:8px;white-space:nowrap;color:var(--muted);font-size:13px}.device-status i{width:10px;height:10px;border-radius:50%;background:#8597aa;box-shadow:0 0 8px #8597aa66}.device-status.online{color:var(--green)}.device-status.online i{background:var(--green);box-shadow:0 0 12px #35ed91a8}.device-status.offline{color:var(--red)}.device-status.offline i{background:var(--red);box-shadow:0 0 12px #ff526d88}.detail:hover,.visual-card:hover,.control:hover{border-color:#59bbef70;box-shadow:0 16px 32px #0007,0 0 24px #0099ff13}.tariff-state{position:relative}.tariff-led{position:absolute;right:14px;bottom:14px;width:8px;height:8px;border-radius:50%;background:#7e8ea2}.tariff-led.active{background:var(--green);box-shadow:0 0 12px #35ed91b0}
         .metric:hover,.info:hover,.action-button:hover,.save-button:hover,.switch-button:hover{transform:translateY(-3px);border-color:#54bdff80;box-shadow:0 18px 34px #0008,0 0 24px #0099ff1b}.tab,.period-button,.action-button,.save-button,.switch-button{transition:background .22s,color .22s,border-color .22s,box-shadow .22s,transform .22s}
-        @media(prefers-reduced-motion:no-preference){.shell:not(.render-ready){animation:deviceBoot .7s cubic-bezier(.2,.8,.2,1) both}.logo .icon{animation:logoFloat 4.2s ease-in-out infinite}.connection.online .dot,.device-status.online i{animation:ledPulse 2.2s ease-in-out infinite}.gauge-dot{animation:gaugePulse 2.8s ease-in-out infinite}.chart-dot{animation:chartPulse 2.4s ease-in-out infinite}.voltage:after{animation:screenGlow 7s ease-in-out infinite alternate}@keyframes deviceBoot{from{opacity:0;transform:translateY(8px) scale(.995)}to{opacity:1;transform:translateY(0) scale(1)}}@keyframes logoFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}@keyframes ledPulse{0%,100%{box-shadow:0 0 7px currentColor}50%{box-shadow:0 0 16px currentColor,0 0 25px currentColor}}@keyframes gaugePulse{0%,100%{filter:drop-shadow(0 0 5px #08c5ff)}50%{filter:drop-shadow(0 0 12px #08c5ff)}}@keyframes chartPulse{0%,100%{opacity:.8}50%{opacity:1}}@keyframes screenGlow{from{box-shadow:inset 0 0 24px #0091ff10}to{box-shadow:inset 0 0 40px #0091ff24}}}
+        @media(prefers-reduced-motion:no-preference){.shell:not(.render-ready){animation:deviceBoot .7s cubic-bezier(.2,.8,.2,1) both}.logo .icon{animation:logoFloat 4.2s ease-in-out infinite}.gauge-dot{animation:gaugePulse 2.8s ease-in-out infinite}.chart-dot{animation:chartPulse 2.4s ease-in-out infinite}.voltage:after{animation:screenGlow 7s ease-in-out infinite alternate}@keyframes deviceBoot{from{opacity:0;transform:translateY(8px) scale(.995)}to{opacity:1;transform:translateY(0) scale(1)}}@keyframes logoFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}@keyframes gaugePulse{0%,100%{filter:drop-shadow(0 0 5px #08c5ff)}50%{filter:drop-shadow(0 0 12px #08c5ff)}}@keyframes chartPulse{0%,100%{opacity:.8}50%{opacity:1}}@keyframes screenGlow{from{box-shadow:inset 0 0 24px #0091ff10}to{box-shadow:inset 0 0 40px #0091ff24}}}
         @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
         @container (max-width:760px){.energy-hero{grid-template-columns:1fr}.energy-visual{min-height:145px}.energy-visual-grid{grid-template-columns:1fr}.energy-object{width:76px;height:76px;right:10px;bottom:8px}.settings-hero{gap:11px;padding:12px}.chip-art{width:56px;height:56px}.device-copy strong{font-size:15px}.device-status{font-size:12px}}
         @container (max-width:420px){.energy-visual{min-height:130px;padding:15px}.energy-visual .hero-number{font-size:clamp(24px,7cqw,31px);max-width:80%}.energy-visual small{font-size:11px;max-width:80%}.energy-object{width:58px;height:58px;right:8px;bottom:6px;opacity:.8}.settings-hero{flex-wrap:wrap}.chip-art{width:46px;height:46px}.device-status{margin-left:6px}.bar-row{grid-template-columns:47px minmax(24px,1fr) minmax(75px,auto);gap:7px}.banner strong{max-width:68%}}
@@ -3988,15 +4070,6 @@
         .chart-tools{display:flex;align-items:center;gap:6px;margin-left:auto}
         .chart-zoom-button,.chart-date-apply{min-width:38px;min-height:36px;border:1px solid #278ed0;border-radius:10px;background:#092645;color:#d7efff;font:inherit;font-weight:700;cursor:pointer}
         .chart-zoom-button:hover,.chart-date-apply:hover{background:#0c3962}
-        .chart-date-range{position:relative;display:inline-flex}
-        .chart-date-range summary{list-style:none;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;user-select:none;-webkit-user-select:none}
-        .chart-date-range summary::-webkit-details-marker{display:none}
-        .chart-date-range-panel{position:absolute;top:calc(100% + 8px);right:0;z-index:30;display:flex;align-items:end;flex-wrap:wrap;gap:9px;padding:12px;border:1px solid #37526f;border-radius:14px;background:#0b192a;box-shadow:0 12px 35px rgba(0,0,0,.85)}
-        .chart-date-range-panel label{display:grid;gap:4px;color:#9fb5d1;font-size:12px}
-        .chart-date-range-panel input{min-width:190px;min-height:36px;padding:6px 8px;border:1px solid #37526f;border-radius:9px;background:#091727;color:#eef6ff;font:inherit;color-scheme:dark}
-        .chart-date-range-panel small{flex-basis:100%;color:#ff9ba8;font-size:12px}
-        .chart-date-apply{padding:0 14px}
-        .chart-card>.chart-head{z-index:20}
         .banner-main{flex:1 1 38%;min-width:0}
         .banner-main strong{display:block;max-width:none}
         .banner-system{flex:1 1 35%;min-width:0;display:grid;gap:3px;padding-left:16px;border-left:1px solid #ffffff2c}
@@ -4009,11 +4082,6 @@
         .chart-plot.is-panning{cursor:grabbing}
         @container (max-width:760px){
           .chart-tools{width:100%;margin-left:0;justify-content:flex-end}
-          .chart-date-range{flex:1 1 auto;min-width:0;position:static}
-          .chart-date-range summary{width:100%;padding:8px 4px;font-size:12px}
-          .chart-date-range-panel{position:absolute;top:calc(100% + 6px);left:0;right:0;min-width:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
-          .chart-date-range-panel input{min-width:0;width:100%;box-sizing:border-box;font-size:12px}
-          .chart-date-apply{grid-column:1/-1}
           .banner{display:grid;grid-template-columns:38px minmax(0,1fr) 58px;align-items:center;gap:10px}
           .banner-check{grid-column:1;grid-row:1}
           .banner-main{grid-column:2;grid-row:1}
@@ -4040,6 +4108,16 @@
         .stats-start-error:empty{display:none}
         .stats-note{margin:10px 4px 0;padding:6px 12px;border-radius:99px;border:1px solid #2f9bff40;background:#0a2038;color:#9fd2ff;font-size:12.5px;text-align:center}
         .period-button.since{white-space:nowrap}
+        .chart-date-range{display:contents}
+        .chart-date-dialog{text-align:left}
+        .chart-date-dialog h2{margin:0 0 16px;text-align:left}
+        .chart-date-dialog label{display:grid;gap:6px;margin:0 0 12px;color:#9fb5d1;font-size:13px}
+        .chart-date-dialog input{min-width:0;width:100%;min-height:44px;box-sizing:border-box;padding:0 12px;border:1px solid #3f6288;border-radius:11px;background:#07121f;color:#f3f7ff;font:inherit;color-scheme:dark}
+        .chart-date-dialog input:focus{outline:none;border-color:#1aa6ff;box-shadow:0 0 0 3px #1aa6ff30}
+        .chart-date-dialog .chart-date-error{min-height:18px;margin:0 0 6px;color:#ff8a9a;font-size:13px}
+        .chart-date-dialog .dialog-actions{margin-top:10px}
+        .shell:not(.home-active)>.header{z-index:2}
+        .shell:not(.home-active)>.page-layout{margin-top:-30px}
         .shell.eco *,.shell.eco *::before,.shell.eco *::after{animation:none!important;filter:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
         .shell.eco .gauge-fill-glow,.shell.eco .tower-halo,.shell.eco .tower-haze,.shell.eco .chart-glow{display:none}
         @media(prefers-reduced-motion:reduce){.card{backdrop-filter:none;-webkit-backdrop-filter:none}.tower-beacon{animation:none}}

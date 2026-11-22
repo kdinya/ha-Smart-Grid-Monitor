@@ -43,13 +43,112 @@ def run_node(body):
     return result
 
 
-class PeriodPickerStylingTests(unittest.TestCase):
-    def test_period_panel_stacks_above_chart_and_spans_card_width_on_narrow_layouts(self):
+class PeriodPickerDialogTests(unittest.TestCase):
+    def test_period_picker_is_a_modal_on_the_shadow_root_not_an_inline_panel(self):
         card = CARD.read_text(encoding="utf-8")
-        self.assertIn(".card>*{position:relative;z-index:1}", card)
-        self.assertIn(".chart-card>.chart-head{z-index:20}", card)
-        self.assertIn(".chart-date-range{flex:1 1 auto;min-width:0;position:static}", card)
-        self.assertIn(".chart-date-range-panel{position:absolute;top:calc(100% + 6px);left:0;right:0;", card)
+        self.assertNotIn("chart-date-range-panel", card)
+        self.assertNotIn("<details class=\"chart-date-range", card)
+        self.assertIn("data-chart-date-open", card)
+        self.assertIn("this.shadowRoot.append(root);", card)
+        self.assertIn("root.className = 'app-dialog-backdrop';", card)
+        self.assertIn(".app-dialog-backdrop{position:fixed;inset:0;z-index:99999;", card)
+        self.assertIn("[data-chart-date-open], [data-chart-date-close], [data-chart-date-apply]", card)
+        self.assertIn("event.target?.matches?.('[data-chart-date-root]')", card)
+
+    def test_open_button_replaces_details_and_stays_next_to_the_period_buttons(self):
+        result = run_node(r"""
+const card = makeCard();
+card._historyRange = 'month';
+card._historyBounds = () => ({ start: 0, end: 0 });
+const html = card._chartDateRangeHtml();
+assert.ok(html.includes('data-chart-date-open'));
+assert.ok(html.includes('class="chart-date-range '));
+assert.ok(!html.includes('<details'));
+assert.ok(!html.includes('data-chart-date-start'), 'inputs live in the dialog only');
+""")
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+
+class LayoutAndIndicatorTests(unittest.TestCase):
+    def test_online_indicator_is_static_on_every_tab(self):
+        card = CARD.read_text(encoding="utf-8")
+        self.assertNotIn("ledPulse", card)
+        self.assertNotIn(".device-status.online i{animation", card)
+        self.assertIn(".dot{display:inline-block;width:12px;height:12px;background:var(--green)", card)
+
+    def test_content_below_the_menu_is_lifted_30px_on_non_home_tabs(self):
+        card = CARD.read_text(encoding="utf-8")
+        self.assertIn(".shell:not(.home-active)>.page-layout{margin-top:-30px}", card)
+        self.assertIn(".shell:not(.home-active)>.header{z-index:2}", card)
+
+
+class EnergyChartTests(unittest.TestCase):
+    def test_energy_tab_has_kwh_and_uah_chart_with_the_same_controls_as_parameters(self):
+        result = run_node(r"""
+const card = makeCard({
+  'sensor.grid_monitor_energy_today': state('3.5', { attributes: { unit_of_measurement: 'kWh' } }),
+  'sensor.grid_monitor_cost_today': state('12.4', { attributes: { unit_of_measurement: 'UAH' } }),
+});
+card._historyBounds = () => ({ start: Date.now() - 3600e3, end: Date.now() });
+card._activeTab = 'energy';
+const html = card._energy();
+assert.ok(html.includes('class="card chart-card detailed-chart"'), 'chart is on the energy tab');
+assert.ok(html.includes('data-metric="energy_today"') && html.includes('data-metric="cost_today"'));
+assert.ok(!html.includes('data-metric="power"') && !html.includes('data-metric="voltage"'));
+['hour', 'day', 'week', 'month'].forEach((period) => assert.ok(html.includes(`data-period="${period}"`)));
+assert.ok(html.includes('data-chart-date-open') && html.includes('data-role="chart-scrubber"') && html.includes('data-role="chart-stats"'));
+assert.ok(html.includes('Енергія, кВт·год') && html.includes('Вартість, грн'));
+assert.equal(card._chartMetric, 'energy_today');
+// Readings for a selected time are energy related on this tab.
+assert.ok(html.includes('data-chart-reading="energy_today"') && html.includes('data-chart-reading="cost_today"') && html.includes('data-chart-reading="tariff"'));
+assert.ok(!html.includes('data-chart-reading="power_factor"'));
+
+card._activeTab = 'params';
+const params = card._params();
+assert.ok(params.includes('data-metric="power"') && params.includes('data-metric="voltage"'));
+assert.ok(!params.includes('data-metric="energy_today"'));
+assert.equal(card._chartMetric, 'power', 'switching tabs falls back to a metric of that tab');
+assert.ok(params.includes('data-chart-reading="power_factor"'));
+""")
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_history_is_requested_for_the_selected_energy_entity(self):
+        result = run_node(r"""
+const card = makeCard({ 'sensor.grid_monitor_energy_today': state('1') });
+card._activeTab = 'energy';
+card._chartMetric = 'power';
+const keys = [];
+card._loadHistory = (key) => { keys.push(key); };
+card._ensureHistory();
+assert.equal(card._chartMetric, 'energy_today');
+assert.equal(keys.length, 1);
+assert.ok(keys[0].endsWith(':energy_today:sensor.grid_monitor_energy_today'), keys[0]);
+card._chartMetric = 'cost_today';
+card._ensureHistory();
+assert.ok(keys[keys.length - 1].endsWith(':cost_today:sensor.grid_monitor_cost_today'));
+""")
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_axis_for_small_decimal_quantities_uses_round_steps(self):
+        result = run_node(r"""
+const card = makeCard();
+const check = (max, step, count) => {
+  const scale = card._niceScaleFine(max);
+  assert.equal(scale.step, step, `step for ${max}`);
+  assert.equal(scale.count, count, `count for ${max}`);
+  assert.ok(scale.max >= max, `axis covers ${max}`);
+};
+check(3.5, 1, 4);
+check(12.4, 5, 3);
+check(0.8, 0.25, 4);
+check(180, 50, 4);
+check(0, 0.025, 4);
+card._chartMetric = 'cost_today';
+assert.equal(card._chartScale([{ v: 12.4 }, { v: 0 }]).lo, 0);
+card._chartMetric = 'power';
+assert.equal(card._chartScale([{ v: 400 }, { v: 0 }]).max, 600);
+""")
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
 
 class PowerSavingModeTests(unittest.TestCase):
