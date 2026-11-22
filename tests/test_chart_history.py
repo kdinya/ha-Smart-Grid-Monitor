@@ -2235,5 +2235,114 @@ assert.ok(durationText.includes('15') || durationText.includes('с'), 'computed 
         result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False)
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
+    def test_zoom_confirm_button_is_positioned_above_active_handle(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = { window: { customCards: [] }, HTMLElement: class HTMLElement {}, customElements: { define: (name, value) => registry.set(name, value) } };
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+const button = { style: {}, offsetWidth: 80 };
+const plot = { clientWidth: 500, getBoundingClientRect: () => ({ left: 0, width: 500 }) };
+const chart = {
+  dataset: { chartStart: '1000', chartEnd: '3000', chartW: '500', chartX0: '50', chartX1: '450' },
+  getBoundingClientRect: () => ({ left: 0, width: 500 }),
+  closest: () => plot,
+};
+card.shadowRoot = {
+  querySelector: (sel) => {
+    if (sel === '[data-chart-zoom-apply]') return button;
+    if (sel === '[data-role="chart-plot"] svg.chart') return chart;
+    return null;
+  },
+};
+card._chartZoomConfirmHandle = 'end';
+card._chartZoomWindow = { start: 1000, end: 2000, dirty: true };
+card._chartZoomSelectionBounds = () => ({ start: 1000, end: 3000 });
+card._updateChartZoomConfirmButton();
+assert.equal(button.style.top, '-34px', 'button is elevated above the handle mark');
+assert.ok(!button.hidden, 'button is visible when dirty');
+"""
+        result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_chart_pan_target_allows_bidirectional_panning(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = { window: { customCards: [] }, HTMLElement: class HTMLElement {}, customElements: { define: (name, value) => registry.set(name, value) } };
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+const now = 1700000000000;
+const tStart = now - 60000;
+const tEnd = now - 30000;
+const panPast = {
+  pointerType: 'axis',
+  rangeMs: 30000,
+  plotWidth: 300,
+  deltaX: 100, // dragging rightwards scrolls timeline back to past
+  tStart,
+  tEnd,
+  buf: { start: now - 3600000, end: now, items: [] },
+};
+const targetPast = card._chartPanTarget(panPast, now);
+assert.ok(targetPast.start < tStart, 'panning moves backwards into earlier history');
+
+const panFuture = {
+  pointerType: 'axis',
+  rangeMs: 30000,
+  plotWidth: 300,
+  deltaX: -100, // dragging leftwards scrolls timeline towards future/present
+  tStart,
+  tEnd,
+  buf: { start: now - 3600000, end: now, items: [] },
+};
+const targetFuture = card._chartPanTarget(panFuture, now);
+assert.ok(targetFuture.start > tStart, 'panning moves forwards into more recent history');
+"""
+        result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_pinch_zoom_scales_around_finger_midpoint(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = { window: { customCards: [] }, HTMLElement: class HTMLElement {}, customElements: { define: (name, value) => registry.set(name, value) } };
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+const now = 1700000000000;
+const tStart = now - 100000;
+const tEnd = now;
+// Two fingers placed at 20% of the chart width (alpha = 0.2)
+const pan = {
+  pointerType: 'touch',
+  rangeMs: 100000,
+  plotWidth: 500,
+  pinchAlpha: 0.2,
+  startDistance: 100,
+  currentDistance: 200, // pinch out: scale = 0.5 (zoom in)
+  deltaX: 0,
+  tStart,
+  tEnd,
+};
+const focalTime = tStart + 0.2 * 100000;
+const target = card._chartPanTarget(pan, now);
+const nextRange = target.end - target.start;
+assert.equal(nextRange, 50000, 'zoomed range is halved');
+const newFocalTime = target.start + 0.2 * nextRange;
+assert.equal(Math.round(newFocalTime), Math.round(focalTime), 'time at 20% position remains identical');
+"""
+        result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
 if __name__ == "__main__":
     unittest.main()
