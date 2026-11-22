@@ -1842,20 +1842,25 @@
       }
     }
 
+    _dropLegacyStatsStart() {
+      try { window.localStorage?.removeItem(`grid-monitor-card:stats-start:${this._config?.prefix || 'grid_monitor'}`); } catch (_error) { /* ignore */ }
+    }
+
     _migrateStatsStart(allowLegacy) {
+      if (this._readStatsStart() !== null) return;
       const helper = this._state('stats_start');
-      if (!helper || helper.state === 'unavailable' || this._readStatsStart() !== null) return;
+      const helperReady = Boolean(helper) && helper.state !== 'unavailable';
       let candidate = Number.isFinite(this._statsStart) && this._statsNeedsPersist ? this._statsStart : null;
-      let legacy = false;
-      if (candidate === null && allowLegacy) { candidate = this._legacyStatsStart(); legacy = candidate !== null; }
-      if (!Number.isFinite(candidate)) return;
-      if (legacy) this._statsStart = candidate;
+      if (candidate === null && allowLegacy) {
+        candidate = this._legacyStatsStart();
+        // Keep using the old browser value even while the helper is missing; it moves into the helper once that exists.
+        if (candidate !== null) { this._statsStart = candidate; this._statsNeedsPersist = true; }
+      }
+      if (!Number.isFinite(candidate) || !helperReady) return;
       this._writeStatsStart(candidate).then((saved) => {
         if (!saved) return;
         this._statsNeedsPersist = false;
-        if (legacy) {
-          try { window.localStorage?.removeItem(`grid-monitor-card:stats-start:${this._config?.prefix || 'grid_monitor'}`); } catch (_error) { /* ignore */ }
-        }
+        this._dropLegacyStatsStart();
         if (this.shadowRoot?.querySelector) this._updateStatsControls();
       });
     }
@@ -2038,7 +2043,12 @@
       const active = Number.isFinite(this._statsStart);
       const hint = active ? `${this._t('stats_active')} ${this._statsStartFullLabel()}` : this._t('stats_hint');
       const createButton = this._canCreateStatsStartHelper() ? `<button class="save-button stats-start-create" type="button" data-stats-helper-create ${this._statsHelperCreating ? 'disabled' : ''}>${this._escape(this._t('stats_create_helper'))}</button>` : '';
-      return `<h2 class="subheading">${this._escape(this._t('stats_title'))}</h2><div class="detail stats-start" data-role="stats-start"><label><span>${this._escape(this._t('stats_start_label'))}</span><div class="stats-start-controls"><input type="datetime-local" data-stats-start-input max="${this._formatDateTimeInput(Date.now())}" value="${active ? this._formatDateTimeInput(this._statsStart) : ''}"><button class="save-button" type="button" data-stats-start-apply>${this._escape(this._t('stats_apply'))}</button><button class="save-button ghost" type="button" data-stats-start-clear data-role="stats-start-clear" ${active ? '' : 'disabled'}>${this._escape(this._t('stats_clear'))}</button></div></label><p class="stats-start-hint" data-role="stats-start-hint">${this._escape(hint)}</p><p class="stats-start-sync" data-role="stats-start-sync">${this._escape(this._t('stats_shared_hint'))}</p>${createButton}<p class="stats-start-error" role="alert" data-role="stats-start-error"></p></div>`;
+      return `<h2 class="subheading">${this._escape(this._t('stats_title'))}</h2><div class="detail stats-start" data-role="stats-start"><label><span>${this._escape(this._t('stats_start_label'))}</span><div class="stats-start-controls"><input type="datetime-local" data-stats-start-input max="${this._formatDateTimeInput(Date.now())}" value="${active ? this._formatDateTimeInput(this._statsStart) : ''}"><button class="save-button" type="button" data-stats-start-apply>${this._escape(this._t('stats_apply'))}</button><button class="save-button ghost" type="button" data-stats-start-clear data-role="stats-start-clear" ${active ? '' : 'disabled'}>${this._escape(this._t('stats_clear'))}</button></div></label><p class="stats-start-hint" data-role="stats-start-hint">${this._escape(hint)}</p><p class="stats-start-sync" data-role="stats-start-sync">${this._escape(this._statsSyncText())}</p>${createButton}<p class="stats-start-error" role="alert" data-role="stats-start-error"></p></div>`;
+    }
+
+    _statsSyncText() {
+      const ready = this._state('stats_start') && !['unknown', 'unavailable'].includes(this._raw('stats_start'));
+      return this._t(ready ? 'stats_sync_saved' : 'stats_sync_missing');
     }
 
     _updateStatsControls() {
@@ -2052,7 +2062,7 @@
       const error = this.shadowRoot.querySelector('[data-role="stats-start-error"]');
       if (error) error.textContent = '';
       const sync = this.shadowRoot.querySelector('[data-role="stats-start-sync"]');
-      if (sync) sync.textContent = this._state('stats_start') && !['unknown', 'unavailable'].includes(this._raw('stats_start')) ? this._t('stats_sync_saved') : this._t('stats_sync_missing');
+      if (sync) sync.textContent = this._statsSyncText();
       const createHelper = this.shadowRoot.querySelector('[data-stats-helper-create]');
       if (createHelper) {
         createHelper.hidden = !this._canCreateStatsStartHelper();
@@ -2073,6 +2083,7 @@
 
     _setStatsStart(value, persist = true) {
       this._statsStart = value;
+      if (persist) this._dropLegacyStatsStart();
       if (persist) this._writeStatsStart(value).then((saved) => {
         this._statsNeedsPersist = !saved && value !== null;
         const sync = this.shadowRoot.querySelector('[data-role="stats-start-sync"]');
