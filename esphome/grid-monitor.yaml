@@ -555,6 +555,7 @@ sensor:
     lambda: |-
       return id(swell_count);
   - platform: template
+    id: sensor_outage_count
     name: "PZEM Offline Events"
     state_class: total_increasing
     accuracy_decimals: 0
@@ -581,6 +582,7 @@ sensor:
       return id(outage_total_s) / 3600.0f;
 
   - platform: template
+    id: sensor_current_outage_duration
     name: "Current PZEM Offline Duration"
     unit_of_measurement: s
     accuracy_decimals: 0
@@ -733,11 +735,16 @@ interval:
             id(v_state) = 0;  // скидаємо просідання/перенапругу: без вимірювань стан не відомий
             id(outage_start_ms) = id(last_pzem_ms);
             id(outage_count)++;
+            id(sensor_outage_count).publish_state(id(outage_count));
+            id(sensor_current_outage_duration).publish_state(0.0f);
           } else if (ok && id(outage_active)) {
             id(outage_active) = false;
             uint32_t d = (millis() - id(outage_start_ms)) / 1000;
             id(last_outage_s) = d;
             id(outage_total_s) += d;
+            id(sensor_current_outage_duration).publish_state(0.0f);
+          } else if (id(outage_active)) {
+            id(sensor_current_outage_duration).publish_state((millis() - id(outage_start_ms)) / 1000.0f);
           }
           id(comm_ok) = ok;
 

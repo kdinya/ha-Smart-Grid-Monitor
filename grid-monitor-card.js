@@ -158,7 +158,7 @@
       history_purge_done: 'Запит на очищення історії Recorder для {count} сутностей виконано.', history_stats_done: 'Статистику Home Assistant для {count} сенсорів видалено.',
       history_delete_error: 'Не вдалося видалити дані. Переконайтеся, що ви ввійшли як адміністратор, Recorder доступний і резервну копію створено.', history_delete_empty: 'Не знайдено сутностей цієї картки, для яких можна видалити дані.',
       stats_error: 'Вкажіть коректні дату й час у минулому.', stats_note: 'Мін/макс від', power_range_period: 'Діапазон потужності за період', max_current_period: 'Максимальний струм за період', peak_power_period: 'Пікова потужність за період', stat_min: 'Мін.', stat_avg: 'Сер.', stat_max: 'Макс.', hour: 'Год', day: 'День', week: 'Тиждень', month: 'Місяць', loading: 'Завантаження історії…', no_history: 'Історія поки недоступна',
-      chart_select_time: 'Повзунком вибирайте час на графіку', chart_pan_hint: 'Потягніть для прокручування', chart_zoom_selection: 'Перетягніть мітки на графіку', chart_zoom_apply: 'Збільшити проміжок', chart_zoom_start: 'Початок', chart_zoom_end: 'Кінець', chart_date_range: 'Вибрати період', chart_from: 'Від', chart_to: 'До', chart_apply: 'Показати', chart_calendar_previous: 'Попередній місяць', chart_calendar_next: 'Наступний місяць', chart_date_error: 'Перевірте дати: кінець має бути пізніше початку й не в майбутньому', chart_zoom_in: 'Збільшити масштаб', chart_zoom_out: 'Зменшити масштаб', chart_readings: 'Дані на вибраний час', chart_readings_loading: 'Завантаження вимірювань…', chart_readings_unavailable: 'Історія вимірювань недоступна', chart_live: 'Зараз', active_power: 'Активна потужність',
+      chart_select_time: 'Повзунком вибирайте час на графіку', chart_pan_hint: 'Потягніть для прокручування', chart_zoom_selection: 'Перетягніть мітки на графіку', chart_zoom_apply: 'Застосувати', chart_zoom_start: 'Початок', chart_zoom_end: 'Кінець', chart_date_range: 'Вибрати період', chart_from: 'Від', chart_to: 'До', chart_apply: 'Показати', chart_calendar_previous: 'Попередній місяць', chart_calendar_next: 'Наступний місяць', chart_date_error: 'Перевірте дати: кінець має бути пізніше початку й не в майбутньому', chart_zoom_in: 'Збільшити масштаб', chart_zoom_out: 'Зменшити масштаб', chart_readings: 'Дані на вибраний час', chart_readings_loading: 'Завантаження вимірювань…', chart_readings_unavailable: 'Історія вимірювань недоступна', chart_live: 'Зараз', active_power: 'Активна потужність',
       mains: 'Зв’язок з PZEM', has_voltage: 'Дані доступні', no_voltage: 'Дані недоступні', source: 'Живлення ESP', from_mains: 'Мережа (не підтверджено)', from_inverter: 'Джерело невідоме', pzem_link: 'Зв’язок з PZEM', active: 'Онлайн', inactive: 'Офлайн', today_consumption: 'Споживання сьогодні',
       esp_power_connection: 'Схема живлення ESP', esp_power_shared: 'Від мережі разом із модулем', esp_power_after_avr: 'Після АВР', esp_power_independent: 'Незалежне живлення', esp_power_avr_note: 'ESP може живитися від інвертора', pzem_grid_note: 'PZEM вимірює мережу в усіх режимах',
       params_title: 'Електричні параметри', range_title: 'Діапазон напруги на графіку', range_now: 'Зараз', energy_title: 'Енергія та вартість', settings_title: 'Налаштування та діагностика',
@@ -226,7 +226,7 @@
       history_purge_done: 'Recorder history cleanup was requested for {count} entities.', history_stats_done: 'Home Assistant statistics were deleted for {count} sensors.',
       history_delete_error: 'Could not delete the data. Make sure you are signed in as an administrator, Recorder is available, and a backup exists.', history_delete_empty: 'No entities used by this card were found to clean up.',
       stats_error: 'Enter a valid date and time in the past.', stats_note: 'Min/max since', power_range_period: 'Power range for the period', max_current_period: 'Peak current for the period', peak_power_period: 'Peak power for the period', stat_min: 'Min', stat_avg: 'Avg', stat_max: 'Max', hour: 'Hour', day: 'Day', week: 'Week', month: 'Month', loading: 'Loading history…', no_history: 'History is not available yet',
-      chart_select_time: 'Select a time on the chart', chart_pan_hint: 'Drag to scroll', chart_zoom_selection: 'Drag the handles on the chart', chart_zoom_apply: 'Zoom to range', chart_zoom_start: 'Start', chart_zoom_end: 'End', chart_date_range: 'Select period', chart_from: 'From', chart_to: 'To', chart_apply: 'Show', chart_calendar_previous: 'Previous month', chart_calendar_next: 'Next month', chart_date_error: 'Check dates: the end must be after the start and not in the future', chart_zoom_in: 'Zoom in', chart_zoom_out: 'Zoom out', chart_readings: 'Readings at selected time', chart_readings_loading: 'Loading readings…', chart_readings_unavailable: 'Measurement history is unavailable', chart_live: 'Now', active_power: 'Active power',
+      chart_select_time: 'Select a time on the chart', chart_pan_hint: 'Drag to scroll', chart_zoom_selection: 'Drag the handles on the chart', chart_zoom_apply: 'Apply', chart_zoom_start: 'Start', chart_zoom_end: 'End', chart_date_range: 'Select period', chart_from: 'From', chart_to: 'To', chart_apply: 'Show', chart_calendar_previous: 'Previous month', chart_calendar_next: 'Next month', chart_date_error: 'Check dates: the end must be after the start and not in the future', chart_zoom_in: 'Zoom in', chart_zoom_out: 'Zoom out', chart_readings: 'Readings at selected time', chart_readings_loading: 'Loading readings…', chart_readings_unavailable: 'Measurement history is unavailable', chart_live: 'Now', active_power: 'Active power',
       mains: 'PZEM connection', has_voltage: 'Data available', no_voltage: 'Data unavailable', source: 'ESP power source', from_mains: 'Mains (not confirmed)', from_inverter: 'Source unknown', pzem_link: 'PZEM connection', active: 'Online', inactive: 'Offline', today_consumption: 'Consumption today',
       esp_power_connection: 'ESP power arrangement', esp_power_shared: 'Mains shared with the module', esp_power_after_avr: 'After AVR', esp_power_independent: 'Independent power', esp_power_avr_note: 'ESP may be powered by the inverter', pzem_grid_note: 'PZEM measures mains in every mode',
       params_title: 'Electrical parameters', range_title: 'Voltage range on chart', range_now: 'Now', energy_title: 'Energy and cost', settings_title: 'Settings and diagnostics',
@@ -984,6 +984,7 @@
       this._chartZoomConfirmHandle = null;
       this._chartZoomAnimation = null;
       this._chartTouchScrubbing = null;
+      this._chartPointerCandidate = null;
       this._chartMetric = 'power';
       this._history = [];
       this._historyKey = '';
@@ -1044,6 +1045,19 @@
       this.shadowRoot.addEventListener('pointermove', (event) => {
         if (this._chartZoomDrag?.pointerId === event.pointerId) { this._queueChartZoomSelectionMove(event); return; }
         if (this._chartPan) { this._chartPointerMove(event); return; }
+        if (this._chartPointerCandidate?.pointerId === event.pointerId) {
+          const dx = event.clientX - this._chartPointerCandidate.startX;
+          const dy = event.clientY - this._chartPointerCandidate.startY;
+          if (Math.abs(dx) >= 6 && Math.abs(dx) > Math.abs(dy)) {
+            const candPlot = this._chartPointerCandidate.plot;
+            this._chartTouchScrubbing = null;
+            this._chartPointerCandidate = null;
+            this._beginChartPan(candPlot, 'drag', [event.pointerId]);
+            this._chartPointerMove(event);
+            event.preventDefault?.();
+            return;
+          }
+        }
         if (this._chartTouchScrubbing === event.pointerId) {
           if (this._chartPointers.has(event.pointerId)) this._chartPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
           this._chartScrubAtClientX(event.clientX);
@@ -1530,8 +1544,16 @@
       }
       if (key === 'uptime' && this._state(key)?.attributes?.unit_of_measurement === 's') return this._formatDuration(n);
       if (['inverter_current_duration', 'last_inverter_duration', 'total_inverter_time'].includes(key)) {
+        if (key === 'inverter_current_duration') {
+          const isOffline = this._effectiveEspStatus() === 'on' && (this._raw('inverter') === 'on' || this._raw('mains') === 'off');
+          if (isOffline && (!n || n <= 0)) {
+            const lastChanged = this._state('inverter')?.last_changed || this._state('mains')?.last_changed;
+            const elapsed = lastChanged ? Math.max(0, Math.floor((Date.now() - new Date(lastChanged).getTime()) / 1000)) : 0;
+            if (elapsed > 0) return this._formatDuration(elapsed);
+          }
+        }
         const unit = this._state(key)?.attributes?.unit_of_measurement || (key === 'total_inverter_time' ? 'h' : 'min');
-        const seconds = n * (unit === 'h' ? 3600 : unit === 'min' ? 60 : 1);
+        const seconds = (n || 0) * (unit === 'h' ? 3600 : unit === 'min' ? 60 : 1);
         return this._formatDuration(seconds);
       }
       const value = n.toLocaleString(this._locale(), { maximumFractionDigits: digits });
@@ -2649,11 +2671,14 @@
       const chartWidth = Number(chart.dataset.chartW) || 0;
       const rect = chart.getBoundingClientRect?.();
       const plotRect = plot.getBoundingClientRect?.();
-      if (!rect?.width || !plotRect) return;
       const chartX = x0 + ((time - bounds.start) / range) * (x1 - x0);
-      const left = rect.left - plotRect.left + chartX * rect.width / chartWidth;
-      const maxLeft = Math.max(12, plot.clientWidth - (button.offsetWidth || 150) / 2 - 8);
-      button.style.left = `${Math.max((button.offsetWidth || 150) / 2 + 8, Math.min(maxLeft, left))}px`;
+      const chartScale = (rect?.width && chartWidth > 0) ? rect.width / chartWidth : 1;
+      const offsetLeft = (rect && plotRect) ? (rect.left - plotRect.left) : 0;
+      const left = offsetLeft + chartX * chartScale;
+      const clientWidth = plot?.clientWidth || chartWidth || 400;
+      const btnWidth = button.offsetWidth || 100;
+      const maxLeft = Math.max(12, clientWidth - btnWidth / 2 - 8);
+      button.style.left = `${Math.max(btnWidth / 2 + 8, Math.min(maxLeft, left))}px`;
       button.style.top = '2px';
     }
 
@@ -3109,30 +3134,39 @@
         try { plot.setPointerCapture(pointerId); } catch (_error) {}
         if (this._chartPointers.size === 2) {
           this._chartTouchScrubbing = null;
+          this._chartPointerCandidate = null;
           this._beginChartPan(plot, 'touch', [...this._chartPointers.keys()]);
           event.preventDefault?.();
         } else if (isAxis) {
           this._chartTouchScrubbing = null;
+          this._chartPointerCandidate = null;
           this._beginChartPan(plot, 'axis', [pointerId]);
           event.preventDefault?.();
-        } else if (!isEnergy && this._chartPts.length) {
+        } else {
           this._chartTouchScrubbing = pointerId;
-          this._chartScrubAtClientX(event.clientX);
-          event.preventDefault?.();
+          this._chartPointerCandidate = { pointerId, plot, startX: event.clientX, startY: event.clientY };
+          if (!isEnergy && this._chartPts.length) {
+            this._chartScrubAtClientX(event.clientX);
+            event.preventDefault?.();
+          }
         }
         return;
       }
       if (event.button !== 0) return;
+      this._chartPointers.set(pointerId, point);
+      if (!this._chartPointerPlots) this._chartPointerPlots = new Map();
+      this._chartPointerPlots.set(pointerId, plot);
+      try { plot.setPointerCapture(pointerId); } catch (_error) {}
       if (isAxis) {
-        this._chartPointers.set(pointerId, point);
-        if (!this._chartPointerPlots) this._chartPointerPlots = new Map();
-        this._chartPointerPlots.set(pointerId, plot);
-        try { plot.setPointerCapture(pointerId); } catch (_error) {}
+        this._chartPointerCandidate = null;
         this._beginChartPan(plot, 'axis', [pointerId]);
         event.preventDefault?.();
-      } else if (!isEnergy && this._chartPts.length) {
-        this._chartScrubAtClientX(event.clientX);
-        event.preventDefault?.();
+      } else {
+        this._chartPointerCandidate = { pointerId, plot, startX: event.clientX, startY: event.clientY };
+        if (!isEnergy && this._chartPts.length) {
+          this._chartScrubAtClientX(event.clientX);
+          event.preventDefault?.();
+        }
       }
     }
 
@@ -3162,8 +3196,9 @@
         currentDistance: pointerType === 'touch' ? this._chartPointerDistance(points) : 1,
         tStart, tEnd, live: false, committed: false,
         buf: Array.isArray(bufferedHistory) && bufferedHistory.length ? {
-          start: Number(bufferedStart) || Math.min(tStart, bufferedHistory[0]?.time?.getTime?.() || tStart),
-          end: Math.max(Number(bufferedEnd) || tEnd, tEnd), items: bufferedHistory,
+          start: Math.min(tStart, Number.isFinite(Number(bufferedStart)) && Number(bufferedStart) > 0 ? Number(bufferedStart) : (bufferedHistory[0]?.time?.getTime?.() || tStart)),
+          end: Math.max(tEnd, Number.isFinite(Number(bufferedEnd)) && Number(bufferedEnd) > 0 ? Number(bufferedEnd) : (bufferedHistory.at(-1)?.time?.getTime?.() || tEnd)),
+          items: bufferedHistory,
         } : null,
       };
       this._setChartGestureActive(plot, true);
@@ -3228,7 +3263,7 @@
       const shift = pan.pointerType === 'touch' ? 0 : this._chartPanShiftForDelta(pan.deltaX, pan.rangeMs, pan.plotWidth);
       let latestStart = now - nextRange;
       let start = Math.max(floor, Math.min(latestStart, (pan.tStart + pan.tEnd) / 2 - shift - nextRange / 2));
-      if (pan.pointerType === 'axis' && pan.buf && pan.buf.end - pan.buf.start >= nextRange) {
+      if ((pan.pointerType === 'axis' || pan.pointerType === 'drag') && pan.buf && pan.buf.end - pan.buf.start >= nextRange) {
         floor = Math.max(floor, pan.buf.start);
         latestStart = Math.min(latestStart, pan.buf.end - nextRange);
         start = Math.max(floor, Math.min(latestStart, start));
@@ -3254,6 +3289,7 @@
     }
 
     _chartPointerEnd(event) {
+      if (this._chartPointerCandidate?.pointerId === event.pointerId) this._chartPointerCandidate = null;
       const zoomDrag = this._chartZoomDrag;
       if (zoomDrag?.pointerId === event.pointerId) {
         this._chartZoomSelectionMove(event);
@@ -3385,7 +3421,14 @@
       const { start: tStart, end: tEnd } = bounds;
       const rangeMs = tEnd - tStart;
       const series = this._bucketHistory(tStart, tEnd, width < 520 ? 48 : 96, history);
-      if (!series.length) return null;
+      if (!series.length) {
+        const prior = Array.isArray(history) ? history.filter((p) => p.time?.getTime?.() <= tStart && Number.isFinite(p.value)).at(-1) : null;
+        if (prior) {
+          const steadySeries = [{ t: tStart, v: prior.value }, { t: tEnd, v: prior.value }];
+          return { series: steadySeries, tStart, tEnd, rangeMs };
+        }
+        return null;
+      }
       if (options.includeCurrent === false) {
         const terminal = history.at(-1);
         const terminalTime = terminal?.time?.getTime?.();
@@ -3511,6 +3554,7 @@
       const data = this._chartData(history, metricKey, { range, customRange, bounds, includeCurrent: !isEnergy });
       if (!data) {
         if (!isEnergy) this._chartPts = [];
+        if (loading) return `<div class="chart-empty">${this._escape(this._t('loading'))}</div>`;
         return `<div class="chart-empty">${this._escape(this._t('no_history'))}</div>`;
       }
       const { series, tStart, tEnd, rangeMs } = data;
@@ -3557,7 +3601,7 @@
       const chartTitle = isEnergy ? (metricKey === 'energy_total' ? this._t('energy_chart_title') : this._t('cost_chart_title')) : this._t('chart_title');
       const zoomOverlay = !isEnergy ? this._chartZoomSelectionSvg(tStart, tEnd, x0, x1, y0, y1) : '';
       const panAxis = this._chartPanAxisHtml(x0, x1, panStripY, panStripHeight);
-      return `<svg class="chart" data-chart-scope="${scope}" data-chart-min="${scale.lo}" data-chart-max="${scale.max}" data-chart-start="${tStart}" data-chart-end="${tEnd}" data-chart-w="${width}" data-chart-h="${height}" data-chart-x0="${x0}" data-chart-x1="${x1}" data-chart-y0="${y0}" data-chart-y1="${y1}" viewBox="0 0 ${width} ${height}" role="group" aria-label="${this._escape(chartTitle)}"><defs><linearGradient id="${svgId('area')}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#0a96ff" stop-opacity=".5"/><stop offset="1" stop-color="#0a96ff" stop-opacity=".02"/></linearGradient><filter id="${svgId('line-glow')}" x="-5%" y="-30%" width="110%" height="160%"><feGaussianBlur stdDeviation="3"/></filter><clipPath id="${svgId('plot-clip')}"><rect x="${x0}" y="0" width="${x1 - x0}" height="${height}"/></clipPath></defs><g class="chart-grid">${horizontal}${vertical}</g><g class="chart-data" data-role="chart-data" clip-path="url(#${svgId('plot-clip')})"><path d="${area}" fill="url(#${svgId('area')})"/><path d="${line}" class="chart-glow" filter="url(#${svgId('line-glow')})"/><path d="${line}" class="chart-line"/></g><path class="chart-cross" data-role="chart-cross" d="M${last.x.toFixed(1)} ${y0}V${y1}" visibility="hidden"/><circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="6" class="chart-dot" data-role="chart-dot" visibility="${hasCurrent ? 'visible' : 'hidden'}"/><rect x="${tagX.toFixed(1)}" y="${tagY.toFixed(1)}" width="84" height="30" rx="10" class="chart-tag" data-role="chart-tag" visibility="${hasCurrent ? 'visible' : 'hidden'}"/><text x="${(tagX + 42).toFixed(1)}" y="${(tagY + 20).toFixed(1)}" text-anchor="middle" class="chart-tag-text" data-role="chart-tag-text" visibility="${hasCurrent ? 'visible' : 'hidden'}">${this._escape(latest)}</text><text x="${(tagX + 42).toFixed(1)}" y="${(tagY + 37).toFixed(1)}" text-anchor="middle" class="chart-tag-sub" data-role="chart-tag-sub" visibility="hidden"></text>${zoomOverlay}${panAxis}</svg>`;
+      return `<svg class="chart" data-chart-scope="${scope}" data-chart-min="${scale.lo}" data-chart-max="${scale.max}" data-chart-start="${tStart}" data-chart-end="${tEnd}" data-chart-w="${width}" data-chart-h="${height}" data-chart-x0="${x0}" data-chart-x1="${x1}" data-chart-y0="${y0}" data-chart-y1="${y1}" viewBox="0 0 ${width} ${height}" role="group" aria-label="${this._escape(chartTitle)}"><defs><linearGradient id="${svgId('area')}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#0a96ff" stop-opacity=".5"/><stop offset="1" stop-color="#0a96ff" stop-opacity=".02"/></linearGradient><filter id="${svgId('line-glow')}" x="-5%" y="-30%" width="110%" height="160%"><feGaussianBlur stdDeviation="3"/></filter><clipPath id="${svgId('plot-clip')}"><rect x="${x0}" y="0" width="${x1 - x0}" height="${height}"/></clipPath></defs><g class="chart-grid">${horizontal}${vertical}</g><g class="chart-clip-wrapper" clip-path="url(#${svgId('plot-clip')})"><g class="chart-data" data-role="chart-data"><path d="${area}" fill="url(#${svgId('area')})"/><path d="${line}" class="chart-glow" filter="url(#${svgId('line-glow')})"/><path d="${line}" class="chart-line"/></g></g><path class="chart-cross" data-role="chart-cross" d="M${last.x.toFixed(1)} ${y0}V${y1}" visibility="hidden"/><circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="6" class="chart-dot" data-role="chart-dot" visibility="${hasCurrent ? 'visible' : 'hidden'}"/><rect x="${tagX.toFixed(1)}" y="${tagY.toFixed(1)}" width="84" height="30" rx="10" class="chart-tag" data-role="chart-tag" visibility="${hasCurrent ? 'visible' : 'hidden'}"/><text x="${(tagX + 42).toFixed(1)}" y="${(tagY + 20).toFixed(1)}" text-anchor="middle" class="chart-tag-text" data-role="chart-tag-text" visibility="${hasCurrent ? 'visible' : 'hidden'}">${this._escape(latest)}</text><text x="${(tagX + 42).toFixed(1)}" y="${(tagY + 37).toFixed(1)}" text-anchor="middle" class="chart-tag-sub" data-role="chart-tag-sub" visibility="hidden"></text>${zoomOverlay}${panAxis}</svg>`;
     }
 
     _energyHistoryBars(history, bounds = this._energyHistoryBounds(), range = this._energyHistoryRange) {
@@ -4198,7 +4242,9 @@
       const start = new Date(fetchBounds.start);
       const end = new Date(fetchBounds.end);
       const previousHistory = this._history;
-      this._refreshChart();
+      if (!previousHistory?.length) {
+        this._refreshChart();
+      }
       try {
         if (typeof hass.callApi !== 'function') throw new Error('History API unavailable');
         const entity = encodeURIComponent(this._entity(metricKey));
@@ -4289,7 +4335,7 @@
       }
       this._chartRefreshPending = false;
       const plot = this.shadowRoot.querySelector('[data-role="chart-plot"]');
-      if (plot) plot.innerHTML = this._chartSvg();
+      if (plot) plot.innerHTML = `${this._chartSvg()}${this._chartZoomActionsHtml()}`;
       const stats = this.shadowRoot.querySelector('[data-role="chart-stats"]');
       if (stats) stats.innerHTML = this._chartStatsHtml();
       if (!this._restoreChartScrub()) this._updateChartCurrent();
