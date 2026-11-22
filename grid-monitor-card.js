@@ -339,6 +339,8 @@
     gauge: '<path d="M6 36a18 18 0 1 1 36 0" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M24 36l9-12" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>',
   };
 
+  const DETAIL_ICON_SHIFT = { frequency: [0, -3], deviation: [0, 3], average: [0, -6], gauge: [0, -3], sag: [1, 1], swell: [1, -1], alert: [0, 1], calendar: [0, 1], angle: [0, -1], tag: [0, -1] };
+
   class GridMonitorCardEditor extends HTMLElement {
     constructor() {
       super();
@@ -1489,7 +1491,13 @@
       const ariaLabel = `${this._t('metric_info_button')}: ${label}`;
       return `<button type="button" class="metric-info-button" data-metric-info="${key}" aria-label="${this._escape(ariaLabel)}" title="${this._escape(ariaLabel)}"><span aria-hidden="true">i</span></button>`;
     }
-    _detailIcon(icon) { return icon ? `<span class="detail-icon" aria-hidden="true">${this._svg(icon)}</span>` : ''; }
+    _detailIcon(icon) {
+      if (!icon) return '';
+      // Optical centring: some glyphs are drawn off-centre inside the 48x48 viewBox.
+      const [dx, dy] = DETAIL_ICON_SHIFT[icon] || [0, 0];
+      const body = dx || dy ? `<g transform="translate(${dx} ${dy})">${ICONS[icon] || ''}</g>` : ICONS[icon] || '';
+      return `<span class="detail-icon" aria-hidden="true"><svg class="icon" viewBox="0 0 48 48" aria-hidden="true">${body}</svg></span>`;
+    }
 
     _detail(key, label, digits = 1, icon = '') {
       const infoButton = this._metricInfoButton(key);
