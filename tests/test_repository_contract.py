@@ -130,11 +130,10 @@ class RepositoryContractTests(unittest.TestCase):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
         settings = card.split("    _settings() {", 1)[1].split("    _chipArt()", 1)[0]
         energy = card.split("    _energy() {", 1)[1].split("    _energyChartControlsHtml()", 1)[0]
-        tariff = card.split("    _tariffBars() {", 1)[1].split("    _settings()", 1)[0]
         self.assertIn("twoZone ? this._setting('tariff_night'", settings)
-        self.assertIn("${twoZone ? row('tariff_night', 'night', 'night-rate', night) : ''}", tariff)
-        self.assertIn("${twoZone ? `<div class=\"detail tariff-state\"", energy)
-        self.assertIn("${twoZone ? `<span class=\"rate-pulse\"", energy)
+        self.assertIn("${twoZone ? `<div class=\"detail tariff-state has-icon\"", energy)
+        for removed in ("tariff_compare", "current_rate", "_tariffBars", "energy-visual-grid"):
+            self.assertNotIn(removed, energy)
 
         dashboard = yaml.load(
             (ROOT / "home-assistant/lovelace/grid-monitor-dashboard.yaml").read_text(encoding="utf-8"),
@@ -475,6 +474,20 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("house-wire-pulse", card)
         self.assertIn("houseWireFlow", card)
         self.assertIn(".shell.eco .house-wire-pulse{animation:none!important}", card)
+
+
+    def test_params_and_energy_detail_blocks_have_icons(self):
+        import re
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        params = card.split("    _params() {", 1)[1].split("    _energy() {", 1)[0]
+        energy = card.split("    _energy() {", 1)[1].split("    _energyChartControlsHtml()", 1)[0]
+        for section in (params, energy):
+            total = section.count("this._detail(")
+            with_icon = len(re.findall(r"this\._detail\('\w+', this\._t\(.*?\), \d, '[a-z_]+'\)", section))
+            self.assertGreater(total, 0)
+            self.assertEqual(total, with_icon)
+        self.assertEqual(len(re.findall(r"_voltageRangeDetail\('(?:min|max)', this\._t\('\w+'\), '[a-z_]+'\)", params)), 2)
+        self.assertIn(".energy-panel .energy-grid{margin-top:14px}", card)
 
 
 if __name__ == "__main__":
