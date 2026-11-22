@@ -90,11 +90,11 @@ class RepositoryContractTests(unittest.TestCase):
         header_call = "${this._activeTab === 'home' ? '' : this._headerHtml()}"
         self.assertLess(render.index(header_call), render.index('<div class="page-layout">'))
         self.assertNotIn("${this._activeTab === 'home' ? '' : this._tabs('side')}", render)
-        self.assertIn(".shell:not(.home-active)>.header>.tabs-top{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));flex:0 0 45%;width:45%;min-width:360px;max-width:560px;margin:0 0 0 auto", card)
-        self.assertIn(".shell:not(.home-active)>.header>.tabs-top .tab{padding:15px 8px}", card)
+        self.assertIn(".shell:not(.home-active)>.header>.tabs-top{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));flex:0 0 calc((100% - 16px) / 2.2);width:calc((100% - 16px) / 2.2);min-width:0;max-width:none;margin:0 0 0 auto", card)
+        self.assertIn("@container (min-width:960px){.shell:not(.home-active)>.header>.tabs-top .tab{padding:15px 8px}}", card)
         self.assertIn(".shell:not(.home-active)>.page-layout{display:block;margin-top:-40px}", card)
         self.assertEqual(card.count(".shell:not(.home-active)>.page-layout{display:block;margin-top:-40px}"), 2)
-        self.assertIn(".shell:not(.home-active)>.header{align-items:flex-start;padding-bottom:1px;z-index:2}", card)
+        self.assertIn(".shell:not(.home-active)>.header{align-items:flex-start;padding:0 0 1px;z-index:2}", card)
         self.assertIn(".shell:not(.home-active)>.page-layout>.tabs-side{display:none}", card)
 
     def test_energy_tab_has_one_history_chart_with_energy_cost_toggle(self):
@@ -282,9 +282,9 @@ class RepositoryContractTests(unittest.TestCase):
 
     def test_non_home_header_aligns_with_menu_and_reduces_content_gap(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
-        self.assertIn(".shell:not(.home-active)>.header{align-items:flex-start;padding-bottom:1px;z-index:2}", card)
-        self.assertIn("@container (max-width:959px){.shell:not(.home-active)>.header{padding-bottom:1px}.shell:not(.home-active)>.header>.tabs-top{margin-bottom:0}}", card)
-        self.assertIn(".shell:not(.home-active)>.header>.tabs-top{margin:0 0 4px}", card)
+        self.assertIn(".shell:not(.home-active)>.header{align-items:flex-start;padding:0 0 1px;z-index:2}", card)
+        self.assertIn("@container (max-width:959px){.shell:not(.home-active)>.header{padding-bottom:8px}.shell:not(.home-active)>.header>.tabs-top{margin-bottom:10px}}", card)
+        self.assertIn(".shell:not(.home-active)>.header>.tabs-top{margin:0 0 10px}", card)
 
     def test_chart_scrubber_shows_full_width_historical_measurements_and_metric_correct_marker(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
@@ -489,6 +489,14 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertEqual(len(re.findall(r"_voltageRangeDetail\('(?:min|max)', this\._t\('\w+'\), '[a-z_]+'\)", params)), 2)
         self.assertIn(".energy-panel .energy-grid{margin-top:14px}", card)
 
+
+    def test_tabs_menu_aligned_consistently_with_home_layout(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        # Desktop navigation matches the 2-column main-grid right track
+        self.assertIn("flex:0 0 calc((100% - 16px) / 2.2);width:calc((100% - 16px) / 2.2)", card)
+        self.assertIn(".shell:not(.home-active)>.header{align-items:flex-start;padding:0 0 1px;z-index:2}", card)
+        # Mobile/tablet navigation matches home tab bar position at top of card
+        self.assertIn("order:-1;flex:1 0 100%;width:100%;min-width:0;max-width:none;margin:0 0 10px;grid-template-columns:repeat(4,minmax(0,1fr))", card)
 
 if __name__ == "__main__":
     unittest.main()
