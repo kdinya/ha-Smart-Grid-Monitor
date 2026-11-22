@@ -1393,7 +1393,11 @@ const chart = {
 const plot = { querySelector: () => chart };
 card._chartZoomSelectionBounds = () => ({ start, end });
 card._chartZoomWindow = { start, end, dirty: false };
-card._chartZoomDrag = { plot, handle: 'start', pointerId: 1 };
+card._chartZoomDrag = {
+  plot, chart, handle: 'start', pointerId: 1, bounds: { start, end },
+  rectLeft: 50, rectWidth: 1000, chartWidth: 1000, x0: 100, x1: 900,
+  frame: null, frameKind: null, lastX: null, nodes: {},
+};
 card._updateChartZoomSelection = () => {};
 card._chartZoomSelectionMove({ pointerId: 1, clientX: 550, preventDefault() {} });
 assert.equal(card._chartZoomWindow.start, start + 30000, 'dragged start handle maps to the middle of the time range');
@@ -1404,6 +1408,46 @@ card._chartZoomSelectionMove({ pointerId: 1, clientX: 650, preventDefault() {} }
 assert.equal(card._chartZoomWindow.end, start + 38000, 'dragged end handle snaps to one-second precision');
 """
         result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False, env={**os.environ, "TZ": "UTC"})
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_zoom_handle_pointer_moves_are_coalesced_and_pointerup_flushes_latest_position(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const scheduled = new Map();
+let frameId = 0;
+const context = {
+  window: {
+    customCards: [],
+    requestAnimationFrame(callback) { const id = ++frameId; scheduled.set(id, callback); return id; },
+    cancelAnimationFrame(id) { scheduled.delete(id); },
+  },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+};
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+const drag = { pointerId: 1, frame: null, frameKind: null, pendingX: 0 };
+const applied = [];
+card._chartZoomDrag = drag;
+card._applyChartZoomSelectionMove = (_drag, x) => applied.push(x);
+const move = (x) => ({ pointerId: 1, clientX: x, preventDefault() {} });
+card._queueChartZoomSelectionMove(move(10));
+card._queueChartZoomSelectionMove(move(20));
+assert.equal(scheduled.size, 1, 'only one animation frame is pending');
+const [id, callback] = scheduled.entries().next().value;
+scheduled.delete(id);
+callback();
+assert.deepEqual(applied, [20], 'the frame applies only the latest pointer position');
+card._queueChartZoomSelectionMove(move(30));
+card._chartZoomSelectionMove(move(40));
+assert.equal(scheduled.size, 0, 'pointerup cancels the pending frame');
+assert.deepEqual(applied, [20, 40], 'pointerup applies its final position immediately');
+"""
+        result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False)
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
     def test_axis_pan_targets_energy_and_parameter_history_without_changing_scale(self):
