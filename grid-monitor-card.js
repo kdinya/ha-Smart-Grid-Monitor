@@ -1687,7 +1687,6 @@
           <linearGradient id="${id('steel')}" gradientUnits="userSpaceOnUse" x1="-42" y1="0" x2="42" y2="0"><stop stop-color="#e3f0fa"/><stop offset=".5" stop-color="#9db3c6"/><stop offset="1" stop-color="#53697d"/></linearGradient>
           <linearGradient id="${id('ground')}" gradientUnits="userSpaceOnUse" x1="0" y1="186" x2="0" y2="205"><stop stop-color="#0a2338"/><stop offset="1" stop-color="#030a13"/></linearGradient>
           <radialGradient id="${id('vignette')}" gradientUnits="userSpaceOnUse" cx="250" cy="205" r="${R}"><stop offset=".68" stop-color="#050f1d" stop-opacity="0"/><stop offset="1" stop-color="#050f1d" stop-opacity=".85"/></radialGradient>
-          <linearGradient id="${id('sheen')}" gradientUnits="userSpaceOnUse" x1="140" y1="60" x2="300" y2="170"><stop stop-color="#fff" stop-opacity=".14"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
           <filter id="${id('haze')}" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="4"/></filter>
           <clipPath id="${id('dome')}"><path d="${dome}"/></clipPath>
         </defs>
@@ -1711,7 +1710,6 @@
           <path d="M98 205V200C140 197 190 201 250 199S360 197 402 201V205Z" fill="url(#${id('ground')})"/>
           <circle class="tower-beacon" cx="250" cy="57" r="2.6" fill="#ff3b5c"/>
           <rect x="90" y="50" width="320" height="156" fill="url(#${id('vignette')})"/>
-          <path d="M120 195C130 120 190 66 262 62C210 86 160 130 150 205Z" fill="url(#${id('sheen')})"/>
         </g>
         <path d="M${250 - R} 205A${R} ${R} 0 0 1 ${250 + R} 205" fill="none" stroke="#9adcff" stroke-opacity=".32" stroke-width="1.4"/>
         <path d="M${250 - R + 2} 205A${R - 2} ${R - 2} 0 0 1 ${250 + R - 2} 205" fill="none" stroke="#000" stroke-opacity=".5" stroke-width="2"/>
@@ -1719,28 +1717,45 @@
     }
     _houseArt() {
       return `
-        <svg viewBox="0 0 160 140" class="real-vector-art" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="0 0 160 140" class="real-vector-art house-night-scene" xmlns="http://www.w3.org/2000/svg">
           <defs>
-            <linearGradient id="roofGrad" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="#2a456e"/>
-              <stop offset="50%" stop-color="#162947"/>
-              <stop offset="100%" stop-color="#0c1a30"/>
+            <linearGradient id="houseSky" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#050e1c"/>
+              <stop offset="60%" stop-color="#0a1b32"/>
+              <stop offset="100%" stop-color="#0c2544"/>
             </linearGradient>
-            <linearGradient id="wallFront" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="#1a3660"/>
-              <stop offset="100%" stop-color="#0e203c"/>
+            <linearGradient id="houseRoof" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#223d63"/>
+              <stop offset="50%" stop-color="#142642"/>
+              <stop offset="100%" stop-color="#0a1526"/>
             </linearGradient>
-            <linearGradient id="wallSide" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stop-color="#0f2444"/>
-              <stop offset="100%" stop-color="#09162a"/>
+            <linearGradient id="houseWallFront" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#1b365d"/>
+              <stop offset="100%" stop-color="#0e213d"/>
             </linearGradient>
-            <linearGradient id="windowWarm" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#ffe89e"/>
-              <stop offset="60%" stop-color="#ffb834"/>
-              <stop offset="100%" stop-color="#ff7b00"/>
+            <linearGradient id="houseWallSide" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#122744"/>
+              <stop offset="100%" stop-color="#09172c"/>
             </linearGradient>
-            <filter id="warmGlow" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="3" result="blur"/>
+            <linearGradient id="houseWindowWarm" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#fff1aa"/>
+              <stop offset="50%" stop-color="#ffb834"/>
+              <stop offset="100%" stop-color="#ff7200"/>
+            </linearGradient>
+            <linearGradient id="poleWood" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#5a422d"/>
+              <stop offset="50%" stop-color="#3d2a1a"/>
+              <stop offset="100%" stop-color="#24170d"/>
+            </linearGradient>
+            <filter id="houseWarmGlow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="2.5" result="blur"/>
+              <feMerge>
+                <feMergeNode in="blur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+            <filter id="greenGlow" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="2" result="blur"/>
               <feMerge>
                 <feMergeNode in="blur"/>
                 <feMergeNode in="SourceGraphic"/>
@@ -1748,45 +1763,102 @@
             </filter>
           </defs>
 
-          <!-- Ground shadow -->
-          <ellipse cx="80" cy="128" rx="68" ry="8" fill="#040a14" opacity="0.6"/>
+          <!-- Night Sky Backdrop with Rounded Frame -->
+          <rect x="2" y="2" width="156" height="136" rx="14" fill="url(#houseSky)"/>
 
-          <!-- House Left Wing Wall -->
-          <polygon points="28,82 68,62 68,118 28,124" fill="url(#wallSide)"/>
-
-          <!-- House Main Front Wall -->
-          <polygon points="68,62 136,88 136,124 68,118" fill="url(#wallFront)"/>
-
-          <!-- Slate Hip Roof (Left Facet) -->
-          <polygon points="82,24 24,78 68,58" fill="#2d4d7a"/>
-          <!-- Slate Hip Roof (Main Facet) -->
-          <polygon points="82,24 68,58 138,84 144,48" fill="url(#roofGrad)"/>
-
-          <!-- Solar PV Panels on Main Roof -->
-          <polygon points="76,52 118,68 112,78 72,62" fill="#091b36" stroke="#12b5ff" stroke-width="1.2"/>
-          <line x1="90" y1="57" x2="86" y2="67" stroke="#12b5ff" stroke-width="0.8"/>
-          <line x1="104" y1="63" x2="100" y2="73" stroke="#12b5ff" stroke-width="0.8"/>
-
-          <!-- Glowing Warm Windows (Living room & Bedroom) -->
-          <g filter="url(#warmGlow)">
-            <!-- Upper Window -->
-            <polygon points="88,90 108,98 108,112 88,106" fill="url(#windowWarm)"/>
-            <line x1="98" y1="94" x2="98" y2="109" stroke="#945200" stroke-width="1"/>
-            <line x1="88" y1="100" x2="108" y2="106" stroke="#945200" stroke-width="1"/>
-
-            <!-- Side Window -->
-            <polygon points="36,92 56,82 56,104 36,109" fill="url(#windowWarm)"/>
-            <line x1="46" y1="87" x2="46" y2="106" stroke="#945200" stroke-width="1"/>
+          <!-- Stars -->
+          <g fill="#d9f0ff">
+            <circle cx="28" cy="16" r="0.75" opacity="0.8"/>
+            <circle cx="45" cy="26" r="0.6" opacity="0.6"/>
+            <circle cx="68" cy="14" r="0.8" opacity="0.9"/>
+            <circle cx="86" cy="22" r="0.5" opacity="0.5"/>
+            <circle cx="112" cy="15" r="0.7" opacity="0.75"/>
+            <circle cx="140" cy="28" r="0.6" opacity="0.6"/>
+            <circle cx="125" cy="38" r="0.5" opacity="0.5"/>
           </g>
 
-          <!-- Front Entrance Door -->
-          <polygon points="116,102 128,106 128,123 116,121" fill="#0d1c33" stroke="#12b5ff" stroke-width="1"/>
-          <circle cx="125" cy="114" r="1" fill="#ffb834"/>
+          <!-- Crescent Moon -->
+          <path d="M136 12 C131 14 128 19 128 25 C128 31 132 36 138 37 C133 38 125 35 125 24 C125 15 131 12 136 12 Z" fill="#fff5cc" filter="drop-shadow(0 0 3px #ffeaa3)"/>
 
-          <!-- Grid Utility Drop & Smart Meter Box -->
-          <rect x="25" y="98" width="5" height="9" fill="#1b3863" stroke="#35ed91" stroke-width="0.8" rx="1"/>
-          <circle cx="27.5" cy="101" r="0.8" fill="#35ed91"/>
-          <path d="M28,98 L28,78 Q22,70 12,65" fill="none" stroke="#35ed91" stroke-width="1" stroke-dasharray="2,2"/>
+          <!-- Distant Horizon -->
+          <path d="M2 112 Q35 106 70 109 Q115 104 158 111 L158 138 L2 138 Z" fill="#08182b"/>
+
+          <!-- Ground Lawn -->
+          <path d="M2 118 Q45 114 85 117 Q125 115 158 120 L158 138 L2 138 Z" fill="#0b2038"/>
+          <ellipse cx="88" cy="130" rx="58" ry="7" fill="#040b15" opacity="0.7"/>
+
+          <!-- Garden Pathway to Entrance -->
+          <path d="M120 125 Q116 130 110 137 L100 137 Q108 129 113 125 Z" fill="#152b47" stroke="#25436c" stroke-width="0.5"/>
+
+          <!-- Garden Solar Path Lights -->
+          <g>
+            <line x1="96" y1="128" x2="96" y2="133" stroke="#4a6585" stroke-width="1"/>
+            <circle cx="96" cy="127" r="1.5" fill="#ffd97d" filter="drop-shadow(0 0 2px #ffc84a)"/>
+            <line x1="124" y1="129" x2="124" y2="134" stroke="#4a6585" stroke-width="1"/>
+            <circle cx="124" cy="128" r="1.5" fill="#ffd97d" filter="drop-shadow(0 0 2px #ffc84a)"/>
+          </g>
+
+          <!-- Modern House Structure -->
+          <!-- Left Wing Side Wall -->
+          <polygon points="46,80 78,63 78,118 46,124" fill="url(#houseWallSide)"/>
+
+          <!-- Front Main Facade -->
+          <polygon points="78,63 134,84 134,120 78,118" fill="url(#houseWallFront)" stroke="#2b4973" stroke-width="0.5"/>
+
+          <!-- Modern Pitched Roof -->
+          <polygon points="90,34 42,76 78,59" fill="#294873"/>
+          <polygon points="90,34 78,59 136,80 142,50" fill="url(#houseRoof)" stroke="#3f6ba3" stroke-width="0.6"/>
+
+          <!-- Solar PV Panels on Roof -->
+          <polygon points="84,54 118,67 114,75 80,62" fill="#07172e" stroke="#12b5ff" stroke-width="0.9"/>
+          <line x1="95" y1="58" x2="92" y2="66" stroke="#12b5ff" stroke-width="0.6"/>
+          <line x1="106" y1="63" x2="103" y2="71" stroke="#12b5ff" stroke-width="0.6"/>
+          <line x1="82" y1="58" x2="116" y2="71" stroke="#12b5ff" stroke-width="0.5" opacity="0.7"/>
+
+          <!-- Warm Glowing Windows -->
+          <g filter="url(#houseWarmGlow)">
+            <polygon points="92,86 108,92 108,105 92,100" fill="url(#houseWindowWarm)"/>
+            <line x1="100" y1="89" x2="100" y2="103" stroke="#8a4b00" stroke-width="0.8"/>
+            <line x1="92" y1="94" x2="108" y2="99" stroke="#8a4b00" stroke-width="0.8"/>
+
+            <polygon points="52,90 68,82 68,102 52,107" fill="url(#houseWindowWarm)"/>
+            <line x1="60" y1="86" x2="60" y2="104" stroke="#8a4b00" stroke-width="0.8"/>
+          </g>
+
+          <!-- Entrance Door with Canopy & Light -->
+          <polygon points="115,98 126,102 126,120 115,119" fill="#0d1b30" stroke="#19b3ff" stroke-width="0.8"/>
+          <circle cx="123" cy="111" r="0.9" fill="#ffb834"/>
+          <polygon points="113,97 128,101 127,99 112,95" fill="#355882"/>
+          <circle cx="120" cy="99" r="1.2" fill="#ffe58f" filter="drop-shadow(0 0 2px #ffc107)"/>
+
+          <!-- Smart Meter on House Wall -->
+          <rect x="44" y="96" width="5" height="9" rx="1" fill="#1b365d" stroke="#35ed91" stroke-width="0.7"/>
+          <circle cx="46.5" cy="99" r="1" fill="#35ed91" filter="url(#greenGlow)"/>
+
+          <!-- Wooden Utility Pole (Опора ЛЕП) -->
+          <g>
+            <polygon points="14,48 18,48 19,132 13,132" fill="url(#poleWood)"/>
+            <rect x="9" y="56" width="16" height="3" rx="0.5" fill="#301f12" stroke="#523924" stroke-width="0.5"/>
+            <line x1="13" y1="62" x2="17" y2="59" stroke="#1c120a" stroke-width="1"/>
+            <rect x="10" y="52" width="2" height="4" rx="0.5" fill="#8bc9eb"/>
+            <rect x="22" y="52" width="2" height="4" rx="0.5" fill="#8bc9eb"/>
+          </g>
+
+          <!-- Power Line Cable from Pole to House Meter -->
+          <path d="M 23 54 Q 32 76 45 97" fill="none" stroke="#1c3a5e" stroke-width="1.2" stroke-linecap="round"/>
+          <path class="house-wire-pulse" d="M 23 54 Q 32 76 45 97" fill="none" stroke="#35ed91" stroke-width="1.1" stroke-linecap="round"/>
+
+          <!-- Bushes and Greenery -->
+          <g fill="#104332">
+            <ellipse cx="40" cy="125" rx="7" ry="5"/>
+            <ellipse cx="74" cy="120" rx="8" ry="6"/>
+            <ellipse cx="138" cy="122" rx="9" ry="6"/>
+          </g>
+          <g fill="#1b6348">
+            <ellipse cx="38" cy="124" rx="5" ry="3.5"/>
+            <ellipse cx="73" cy="119" rx="6" ry="4.5"/>
+            <ellipse cx="136" cy="121" rx="6" ry="4"/>
+          </g>
         </svg>
       `;
     }
@@ -4630,7 +4702,7 @@
         .metric{background:linear-gradient(145deg,#1c3452,#091628);border-color:#70aee247;box-shadow:inset 0 1px 0 #ffffff20,0 14px 28px #0006,inset 0 -8px 17px #0005}.metric:before{content:"";position:absolute;right:-62px;top:-76px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,#00aeff40,transparent 70%);pointer-events:none}.metric-icon{filter:drop-shadow(0 5px 9px #00a6ff65)}.metric-value{text-shadow:0 3px 14px #0007}.info{background:linear-gradient(145deg,#1a314d,#081425);border-color:#69a4d944;box-shadow:inset 0 1px 0 #ffffff1d,0 12px 27px #0006,inset 0 -7px 16px #0005}.info .symbol{filter:drop-shadow(0 5px 8px #0006) drop-shadow(0 0 10px currentColor)}
         .chart-card{background:linear-gradient(145deg,#142b45f7,#071221fa);box-shadow:0 18px 36px #0007,inset 0 1px 0 #ffffff20,inset 0 -9px 20px #0005}.chart-line{filter:drop-shadow(0 0 3px #05baff)}.chart-tag{filter:drop-shadow(0 5px 8px #0008)}
         .banner{position:relative;overflow:hidden;background:linear-gradient(105deg,#07362bf7,#082830f7 55%,#082038f7);border-color:#43f5a0b3;box-shadow:0 0 0 1px #43f5a01a,0 0 30px #29dc8621,inset 0 1px 0 #ffffff2e,inset 0 -8px 20px #0005}.banner strong{text-shadow:0 2px 12px #24ff9d45}.banner .banner-check{box-shadow:0 0 0 6px #3fffa414,0 0 24px #3fffa078,inset 0 2px 4px #ffffff5c}.banner.inverter{background:linear-gradient(105deg,#403014f7,#222a32f7 58%,#10233af7)}.banner.pzem-offline{background:linear-gradient(105deg,#403014f7,#222a32f7 58%,#10233af7)}.banner.alarm,.banner.offline{background:linear-gradient(105deg,#401b27f7,#202336f7 62%,#171c2af7)}
-        .house-art{width:min(30%,210px);max-width:210px;filter:drop-shadow(0 8px 15px #000a) drop-shadow(0 0 15px #0082ff54);opacity:.98}.house-art svg{display:block;width:100%;height:auto}
+        .house-art{width:min(30%,210px);max-width:210px;filter:drop-shadow(0 8px 15px #000a) drop-shadow(0 0 15px #0082ff54);opacity:.98}.house-art svg{display:block;width:100%;height:auto}.house-wire-pulse{stroke-dasharray:4 6;animation:houseWireFlow 1.6s linear infinite}@keyframes houseWireFlow{from{stroke-dashoffset:20}to{stroke-dashoffset:0}}
         .energy-hero{display:grid;grid-template-columns:1.08fr .92fr;gap:15px;margin:0 0 15px}.energy-visual{position:relative;isolation:isolate;min-height:170px;overflow:hidden;padding:20px;border-radius:19px;border:1px solid #70aee24f;box-shadow:inset 0 1px 0 #ffffff2c,0 16px 32px #0006,inset 0 -10px 20px #0004;display:flex;flex-direction:column;justify-content:center;align-items:flex-start}.energy-visual:before{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(circle at 82% 24%,#ffbd4a42,transparent 34%),linear-gradient(125deg,#193e68,#10213d 58%,#201d45)}.energy-load:before{background:radial-gradient(circle at 82% 24%,#19cdff40,transparent 35%),linear-gradient(125deg,#123f61,#10213d 60%,#122d50)}.energy-visual .eyebrow{color:#b4cbe6;font-size:12px;letter-spacing:.1em;text-transform:uppercase}.energy-visual .hero-number{position:relative;z-index:1;max-width:75%;margin:7px 0 3px;font-size:clamp(25px,4cqw,43px);line-height:1.12;font-weight:850;letter-spacing:-1px;text-shadow:0 4px 18px #0008;overflow-wrap:anywhere}.energy-visual small{position:relative;z-index:1;max-width:76%;color:#c1d4ea;font-size:13px}.energy-object{position:absolute;right:16px;bottom:10px;width:95px;height:95px;max-width:32%;max-height:80%;pointer-events:none;filter:drop-shadow(0 8px 14px #0008);opacity:.92;transition:transform .2s ease}.coin-object{transform:rotate(-3deg)}.plug-object{transform:rotate(4deg)}
         .energy-visual-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;margin-top:14px}.visual-card{padding:18px;border-radius:18px;background:linear-gradient(145deg,#1b334ff5,#0a1728fa);border:1px solid #69a4d944;box-shadow:inset 0 1px 0 #ffffff1e,0 11px 24px #0005}.visual-card h3{margin:0 0 15px;font-size:17px}.bar-list{display:grid;gap:14px}.bar-row{display:grid;grid-template-columns:64px minmax(36px,1fr) minmax(80px,auto);gap:11px;align-items:center;color:var(--muted);font-size:13px}.bar-row b{color:var(--text);font-size:14px;text-align:right}.bar-track{height:9px;border-radius:9px;overflow:hidden;background:#263c56;box-shadow:inset 0 2px 3px #0008}.bar-track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#078bff,#16d6e8);box-shadow:0 0 12px #0aaaff62;transition:width .55s ease}.bar-track i.night-rate{background:linear-gradient(90deg,#8057d8,#c07aff);box-shadow:0 0 12px #a875ff62}.rate-pulse{display:inline-flex;align-items:center;gap:7px;margin-top:13px;padding:6px 10px;border-radius:18px;background:#0b3440;border:1px solid #28bdc457;color:#69e6d4;font-size:12px;max-width:100%;flex-wrap:wrap}.rate-pulse .icon{width:17px;height:17px}.current-tariff{display:flex;flex-direction:column;justify-content:center;align-items:flex-start}.current-tariff .big-number{font-size:clamp(27px,3.5cqw,40px);overflow-wrap:anywhere}
         .settings-hero{display:flex;align-items:center;gap:15px;padding:14px 18px;margin:0 0 15px;border-radius:18px;background:linear-gradient(110deg,#163c5ff2,#17224bf2);border:1px solid #70aee24a;box-shadow:inset 0 1px 0 #ffffff27,0 14px 28px #0005}.chip-art{width:68px;height:68px;flex:none;filter:drop-shadow(0 6px 12px #0008) drop-shadow(0 0 10px #078fff35)}.device-copy{min-width:0}.device-copy strong{display:block;font-size:17px}.device-copy span{display:block;margin-top:4px;color:#a9bfdc;font-size:12px}.device-status{margin-left:auto;display:flex;align-items:center;gap:8px;white-space:nowrap;color:var(--muted);font-size:13px}.device-status i{width:10px;height:10px;border-radius:50%;background:#8597aa;box-shadow:0 0 8px #8597aa66}.device-status.online{color:var(--green)}.device-status.online i{background:var(--green);box-shadow:0 0 12px #35ed91a8}.device-status.offline{color:var(--red)}.device-status.offline i{background:var(--red);box-shadow:0 0 12px #ff526d88}.detail:hover,.visual-card:hover,.control:hover{border-color:#59bbef70;box-shadow:0 16px 32px #0007,0 0 24px #0099ff13}.tariff-state{position:relative}.tariff-led{position:absolute;right:14px;bottom:14px;width:8px;height:8px;border-radius:50%;background:#7e8ea2}.tariff-led.active{background:var(--green);box-shadow:0 0 12px #35ed91b0}
@@ -5076,7 +5148,7 @@
         .stats-note{margin:10px 4px 0;padding:6px 12px;border-radius:99px;border:1px solid #2f9bff40;background:#0a2038;color:#9fd2ff;font-size:12.5px;text-align:center}
         .period-button.since{white-space:nowrap}
         .shell.eco *,.shell.eco *::before,.shell.eco *::after{animation:none!important;filter:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
-        .shell.eco .gauge-fill-glow,.shell.eco .tower-halo,.shell.eco .tower-haze,.shell.eco .chart-glow{display:none}
+        .shell.eco .gauge-fill-glow,.shell.eco .tower-halo,.shell.eco .tower-haze,.shell.eco .chart-glow{display:none}.shell.eco .house-wire-pulse{animation:none!important}
         @media(prefers-reduced-motion:reduce){.card{backdrop-filter:none;-webkit-backdrop-filter:none}.tower-beacon{animation:none}}
 
         .action-grid .action-button.danger{border-color:#ff526d80;background:linear-gradient(145deg,#2c1520,#0d1b2e)}
