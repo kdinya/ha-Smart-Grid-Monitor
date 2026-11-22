@@ -991,7 +991,12 @@
       this._dialogResolver = null;
       this._renderPending = false;
       this._scrollListenersAttached = false;
-      this._scrollVisibilityHandler = () => this._updateScrollTopVisibility();
+      this._chartDateDocumentListenersAttached = false;
+      this._chartDateDocumentPointerDownHandler = (event) => this._handleChartDateDocumentPointerDown(event);
+      this._scrollVisibilityHandler = () => {
+        this._updateScrollTopVisibility();
+        this._handleChartDateDocumentScroll();
+      };
       this._chartW = 0;
       this._chartPts = [];
       this._scrubTime = null;
@@ -1067,6 +1072,10 @@
         });
         this._intersectionObserver.observe(this);
       }
+      if (typeof document !== 'undefined' && !this._chartDateDocumentListenersAttached) {
+        document.addEventListener('pointerdown', this._chartDateDocumentPointerDownHandler, true);
+        this._chartDateDocumentListenersAttached = true;
+      }
       if (typeof document !== 'undefined' && !this._visibilityHandler) {
         this._visibilityHandler = () => { if (this._isActive()) this._resumeUpdates(); };
         document.addEventListener('visibilitychange', this._visibilityHandler);
@@ -1087,6 +1096,11 @@
       this._intersectionObserver = null;
       if (this._visibilityHandler && typeof document !== 'undefined') document.removeEventListener('visibilitychange', this._visibilityHandler);
       this._visibilityHandler = null;
+      if (this._chartDateDocumentListenersAttached && typeof document !== 'undefined') {
+        document.removeEventListener('pointerdown', this._chartDateDocumentPointerDownHandler, true);
+        this._chartDateDocumentListenersAttached = false;
+      }
+      this._closeChartDateRangePopover();
       if (this._scrollListenersAttached && typeof document !== 'undefined' && typeof window !== 'undefined') {
         document.removeEventListener('scroll', this._scrollVisibilityHandler, true);
         window.removeEventListener('scroll', this._scrollVisibilityHandler);
@@ -1762,7 +1776,7 @@
       const labels = ['hour', 'day', 'week', 'month'];
       const buttons = labels.map((period) => `<button class="period-button ${this._historyRange === period ? 'active' : ''}" data-period="${period}" aria-pressed="${this._historyRange === period}">${this._escape(this._t(period))}</button>`).join('');
       const metricButtons = ['power', 'voltage'].map((metric) => `<button class="period-button ${this._chartMetric === metric ? 'active' : ''}" data-metric="${metric}" aria-pressed="${this._chartMetric === metric}">${this._escape(this._t(metric))}</button>`).join('');
-      return `<section class="card chart-card detailed-chart"><div class="chart-head"><h2><span class="chart-icon">${this._svg('chart')}</span>${this._escape(this._t('chart_title'))}</h2><div class="periods" role="group" aria-label="${this._escape(this._t('chart_title'))}">${metricButtons}</div><div class="periods" role="group" aria-label="${this._escape(this._t('hour'))}">${buttons}${this._chartDateRangeHtml()}</div></div><div class="chart-stats" data-role="chart-stats">${this._chartStatsHtml()}</div><div class="chart-plot" data-role="chart-plot">${this._chartSvg()}</div>${this._chartScrubberHtml()}${this._chartReadingsHtml()}</section>`;
+      return `<section class="card chart-card detailed-chart"><div class="chart-head"><h2><span class="chart-icon">${this._svg('chart')}</span>${this._escape(this._t('chart_title'))}</h2><div class="periods chart-metric-periods" role="group" aria-label="${this._escape(this._t('chart_title'))}">${metricButtons}</div><div class="periods chart-range-periods" role="group" aria-label="${this._escape(this._t('hour'))}">${buttons}${this._chartDateRangeHtml()}</div></div><div class="chart-stats" data-role="chart-stats">${this._chartStatsHtml()}</div><div class="chart-plot" data-role="chart-plot">${this._chartSvg()}</div>${this._chartScrubberHtml()}${this._chartReadingsHtml()}</section>`;
     }
 
     _readStatsStart() {
@@ -2300,6 +2314,20 @@
       const fieldButton = panel?.querySelector(`[data-chart-calendar-open][data-chart-field="${state.field}"]`);
       if (fieldButton) fieldButton.setAttribute('aria-expanded', 'false');
       this._chartCalendarState = null;
+    }
+
+    _handleChartDateDocumentPointerDown(event) {
+      if (!this._chartCalendarState) return;
+      const path = typeof event?.composedPath === 'function' ? event.composedPath() : [event?.target];
+      const calendarControl = path.some((node) => node?.matches?.('[data-chart-calendar-day], [data-chart-calendar-nav], [data-chart-calendar-open]'));
+      if (calendarControl) return;
+      const insideRange = path.some((node) => node?.matches?.('.chart-date-range'));
+      if (insideRange) this._closeChartCalendar();
+      else this._closeChartDateRangePopover();
+    }
+
+    _handleChartDateDocumentScroll() {
+      if (this._chartCalendarState) this._closeChartDateRangePopover();
     }
 
     _handleChartDatePointerDown(event) {
@@ -3872,7 +3900,7 @@
       const metrics = [['energy_total', 'energy_metric_energy'], ['cost_total', 'energy_metric_cost']]
         .map(([key, label]) => `<button type="button" class="period-button ${metric === key ? 'active' : ''}" data-energy-metric="${key}" aria-pressed="${metric === key}">${this._escape(this._t(label))}</button>`).join('');
       const periods = ['hour', 'day', 'week', 'month'].map((period) => `<button type="button" class="period-button ${this._energyHistoryRange === period ? 'active' : ''}" data-energy-period="${period}" aria-pressed="${this._energyHistoryRange === period}">${this._escape(this._t(period))}</button>`).join('');
-      return `<div class="periods" role="group" aria-label="${this._escape(this._t('energy_metric_group'))}">${metrics}</div><div class="periods" role="group" aria-label="${this._escape(this._t('chart_period'))}">${periods}${this._chartDateRangeHtml('energy')}</div>`;
+      return `<div class="periods chart-metric-periods" role="group" aria-label="${this._escape(this._t('energy_metric_group'))}">${metrics}</div><div class="periods chart-range-periods" role="group" aria-label="${this._escape(this._t('chart_period'))}">${periods}${this._chartDateRangeHtml('energy')}</div>`;
     }
 
     _energyChart(metricKey = this._energyChartMetric || 'energy_total') {
@@ -5192,6 +5220,15 @@
         .actions-chevron{width:10px;height:10px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);transition:transform .2s;margin-top:-4px}
         .actions-toggle[aria-expanded="true"] .actions-chevron{transform:rotate(-135deg);margin-top:4px}
         .actions-body{margin-top:12px}.actions-body[hidden]{display:none}
+        @container (max-width:760px){
+          .periods.chart-range-periods{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:stretch;width:100%;min-width:0;margin:0;padding:4px;gap:4px}
+          .periods.chart-range-periods>.period-button{width:100%;min-width:0;padding:8px 2px;font-size:clamp(10px,3.1cqw,12px);line-height:1.2;white-space:nowrap}
+          .periods.chart-range-periods>.chart-date-range{grid-column:1/-1;width:100%;min-width:0}
+          .periods.chart-range-periods>.chart-date-range>[data-chart-date-toggle]{width:100%;min-width:0;white-space:normal;line-height:1.2}
+          .periods.chart-metric-periods{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;min-width:0;margin:0;gap:4px}
+          .periods.chart-metric-periods>.period-button{width:100%;min-width:0;padding:8px 4px;white-space:normal;line-height:1.2}
+          .shell:not(.home-active)>.header>.tabs-top .tab[data-tab="home"] .tab-icon{display:none}
+        }
       `;
     }
   }

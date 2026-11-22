@@ -362,6 +362,16 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertNotIn('data-value-key=\"voltage_min\"', card)
         self.assertIn("range_title: 'Діапазон напруги на графіку'", card)
 
+    def test_mobile_period_controls_and_secondary_tabs_have_compact_layout(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        self.assertGreaterEqual(card.count('class="periods chart-range-periods"'), 2)
+        self.assertGreaterEqual(card.count('class="periods chart-metric-periods"'), 2)
+        self.assertIn(".periods.chart-range-periods{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))", card)
+        self.assertIn(".periods.chart-range-periods>.chart-date-range{grid-column:1/-1", card)
+        self.assertIn('.shell:not(.home-active)>.header>.tabs-top .tab[data-tab="home"] .tab-icon{display:none}', card)
+        self.assertIn("document.addEventListener('pointerdown', this._chartDateDocumentPointerDownHandler, true)", card)
+        self.assertIn("document.removeEventListener('pointerdown', this._chartDateDocumentPointerDownHandler, true)", card)
+
     def test_chart_is_measured_and_rescaled_to_the_card_width(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
         self.assertIn("new ResizeObserver(() => this._queueChartMeasure())", card)
