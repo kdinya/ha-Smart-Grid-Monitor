@@ -1016,6 +1016,10 @@
         const slider = event.target?.closest?.('[data-role="chart-scrubber"]');
         if (slider) this._chartScrubberInput(slider.value);
       });
+      this.shadowRoot.addEventListener('focusout', (event) => {
+        const input = event.target?.closest?.('[data-chart-date-start], [data-chart-date-end], [data-energy-chart-date-start], [data-energy-chart-date-end]');
+        if (input) this._clampChartDateInput(input);
+      });
       this.shadowRoot.addEventListener('change', (event) => {
         const slider = event.target?.closest?.('[data-role="chart-scrubber"]');
         if (slider && this._scrubTime !== null) this._queueChartReadings(this._scrubTime, true);
@@ -2230,15 +2234,25 @@
       return new Date(timestamp - when.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
     }
 
+    // The statistics start from the settings is the earliest moment either period picker accepts.
+    _chartDateRangeMin() {
+      return Number.isFinite(this._statsStart) ? this._formatDateTimeInput(this._statsStart) : '';
+    }
+
+    _clampChartDateInput(input) {
+      const min = this._chartDateRangeMin();
+      if (input?.value && min && input.value < min) input.value = min;
+    }
+
     _chartDateRangeHtml(scope = 'params') {
       const isEnergy = scope === 'energy';
       const bounds = isEnergy ? this._energyHistoryBounds() : this._historyBounds();
       const startKey = isEnergy ? 'data-energy-chart-date-start' : 'data-chart-date-start';
       const endKey = isEnergy ? 'data-energy-chart-date-end' : 'data-chart-date-end';
-      const minAttr = !isEnergy && Number.isFinite(this._statsStart) ? ` min="${this._formatDateTimeInput(this._statsStart)}"` : '';
+      const minAttr = this._chartDateRangeMin() ? ` min="${this._chartDateRangeMin()}"` : '';
       const isCustom = isEnergy ? this._energyHistoryRange === 'custom' : this._historyRange === 'custom';
       const popoverId = `${this._instanceId}-${scope}-chart-date-range`;
-      return `<div class="chart-date-range ${isCustom ? 'active' : ''}"><button type="button" class="period-button ${isCustom ? 'active' : ''}" data-chart-date-toggle data-chart-scope="${scope}" aria-controls="${popoverId}" aria-haspopup="dialog" aria-expanded="false">${this._escape(this._t('chart_date_range'))}</button><div class="chart-date-range-panel" id="${popoverId}" data-range-scope="${scope}" popover="auto" hidden role="dialog" aria-label="${this._escape(this._t('chart_date_range'))}"><label>${this._escape(this._t('chart_from'))}<input type="datetime-local" ${startKey}${minAttr} value="${this._formatDateTimeInput(bounds.start)}"></label><label>${this._escape(this._t('chart_to'))}<input type="datetime-local" ${endKey}${minAttr} value="${this._formatDateTimeInput(bounds.end)}"></label><button type="button" class="chart-date-apply" data-chart-date-apply data-chart-scope="${scope}">${this._escape(this._t('chart_apply'))}</button><small data-role="chart-date-error" aria-live="polite"></small></div></div>`;
+      return `<div class="chart-date-range ${isCustom ? 'active' : ''}"><button type="button" class="period-button ${isCustom ? 'active' : ''}" data-chart-date-toggle data-chart-scope="${scope}" aria-controls="${popoverId}" aria-haspopup="dialog" aria-expanded="false" aria-pressed="${isCustom}">${this._escape(this._t('chart_date_range'))}</button><div class="chart-date-range-panel" id="${popoverId}" data-range-scope="${scope}" popover="auto" hidden role="dialog" aria-label="${this._escape(this._t('chart_date_range'))}"><label>${this._escape(this._t('chart_from'))}<input type="datetime-local" ${startKey}${minAttr} value="${this._formatDateTimeInput(bounds.start)}"></label><label>${this._escape(this._t('chart_to'))}<input type="datetime-local" ${endKey}${minAttr} value="${this._formatDateTimeInput(bounds.end)}"></label><button type="button" class="chart-date-apply" data-chart-date-apply data-chart-scope="${scope}">${this._escape(this._t('chart_apply'))}</button><small data-role="chart-date-error" aria-live="polite"></small></div></div>`;
     }
 
     _closeChartDateRangePopover(panel = null) {
@@ -2292,7 +2306,7 @@
       const bounds = isEnergy ? this._energyHistoryBounds() : this._historyBounds();
       const start = this.shadowRoot.querySelector(isEnergy ? '[data-energy-chart-date-start]' : '[data-chart-date-start]');
       const end = this.shadowRoot.querySelector(isEnergy ? '[data-energy-chart-date-end]' : '[data-chart-date-end]');
-      const minVal = !isEnergy && Number.isFinite(this._statsStart) ? this._formatDateTimeInput(this._statsStart) : '';
+      const minVal = this._chartDateRangeMin();
       if (start) {
         start.value = this._formatDateTimeInput(bounds.start);
         if (minVal) start.setAttribute('min', minVal); else start.removeAttribute('min');
@@ -2304,22 +2318,45 @@
       const scopePanel = this.shadowRoot.querySelector(`.chart-date-range-panel[data-range-scope="${scope}"]`);
       const error = scopePanel?.querySelector('[data-role="chart-date-error"]');
       if (error) error.textContent = '';
+      this._syncChartPeriodHighlight(scope);
+    }
+
+    // Highlights exactly one control above the chart: the period picker button for a custom period, otherwise the matching preset.
+    _syncChartPeriodHighlight(scope = 'params') {
+      const isEnergy = scope === 'energy';
+      const current = isEnergy ? this._energyHistoryRange : this._historyRange;
+      const isCustom = current === 'custom';
+      const toggle = this.shadowRoot.querySelector(`[data-chart-date-toggle][data-chart-scope="${scope}"]`);
+      if (toggle) {
+        toggle.classList.toggle('active', isCustom);
+        toggle.setAttribute('aria-pressed', String(isCustom));
+        toggle.parentElement?.classList.toggle('active', isCustom);
+      }
+      const presetAttr = isEnergy ? 'data-energy-period' : 'data-period';
+      this.shadowRoot.querySelectorAll(`[${presetAttr}]`).forEach((button) => {
+        const active = button.getAttribute(presetAttr) === current;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+      });
     }
 
     _applyChartDateRange(scope = 'params') {
       const isEnergy = scope === 'energy';
-      const startValue = this.shadowRoot.querySelector(isEnergy ? '[data-energy-chart-date-start]' : '[data-chart-date-start]')?.value;
-      const endValue = this.shadowRoot.querySelector(isEnergy ? '[data-energy-chart-date-end]' : '[data-chart-date-end]')?.value;
-      const start = startValue ? new Date(startValue).getTime() : NaN;
-      const end = endValue ? new Date(endValue).getTime() : NaN;
+      const startInput = this.shadowRoot.querySelector(isEnergy ? '[data-energy-chart-date-start]' : '[data-chart-date-start]');
+      const endInput = this.shadowRoot.querySelector(isEnergy ? '[data-energy-chart-date-end]' : '[data-chart-date-end]');
+      this._clampChartDateInput(startInput);
+      this._clampChartDateInput(endInput);
+      let start = startInput?.value ? new Date(startInput.value).getTime() : NaN;
+      let end = endInput?.value ? new Date(endInput.value).getTime() : NaN;
+      // A moment earlier than the statistics start is never accepted; it is moved to the start instead of warning.
+      if (Number.isFinite(this._statsStart)) {
+        start = Math.max(start, this._statsStart);
+        end = Math.max(end, this._statsStart);
+      }
       const scopePanel = this.shadowRoot.querySelector(`.chart-date-range-panel[data-range-scope="${scope}"]`);
       const error = scopePanel?.querySelector('[data-role="chart-date-error"]');
       if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || end > Date.now()) {
         if (error) error.textContent = this._t('chart_date_error');
-        return;
-      }
-      if (!isEnergy && Number.isFinite(this._statsStart) && start < this._statsStart) {
-        if (error) error.textContent = this._t('chart_date_error_earlier') || this._t('chart_date_error');
         return;
       }
       if (error) error.textContent = '';
