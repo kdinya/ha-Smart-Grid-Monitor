@@ -319,7 +319,7 @@ assert.equal(marker.text, '230 V');
         )
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
-    def test_pinch_zoom_preserves_center_and_limits_range_without_drag_panning(self):
+    def test_pinch_zoom_and_axis_drag_keep_their_separate_behaviors(self):
         script = r"""
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -346,6 +346,11 @@ const pinch = {
 const pinched = card._chartPanTarget(pinch);
 assert.equal(pinched.end - pinched.start, span / 2, 'pinch distance controls zoom');
 assert.equal((pinched.start + pinched.end) / 2, center, 'moving the two-finger center does not pan the graph');
+const axisPan = card._chartPanTarget({ pointerType: 'axis', startDistance: 1, currentDistance: 1, rangeMs: span, deltaX: 30, plotWidth: 300, tStart: live.start, tEnd: live.end });
+assert.equal(axisPan.end - axisPan.start, span, 'dragging the time axis preserves the zoom level');
+assert.equal((axisPan.start + axisPan.end) / 2, center - span / 10, 'dragging right moves toward older history');
+const oneSecond = card._chartPanTarget({ pointerType: 'axis', rangeMs: 1000, deltaX: -30, plotWidth: 300, tStart: now - 10000, tEnd: now - 9000 });
+assert.equal(oneSecond.end - oneSecond.start, 1000, 'time-axis pan preserves one-second zoom');
 let zoomed;
 card._chartTimeBounds = () => ({ tStart: now - 3600000, tEnd: now, rangeMs: 3600000 });
 card._setCustomChartRange = (start, end) => { zoomed = { start, end }; };
@@ -1110,11 +1115,13 @@ const svg = card._energyBarSvg('energy_total', [
   { time: new Date(start + 2 * 3600e3), value: 2.5 },
   { time: new Date(start + 3 * 3600e3), value: 4 },
 ], false);
-assert.match(svg, /class="energy-bars" data-energy-bar-count="3"/);
+assert.match(svg, /class="energy-bars" data-chart-scope="energy"[^>]*data-energy-bar-count="3"/);
 assert.equal((svg.match(/data-energy-bar="/g) || []).length, 3);
 assert.match(svg, /role="button" tabindex="0" aria-pressed="false"/);
 assert.match(svg, /<title>/, 'each bar includes an accessible tooltip');
 assert.doesNotMatch(svg, /class="chart-line"|class="chart-glow"/);
+assert.match(svg, /data-chart-pan-axis="true"/, 'energy graph exposes its time-axis pan zone');
+assert.doesNotMatch(svg, /data-chart-zoom-handle/, 'range zoom handles are reserved for Parameters');
 """
         result = subprocess.run(
             ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
@@ -1206,7 +1213,7 @@ assert.equal(focused, true, 'keyboard activation keeps focus on the re-rendered 
         )
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
-    def test_single_touch_scrubs_chart_and_updates_slider_synchronously(self):
+    def test_single_touch_scrubs_chart_and_axis_drag_starts_history_pan(self):
         script = r"""
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -1249,8 +1256,10 @@ plot = {
   captured: [],
   setPointerCapture: (id) => plot.captured.push(id),
   releasePointerCapture: (id) => { plot.captured = plot.captured.filter(x => x !== id); },
-  closest: () => plot,
-  querySelector: (sel) => (sel === 'svg.chart' ? chartSvg : null),
+  closest: (selector) => selector === '[data-chart-zoom-handle]' ? null : selector === '[data-role="chart-plot"], [data-energy-plot]' ? plot : selector === '[data-chart-pan-axis]' && plot.axisHit ? plot : null,
+  hasAttribute: (name) => name === 'data-energy-plot' && !!plot.energy,
+  dataset: {},
+  querySelector: (sel) => (sel === 'svg.chart, svg.energy-bars' || sel === 'svg.chart' ? chartSvg : null),
   classList: { add: () => {}, remove: () => {} },
 };
 card.shadowRoot = {
@@ -1310,15 +1319,28 @@ card._chartPointerDown({ pointerId: 11, pointerType: 'touch', clientX: 700, clie
 assert.equal(card._chartTouchScrubbing, null, 'second touch cancels single touch scrub');
 assert.ok(card._chartPan !== null, 'second touch starts the pinch gesture');
 assert.equal(bufferRequests, 0, 'merely placing two fingers does not request older history');
-const unchanged = card._chartPanTarget({ ...card._chartPan, rangeMs: 60000, tStart: 1000, tEnd: 61000, deltaX: 90, startDistance: 100, currentDistance: 100 });
+const pinchNow = Date.now();
+const unchanged = card._chartPanTarget({ ...card._chartPan, rangeMs: 60000, tStart: pinchNow - 60000, tEnd: pinchNow, deltaX: 90, startDistance: 100, currentDistance: 100 });
 assert.equal(unchanged.end - unchanged.start, 60000, 'two-finger translation without a pinch does not change the range');
-assert.equal((unchanged.start + unchanged.end) / 2, 31000, 'two-finger translation does not pan');
+assert.ok(Math.abs((unchanged.start + unchanged.end) / 2 - (Date.now() - 30000)) < 1000, 'two-finger translation does not pan');
 card._chartPan = null;
 card._chartPointers = new Map();
 card._chartScrubAtClientX = (x) => { card._mouseScrubX = x; };
 card._chartPointerDown({ pointerId: 20, pointerType: 'mouse', button: 0, clientX: 400, target: plot, preventDefault() {} });
-assert.equal(card._chartPan, null, 'mouse dragging does not start chart panning');
+assert.equal(card._chartPan, null, 'mouse click in the plot does not start chart panning');
 assert.equal(card._mouseScrubX, 400, 'mouse click continues to select a chart point');
+plot.axisHit = true;
+card._chartPointers = new Map();
+card._chartPointerPlots = new Map();
+card._chartPointerDown({ pointerId: 21, pointerType: 'touch', clientX: 500, clientY: 210, target: plot, preventDefault() {} });
+assert.equal(card._chartPan?.pointerType, 'axis', 'one-finger drag on the time-axis zone starts horizontal panning');
+assert.equal(card._chartPan?.scope, 'params', 'the time-axis gesture is bound to the parameters chart');
+card._chartPan = null;
+card._chartPointers = new Map();
+plot.energy = true;
+card._chartPointerDown({ pointerId: 22, pointerType: 'mouse', button: 0, clientX: 500, clientY: 210, target: plot, preventDefault() {} });
+assert.equal(card._chartPan?.pointerType, 'axis', 'mouse drag on the energy time axis starts horizontal panning');
+assert.equal(card._chartPan?.scope, 'energy', 'energy gestures use the energy history window');
 """
         result = subprocess.run(
             ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
@@ -1329,7 +1351,7 @@ assert.equal(card._mouseScrubX, 400, 'mouse click continues to select a chart po
         )
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
-    def test_selected_zoom_range_applies_to_the_parameters_chart_at_one_second_precision(self):
+    def test_dragged_chart_handles_apply_a_one_second_parameters_range(self):
         script = r"""
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -1341,35 +1363,50 @@ const Card = registry.get('grid-monitor-card');
 const card = Object.create(Card.prototype);
 const start = 1700000000000;
 const end = start + 60000;
-card._historyBounds = () => ({ start, end });
-card._chartTimeBounds = () => ({ tStart: start, tEnd: end, rangeMs: end - start });
-card._formatChartTimestamp = (value) => String(value);
+card._chartZoomSelectionBounds = () => ({ start, end });
 card._chartZoomWindow = { start: start + 10000, end: start + 11000, dirty: true };
-const from = { value: String(start + 10000), min: '', max: '', step: '', disabled: false };
-const to = { value: String(start + 11000), min: '', max: '', step: '', disabled: false };
-const apply = { disabled: true };
-const fromLabel = { textContent: '' };
-const toLabel = { textContent: '' };
-const root = { querySelector: (selector) => ({
-  '[data-chart-zoom-start]': from,
-  '[data-chart-zoom-end]': to,
-  '[data-chart-zoom-apply]': apply,
-  '[data-chart-zoom-start-label]': fromLabel,
-  '[data-chart-zoom-end-label]': toLabel,
-}[selector] || null) };
-card.shadowRoot = { querySelector: (selector) => selector === '[data-chart-zoom-selection]' ? root : null };
 let applied;
 card._setCustomChartRange = (a, b, scope) => { applied = { start: a, end: b, scope }; };
 card._applyChartZoomSelection();
 assert.deepEqual(applied, { start: start + 10000, end: start + 11000, scope: 'params' });
-assert.equal(applied.end - applied.start, 1000, 'one second selection is accepted');
-assert.equal(fromLabel.textContent, String(start + 10000));
-assert.equal(toLabel.textContent, String(start + 11000));
+assert.equal(applied.end - applied.start, 1000, 'one-second selection is accepted');
 """
         result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False, env={**os.environ, "TZ": "UTC"})
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
-    def test_history_navigator_keeps_visible_window_width_for_parameters_and_energy(self):
+    def test_dragging_chart_handles_maps_to_one_second_time_coordinates(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = { window: { customCards: [] }, HTMLElement: class HTMLElement {}, customElements: { define: (name, value) => registry.set(name, value) } };
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+const start = 1700000000000;
+const end = start + 60000;
+const chart = {
+  dataset: { chartStart: String(start), chartEnd: String(end), chartW: '1000', chartX0: '100', chartX1: '900' },
+  getBoundingClientRect: () => ({ left: 50, width: 1000 }),
+};
+const plot = { querySelector: () => chart };
+card._chartZoomSelectionBounds = () => ({ start, end });
+card._chartZoomWindow = { start, end, dirty: false };
+card._chartZoomDrag = { plot, handle: 'start', pointerId: 1 };
+card._updateChartZoomSelection = () => {};
+card._chartZoomSelectionMove({ pointerId: 1, clientX: 550, preventDefault() {} });
+assert.equal(card._chartZoomWindow.start, start + 30000, 'dragged start handle maps to the middle of the time range');
+assert.equal(card._chartZoomWindow.end, end, 'moving the start handle leaves the end in place');
+assert.equal(card._chartZoomWindow.dirty, true);
+card._chartZoomDrag.handle = 'end';
+card._chartZoomSelectionMove({ pointerId: 1, clientX: 650, preventDefault() {} });
+assert.equal(card._chartZoomWindow.end, start + 38000, 'dragged end handle snaps to one-second precision');
+"""
+        result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False, env={**os.environ, "TZ": "UTC"})
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_axis_pan_targets_energy_and_parameter_history_without_changing_scale(self):
         script = r"""
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -1380,28 +1417,19 @@ vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
 const Card = registry.get('grid-monitor-card');
 const card = Object.create(Card.prototype);
 const now = Date.now();
-card._statsStart = now - 7 * 86400000;
-card._historyBounds = () => ({ start: now - 3600000, end: now });
-card._energyHistoryBounds = () => ({ start: now - 86400000, end: now });
-card._formatChartTimestamp = (value) => String(value);
-let applied;
-card._setCustomChartRange = (start, end, scope) => { applied = { start, end, scope }; };
-card._clearChartScrub = () => { card.scrubCleared = true; };
-const params = card._chartHistoryNavigatorBounds('params');
-assert.equal(params.rangeMs, 3600000);
-assert.ok(params.maxStart > params.minStart);
-card._applyChartHistoryNavigator('params', params.minStart + 3600000);
-assert.equal(applied.scope, 'params');
-assert.equal(applied.end - applied.start, 3600000, 'parameter history pans without changing its scale');
-assert.equal(card.scrubCleared, true);
-const energy = card._chartHistoryNavigatorBounds('energy');
-assert.equal(energy.rangeMs, 86400000);
-card._applyChartHistoryNavigator('energy', energy.minStart + 3600000);
-assert.equal(applied.scope, 'energy');
-assert.equal(applied.end - applied.start, 86400000, 'energy history pans without changing its scale');
-const html = card._chartHistoryNavigatorHtml('energy');
-assert.ok(html.includes('data-chart-history-navigator="energy"'));
-assert.ok(html.includes('chart-history-navigator-edges'));
+card._statsStart = now - 10 * 86400000;
+const paramsStart = now - 2 * 3600000;
+const paramsEnd = now - 3600000;
+const params = card._chartPanTarget({ pointerType: 'axis', rangeMs: 3600000, deltaX: 30, plotWidth: 300, tStart: paramsStart, tEnd: paramsEnd });
+assert.equal(params.end - params.start, 3600000, 'parameters pan keeps the visible duration');
+assert.equal((params.start + params.end) / 2, (paramsStart + paramsEnd) / 2 - 360000, 'rightward drag reveals older parameter history');
+const energyStart = now - 4 * 86400000;
+const energyEnd = energyStart + 86400000;
+const energy = card._chartPanTarget({ pointerType: 'axis', rangeMs: 86400000, deltaX: -15, plotWidth: 300, tStart: energyStart, tEnd: energyEnd });
+assert.equal(energy.end - energy.start, 86400000, 'energy pan keeps the visible duration');
+assert.equal((energy.start + energy.end) / 2, (energyStart + energyEnd) / 2 + 4320000, 'leftward drag reveals newer energy history');
+const oneSecond = card._chartPanTarget({ pointerType: 'axis', rangeMs: 1000, deltaX: -30, plotWidth: 300, tStart: now - 10000, tEnd: now - 9000 });
+assert.equal(oneSecond.end - oneSecond.start, 1000, 'one-second range remains one second while panning');
 """
         result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False, env={**os.environ, "TZ": "UTC"})
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
@@ -1449,9 +1477,13 @@ card._chartReadingsHtml = () => '';
 
 const html = card._chart();
 assert.ok(!html.includes('data-chart-zoom="in"'), 'chart does not render old plus/minus zoom buttons');
-assert.ok(html.includes('data-chart-zoom-start') && html.includes('data-chart-zoom-end'), 'parameters chart renders two interval handles');
-assert.ok(html.includes('step="1000"'), 'interval selection supports one-second precision');
-assert.ok(html.includes('data-chart-history-navigator="params"'), 'parameters chart renders a bottom history navigator');
+assert.ok(html.includes('data-chart-zoom-actions'), 'parameters chart renders one compact apply row');
+assert.ok(!html.includes('<input type="range" data-chart-zoom-start') && !html.includes('<input type="range" data-chart-zoom-end'), 'no separate range sliders are rendered');
+assert.ok(!html.includes('data-chart-history-navigator'), 'no separate history navigator is rendered');
+const markers = card._chartZoomSelectionSvg(1000, 61000, 100, 900, 20, 190);
+assert.equal((markers.match(/data-chart-zoom-handle=/g) || []).length, 2, 'two draggable triangular handles are drawn on the chart');
+assert.ok(markers.includes('data-chart-zoom-band'), 'selected interval is highlighted on the graph');
+assert.ok(markers.includes('role="slider"') && markers.includes('M-9 2H9L0 16Z'), 'handles are accessible and triangular');
 assert.ok(!html.includes('chart-zoom-button'), 'chart does not render chart-zoom-button class');
 assert.ok(html.includes('data-period="month"'), 'renders month period button');
 assert.ok(html.indexOf('data-period="month"') < html.indexOf('chart-date-range'), 'Select period is placed to the right of Month button');
