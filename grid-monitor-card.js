@@ -2185,14 +2185,26 @@
       return new Date(timestamp - when.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
     }
 
+    _formatDateInput(timestamp) {
+      if (!Number.isFinite(timestamp)) return '';
+      const when = new Date(timestamp);
+      return new Date(timestamp - when.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    }
+
     // The statistics start from the settings is the earliest moment either period picker accepts.
     _chartDateRangeMin() {
-      return Number.isFinite(this._statsStart) ? this._formatDateTimeInput(this._statsStart) : '';
+      return Number.isFinite(this._statsStart) ? this._formatDateInput(this._statsStart) : '';
+    }
+
+    _chartDateRangeMax() {
+      return this._formatDateInput(Date.now());
     }
 
     _clampChartDateInput(input) {
       const min = this._chartDateRangeMin();
+      const max = this._chartDateRangeMax();
       if (input?.value && min && input.value < min) input.value = min;
+      if (input?.value && max && input.value > max) input.value = max;
     }
 
     _chartDateRangeHtml(scope = 'params') {
@@ -2200,10 +2212,15 @@
       const bounds = isEnergy ? this._energyHistoryBounds() : this._historyBounds();
       const startKey = isEnergy ? 'data-energy-chart-date-start' : 'data-chart-date-start';
       const endKey = isEnergy ? 'data-energy-chart-date-end' : 'data-chart-date-end';
-      const minAttr = this._chartDateRangeMin() ? ` min="${this._chartDateRangeMin()}"` : '';
+      const minDate = this._chartDateRangeMin();
+      const maxDate = this._chartDateRangeMax();
+      const minAttr = minDate ? ` min="${minDate}"` : '';
+      const maxAttr = maxDate ? ` max="${maxDate}"` : '';
       const isCustom = isEnergy ? this._energyHistoryRange === 'custom' : this._historyRange === 'custom';
       const popoverId = `${this._instanceId}-${scope}-chart-date-range`;
-      return `<div class="chart-date-range ${isCustom ? 'active' : ''}"><button type="button" class="period-button ${isCustom ? 'active' : ''}" data-chart-date-toggle data-chart-scope="${scope}" aria-controls="${popoverId}" aria-haspopup="dialog" aria-expanded="false" aria-pressed="${isCustom}">${this._escape(this._t('chart_date_range'))}</button><div class="chart-date-range-panel" id="${popoverId}" data-range-scope="${scope}" popover="auto" hidden role="dialog" aria-label="${this._escape(this._t('chart_date_range'))}"><label>${this._escape(this._t('chart_from'))}<input type="datetime-local" ${startKey}${minAttr} value="${this._formatDateTimeInput(bounds.start)}"></label><label>${this._escape(this._t('chart_to'))}<input type="datetime-local" ${endKey}${minAttr} value="${this._formatDateTimeInput(bounds.end)}"></label><button type="button" class="chart-date-apply" data-chart-date-apply data-chart-scope="${scope}">${this._escape(this._t('chart_apply'))}</button><small data-role="chart-date-error" aria-live="polite"></small></div></div>`;
+      const startVal = this._formatDateInput(bounds.start);
+      const endVal = this._formatDateInput(bounds.end > bounds.start ? bounds.end - 1 : bounds.end);
+      return `<div class="chart-date-range ${isCustom ? 'active' : ''}"><button type="button" class="period-button ${isCustom ? 'active' : ''}" data-chart-date-toggle data-chart-scope="${scope}" aria-controls="${popoverId}" aria-haspopup="dialog" aria-expanded="false" aria-pressed="${isCustom}">${this._escape(this._t('chart_date_range'))}</button><div class="chart-date-range-panel" id="${popoverId}" data-range-scope="${scope}" popover="auto" hidden role="dialog" aria-label="${this._escape(this._t('chart_date_range'))}"><label>${this._escape(this._t('chart_from'))}<input type="date" ${startKey}${minAttr}${maxAttr} value="${startVal}"></label><label>${this._escape(this._t('chart_to'))}<input type="date" ${endKey}${minAttr}${maxAttr} value="${endVal}"></label><button type="button" class="chart-date-apply" data-chart-date-apply data-chart-scope="${scope}">${this._escape(this._t('chart_apply'))}</button><small data-role="chart-date-error" aria-live="polite"></small></div></div>`;
     }
 
     _closeChartDateRangePopover(panel = null) {
@@ -2258,13 +2275,16 @@
       const start = this.shadowRoot.querySelector(isEnergy ? '[data-energy-chart-date-start]' : '[data-chart-date-start]');
       const end = this.shadowRoot.querySelector(isEnergy ? '[data-energy-chart-date-end]' : '[data-chart-date-end]');
       const minVal = this._chartDateRangeMin();
+      const maxVal = this._chartDateRangeMax();
       if (start) {
-        start.value = this._formatDateTimeInput(bounds.start);
+        start.value = this._formatDateInput(bounds.start);
         if (minVal) start.setAttribute('min', minVal); else start.removeAttribute('min');
+        if (maxVal) start.setAttribute('max', maxVal); else start.removeAttribute('max');
       }
       if (end) {
-        end.value = this._formatDateTimeInput(bounds.end);
+        end.value = this._formatDateInput(bounds.end > bounds.start ? bounds.end - 1 : bounds.end);
         if (minVal) end.setAttribute('min', minVal); else end.removeAttribute('min');
+        if (maxVal) end.setAttribute('max', maxVal); else end.removeAttribute('max');
       }
       const scopePanel = this.shadowRoot.querySelector(`.chart-date-range-panel[data-range-scope="${scope}"]`);
       const error = scopePanel?.querySelector('[data-role="chart-date-error"]');
@@ -2297,8 +2317,13 @@
       const endInput = this.shadowRoot.querySelector(isEnergy ? '[data-energy-chart-date-end]' : '[data-chart-date-end]');
       this._clampChartDateInput(startInput);
       this._clampChartDateInput(endInput);
-      let start = startInput?.value ? new Date(startInput.value).getTime() : NaN;
-      let end = endInput?.value ? new Date(endInput.value).getTime() : NaN;
+      let start = startInput?.value ? new Date(`${startInput.value}T00:00:00`).getTime() : NaN;
+      let end = NaN;
+      if (endInput?.value) {
+        const endDay = new Date(`${endInput.value}T00:00:00`);
+        endDay.setDate(endDay.getDate() + 1);
+        end = Math.min(endDay.getTime(), Date.now());
+      }
       // A moment earlier than the statistics start is never accepted; it is moved to the start instead of warning.
       if (Number.isFinite(this._statsStart)) {
         start = Math.max(start, this._statsStart);
@@ -2306,7 +2331,7 @@
       }
       const scopePanel = this.shadowRoot.querySelector(`.chart-date-range-panel[data-range-scope="${scope}"]`);
       const error = scopePanel?.querySelector('[data-role="chart-date-error"]');
-      if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || end > Date.now()) {
+      if (!Number.isFinite(start) || !Number.isFinite(end) || (startInput?.value && endInput?.value && startInput.value > endInput.value) || end <= start) {
         if (error) error.textContent = this._t('chart_date_error');
         return;
       }
@@ -2429,7 +2454,7 @@
       if (range === 'week' || range === 'month') {
         return when.toLocaleDateString(this._locale(), { day: '2-digit', month: '2-digit', year: 'numeric' });
       }
-      if ((range === 'custom' && customRange?.end - customRange?.start >= 24 * 3600e3) || (range === 'since' && Number.isFinite(this._statsStart) && Date.now() - this._statsStart >= 24 * 3600e3)) {
+      if ((range === 'custom' && customRange?.end - customRange?.start > 24 * 3600e3) || (range === 'since' && Number.isFinite(this._statsStart) && Date.now() - this._statsStart > 24 * 3600e3)) {
         return when.toLocaleString(this._locale(), { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
       }
       return when.toLocaleTimeString(this._locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -2445,7 +2470,7 @@
       const customRange = isEnergy ? this._energyCustomRange : this._historyCustomRange;
       const bounds = isEnergy ? this._energyHistoryBounds() : this._historyBounds();
       const energyBars = isEnergy ? this._energyHistoryBars(history, bounds, range) : null;
-      const dailyEnergyBars = isEnergy && (range === 'week' || range === 'month' || range === 'custom' && bounds.end - bounds.start >= 24 * 3600e3);
+      const dailyEnergyBars = isEnergy && (range === 'week' || range === 'month' || range === 'custom' && bounds.end - bounds.start > 24 * 3600e3);
       const maxLabel = isEnergy ? this._t(dailyEnergyBars ? 'energy_max_day' : 'energy_max_hour') : this._t('stat_max');
       const data = isEnergy ? null : this._chartData(history, metricKey, { range, customRange, bounds, includeCurrent: true });
       const plottedPoints = isEnergy
@@ -2624,7 +2649,7 @@
       const k = pan.rangeMs / range;
       const tx = x0 * (1 - k) + ((pan.tStart - start) / range) * (x1 - x0);
       group.setAttribute('transform', `matrix(${k.toFixed(5)} 0 0 1 ${tx.toFixed(2)} 0)`);
-      const longRange = this._historyRange === 'week' || this._historyRange === 'month' || range >= 24 * 3600e3;
+      const longRange = this._historyRange === 'week' || this._historyRange === 'month' || range > 24 * 3600e3;
       chart.querySelectorAll('[data-time-tick]').forEach((label) => {
         const time = new Date(start + range * Number(label.dataset.timeTick) / 4);
         label.textContent = longRange
@@ -2908,7 +2933,7 @@
         const y = Y(tickValue);
         return `<path d="M${x0} ${y.toFixed(1)}H${x1}"/><text x="${x0 - 10}" y="${(y + 4).toFixed(1)}" text-anchor="end">${this._escape(tickValue.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits }))}${index === scale.count ? ` ${unit}` : ''}</text>`;
       }).join('');
-      const longRange = range === 'week' || range === 'month' || (range === 'custom' || range === 'since') && rangeMs >= 24 * 3600e3;
+      const longRange = range === 'week' || range === 'month' || (range === 'custom' || range === 'since') && rangeMs > 24 * 3600e3;
       const vertical = [0, 1, 2, 3, 4].map((index) => {
         const x = x0 + index * ((x1 - x0) / 4);
         const time = new Date(tStart + rangeMs * index / 4);
@@ -2930,7 +2955,7 @@
 
     _energyHistoryBars(history, bounds = this._energyHistoryBounds(), range = this._energyHistoryRange) {
       if (!Number.isFinite(bounds?.start) || !Number.isFinite(bounds?.end) || bounds.end <= bounds.start || !Array.isArray(history) || history.length < 2) return [];
-      const daily = range === 'week' || range === 'month' || range === 'custom' && bounds.end - bounds.start >= 24 * 3600e3;
+      const daily = range === 'week' || range === 'month' || range === 'custom' && bounds.end - bounds.start > 24 * 3600e3;
       const bins = [];
       if (range === 'hour') {
         const startDate = new Date(bounds.start);
@@ -4035,7 +4060,10 @@
         let isOpen = false;
         try { isOpen = panel?.matches(':popover-open'); } catch (_error) { isOpen = !panel?.hidden; }
         if (isOpen) this._closeChartDateRangePopover(panel);
-        else this._positionChartDateRangePopover(target, panel);
+        else {
+          this._updateChartDateRangeControls(target.dataset.chartScope || 'params');
+          this._positionChartDateRangePopover(target, panel);
+        }
         return;
       }
       if (target.dataset.actionsToggle !== undefined) { this._toggleActions(); return; }
@@ -4923,7 +4951,7 @@
         .chart-date-range-panel[hidden]{display:none!important}
         .chart-date-range-panel:popover-open{display:flex}
         .chart-date-range-panel label{display:grid;gap:4px;color:#9fb5d1;font-size:12px}
-        .chart-date-range-panel input{min-width:190px;min-height:36px;padding:6px 8px;border:1px solid #37526f;border-radius:9px;background:#091727;color:#eef6ff;font:inherit;color-scheme:dark}
+        .chart-date-range-panel input{min-width:140px;min-height:36px;padding:6px 8px;border:1px solid #37526f;border-radius:9px;background:#091727;color:#eef6ff;font:inherit;color-scheme:dark}
         .chart-date-range-panel small{flex-basis:100%;color:#ff9ba8;font-size:12px}
         .chart-date-apply{padding:0 14px}
         .chart-card>.chart-head{position:relative;z-index:20}

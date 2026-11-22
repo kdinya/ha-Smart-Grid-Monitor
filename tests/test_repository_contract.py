@@ -345,7 +345,7 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("metricKey === 'power' ? plottedPoints.filter((point) => point.v > 0) : plottedPoints", card)
         self.assertIn("this._historyBounds(range)", card)
         self.assertIn("_chartDateRangeHtml()", card)
-        self.assertIn('type="datetime-local" ${startKey}', card)
+        self.assertIn('type="date" ${startKey}', card)
         self.assertIn("isEnergy ? 'data-energy-chart-date-start' : 'data-chart-date-start'", card)
         self.assertNotIn("data-chart-zoom=\"in\"", card)
         self.assertIn("chart_date_range", card)
