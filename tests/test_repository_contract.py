@@ -160,6 +160,12 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertEqual(card.count("localStorage"), 2)  # read and remove, only for migrating the legacy browser value
         self.assertIn("_migrateStatsStart", card)
         self.assertEqual(package["input_text"]["grid_monitor_statistics_start"]["max"], 32)
+        migrate = card[card.index("_migrateStatsStart(allowLegacy) {"):card.index("_canCreateStatsStartHelper() {")]
+        # The old browser date is loaded before the helper is required, so it is not dropped while the helper is missing.
+        self.assertLess(migrate.index("this._legacyStatsStart()"), migrate.index("!helperReady"))
+        self.assertIn("_dropLegacyStatsStart()", migrate)
+        # The status line reflects the real helper state on the first render, not only after a later update.
+        self.assertIn('data-role="stats-start-sync">${this._escape(this._statsSyncText())}', card)
 
     def test_scroll_to_top_is_fixed_and_smooth_for_home_assistant_scroll_containers(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
