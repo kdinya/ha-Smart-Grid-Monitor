@@ -4990,7 +4990,7 @@
         .shell.eco *,.shell.eco *::before,.shell.eco *::after{animation:none!important;filter:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
         .shell.eco .gauge-fill-glow,.shell.eco .tower-halo,.shell.eco .tower-haze,.shell.eco .chart-glow{display:none}.shell.eco .house-smoke,.shell.eco .house-canopy{animation:none!important}
         .header>.header-house{flex:none;position:relative;z-index:3;align-self:flex-start;width:0;height:0;max-width:none;margin:0;overflow:visible}
-        .header>.header-house .house-scene{position:absolute;right:-36px;top:50px;width:264px}
+        .header>.header-house .house-scene{position:absolute;right:-56px;top:50px;width:264px}
         @container (max-width:959px){.header>.header-house{order:3;margin-left:auto}.header>.header-house .house-scene{right:-30px;top:22px;width:174px}}
 
         @media(prefers-reduced-motion:reduce){.card{backdrop-filter:none;-webkit-backdrop-filter:none}.tower-beacon{animation:none}}
