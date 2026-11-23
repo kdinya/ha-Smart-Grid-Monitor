@@ -48,6 +48,13 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("power_save_mode: light", firmware)
         self.assertIn("reboot_timeout: 5min", firmware)
 
+    def test_firmware_viewer_points_to_the_repository_firmware(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        self.assertIn("raw.githubusercontent.com/kdinya/ha-Smart-Grid-Monitor/main/esphome/grid-monitor.yaml", card)
+        self.assertTrue((ROOT / "esphome" / "grid-monitor.yaml").is_file())
+        self.assertIn("data-firmware-toggle", card)
+        self.assertIn("readonly", card)
+
     def test_hacs_manifest_is_valid_json(self):
         manifest = json.loads((ROOT / "hacs.json").read_text(encoding="utf-8"))
         self.assertTrue(manifest)
