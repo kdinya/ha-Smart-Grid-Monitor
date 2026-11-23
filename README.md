@@ -109,6 +109,10 @@ In the card's **Settings** tab, the **Statistics** section lets you pick a date 
 
 To delete the card's Recorder history or long-term sensor statistics, use the matching confirmation button in **Settings → Actions**. These buttons use the same layout and styling as the other action buttons, and target only entities referenced by this card; they do not clear the entire Recorder database.
 
+## Firmware code in the card
+
+At the bottom of the **Settings** tab, the **ESP firmware** section is collapsed by default. Opening it shows a warning, then downloads the current `esphome/grid-monitor.yaml` from the `main` branch on GitHub into a read-only field with **Select all**, **Copy** and **Refresh from GitHub** buttons, so you can paste it into ESPHome without opening GitHub. It needs internet access from the device that shows the card. The code may differ from the firmware currently running on your ESP.
+
 ## Electrical safety
 
 The PZEM module is connected to mains-voltage wiring. Use an enclosed, strain-relieved installation, keep the low-voltage and mains sections isolated, and work only with the breaker disconnected. Have a qualified electrician verify the CT and mains wiring if anything is uncertain.

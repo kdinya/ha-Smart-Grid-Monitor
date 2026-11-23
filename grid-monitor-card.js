@@ -152,7 +152,7 @@
       stats_create_helper: 'Створити helper', stats_create_helper_confirm: 'Створити input_text.grid_monitor_statistics_start у Home Assistant? Потрібні права адміністратора. Після створення виберіть дату початку й натисніть «Застосувати».', stats_helper_created: 'Helper створено. Тепер виберіть дату початку статистики й натисніть «Застосувати», щоб зберегти її в Home Assistant.', stats_helper_error: 'Не вдалося створити helper. Переконайтеся, що ви ввійшли як адміністратор. Або створіть Text helper вручну в Settings → Devices & services → Helpers.',
       stats_active: 'Графіки та мін/макс рахуються від', stats_apply: 'Застосувати', stats_clear: 'Скинути', chart_date_error_earlier: 'Дата не може бути раніше виставленого початку статистики',
       history_cleanup_title: 'Історія та статистика Home Assistant', history_cleanup_hint: 'Перед видаленням створіть резервну копію. Кнопки нижче очищують лише сутності, пов’язані з цією карткою, а не всю базу Recorder.',
-      history_purge_button: 'Видалити історію Recorder', history_stats_button: 'Видалити статистику HA', actions_show: 'Показати дії', actions_hide: 'Сховати дії', actions_open: 'Відкрити', actions_warning_title: 'Увага: небезпечні дії', actions_warning: 'У розділі «Дії» є скидання лічильників і подій, перезавантаження пристрою та видалення історії й статистики Home Assistant для сенсорів цієї картки. Видалені дані без резервної копії відновити неможливо, а скинуті лічильники починаються з нуля. Відкрити розділ?',
+      history_purge_button: 'Видалити історію Recorder', history_stats_button: 'Видалити статистику HA', firmware_title: 'Прошивка ESP', firmware_show: 'Показати код прошивки', firmware_hide: 'Сховати код прошивки', firmware_warning_title: 'Код прошивки', firmware_warning: 'Буде завантажено актуальний код прошивки з GitHub (гілка main). Він може відрізнятися від прошивки, яка зараз працює на вашому ESP. Паролі та ключі в коді задані через !secret: впишіть свої значення у secrets.yaml, а не в сам код.', firmware_open: 'Показати', firmware_hint: 'Код тільки для читання. Виділіть його вручну або кнопкою, скопіюйте й вставте в ESPHome. Не змінюйте його тут.', firmware_select: 'Виділити все', firmware_copy: 'Копіювати', firmware_reload: 'Оновити з GitHub', firmware_loading: 'Завантаження з GitHub…', firmware_loaded: 'Завантажено з GitHub (main)', firmware_copied: 'Скопійовано в буфер обміну', firmware_copy_failed: 'Не вдалося скопіювати автоматично: код виділено, натисніть Ctrl+C', firmware_error: 'Не вдалося завантажити код з GitHub. Перевірте інтернет і натисніть «Оновити з GitHub».', firmware_label: 'Код прошивки ESPHome (тільки читання)', actions_show: 'Показати дії', actions_hide: 'Сховати дії', actions_open: 'Відкрити', actions_warning_title: 'Увага: небезпечні дії', actions_warning: 'У розділі «Дії» є скидання лічильників і подій, перезавантаження пристрою та видалення історії й статистики Home Assistant для сенсорів цієї картки. Видалені дані без резервної копії відновити неможливо, а скинуті лічильники починаються з нуля. Відкрити розділ?',
       history_purge_confirm: 'Буде видалено всю збережену історію станів Recorder для {count} сутностей цієї картки. Цю дію не можна скасувати без резервної копії. Продовжити?',
       history_stats_confirm: 'Буде видалено короткострокову й довготривалу статистику Home Assistant для {count} сенсорів цієї картки. Цю дію не можна скасувати без резервної копії. Продовжити?',
       history_purge_done: 'Запит на очищення історії Recorder для {count} сутностей виконано.', history_stats_done: 'Статистику Home Assistant для {count} сенсорів видалено.',
@@ -220,7 +220,7 @@
       stats_create_helper: 'Create helper', stats_create_helper_confirm: 'Create input_text.grid_monitor_statistics_start in Home Assistant? Administrator permissions are required. After creation, select the statistics start date and press Apply.', stats_helper_created: 'The helper was created. Select a statistics start date and press Apply to save it in Home Assistant.', stats_helper_error: 'Could not create the helper. Make sure you are signed in as a Home Assistant administrator, or create a Text helper manually under Settings → Devices & services → Helpers.',
       stats_active: 'Charts and min/max are calculated from', stats_apply: 'Apply', stats_clear: 'Reset', chart_date_error_earlier: 'Date cannot be earlier than the statistics start time',
       history_cleanup_title: 'Home Assistant history and statistics', history_cleanup_hint: 'Create a backup before deleting data. These buttons target only entities referenced by this card, not the entire Recorder database.',
-      history_purge_button: 'Delete Recorder history', history_stats_button: 'Delete HA statistics', actions_show: 'Show actions', actions_hide: 'Hide actions', actions_open: 'Open', actions_warning_title: 'Warning: risky actions', actions_warning: 'The Actions section can reset counters and events, restart the device, and delete Home Assistant history and statistics for this card\'s sensors. Deleted data cannot be restored without a backup, and reset counters start from zero. Open the section?',
+      history_purge_button: 'Delete Recorder history', history_stats_button: 'Delete HA statistics', firmware_title: 'ESP firmware', firmware_show: 'Show firmware code', firmware_hide: 'Hide firmware code', firmware_warning_title: 'Firmware code', firmware_warning: 'The current firmware code is downloaded from GitHub (main branch). It may differ from the firmware currently running on your ESP. Passwords and keys in the code use !secret: put your values into secrets.yaml, not into the code.', firmware_open: 'Show', firmware_hint: 'Read-only code. Select it by hand or with the button, copy it and paste it into ESPHome. Do not edit it here.', firmware_select: 'Select all', firmware_copy: 'Copy', firmware_reload: 'Refresh from GitHub', firmware_loading: 'Loading from GitHub…', firmware_loaded: 'Loaded from GitHub (main)', firmware_copied: 'Copied to clipboard', firmware_copy_failed: 'Could not copy automatically: the code is selected, press Ctrl+C', firmware_error: 'Could not load the code from GitHub. Check your internet connection and press “Refresh from GitHub”.', firmware_label: 'ESPHome firmware code (read-only)', actions_show: 'Show actions', actions_hide: 'Hide actions', actions_open: 'Open', actions_warning_title: 'Warning: risky actions', actions_warning: 'The Actions section can reset counters and events, restart the device, and delete Home Assistant history and statistics for this card\'s sensors. Deleted data cannot be restored without a backup, and reset counters start from zero. Open the section?',
       history_purge_confirm: 'All saved Recorder state history for {count} entities used by this card will be deleted. This cannot be undone without a backup. Continue?',
       history_stats_confirm: 'Home Assistant short-term and long-term statistics for {count} sensors used by this card will be deleted. This cannot be undone without a backup. Continue?',
       history_purge_done: 'Recorder history cleanup was requested for {count} entities.', history_stats_done: 'Home Assistant statistics were deleted for {count} sensors.',
@@ -895,6 +895,7 @@
 
 
   const DEFAULT_KEYS = Object.keys(DEFAULTS);
+  const FIRMWARE_URL = 'https://raw.githubusercontent.com/kdinya/ha-Smart-Grid-Monitor/main/esphome/grid-monitor.yaml';
   const STATS_REFRESH_OVERLAP_MS = 120e3;
 
   let CARD_SEQUENCE = 0;
@@ -956,6 +957,9 @@
       this._statsStartApplied = false;
       this._statsNeedsPersist = false;
       this._actionsOpen = false;
+      this._firmwareOpen = false;
+      this._firmwareCode = '';
+      this._firmwareStatus = '';
       this._statsExtremes = null;
       this._statsExtremesKey = '';
       this._statsExtremesAt = 0;
@@ -1989,6 +1993,87 @@
       const disabled = this._historyDeleteInProgress ? 'disabled' : '';
       const button = (kind, labelKey, icon, count) => `<button class="action-button danger" type="button" data-history-delete="${kind}" ${!count || disabled}><span>${this._svg(icon)}</span>${this._escape(this._t(labelKey))}</button>`;
       return `${button('recorder', 'history_purge_button', 'chart', entityIds.length)}${button('statistics', 'history_stats_button', 'params', sensorIds.length)}`;
+    }
+
+    _firmwareSection() {
+      const open = this._firmwareOpen === true;
+      return `<h2 class="subheading">${this._escape(this._t('firmware_title'))}</h2><div class="actions-section" data-role="firmware-section"><button type="button" class="actions-toggle" data-firmware-toggle aria-expanded="${open ? 'true' : 'false'}" aria-controls="grid-monitor-firmware"><span data-role="firmware-toggle-label">${this._escape(this._t(open ? 'firmware_hide' : 'firmware_show'))}</span><span class="actions-chevron" aria-hidden="true"></span></button><div class="actions-body" id="grid-monitor-firmware" data-role="firmware-body" ${open ? '' : 'hidden'}><p class="history-cleanup-hint">${this._escape(this._t('firmware_hint'))}</p><div class="firmware-tools"><button type="button" class="action-button" data-firmware-select>${this._escape(this._t('firmware_select'))}</button><button type="button" class="action-button" data-firmware-copy>${this._escape(this._t('firmware_copy'))}</button><button type="button" class="action-button" data-firmware-reload>${this._escape(this._t('firmware_reload'))}</button></div><p class="firmware-status" data-role="firmware-status" aria-live="polite">${this._escape(this._firmwareStatus || '')}</p><textarea class="firmware-code" data-role="firmware-code" readonly spellcheck="false" wrap="off" aria-label="${this._escape(this._t('firmware_label'))}">${this._escape(this._firmwareCode || '')}</textarea></div></div>`;
+    }
+
+    _firmwareNode(role) { return this.shadowRoot?.querySelector?.(`[data-role="${role}"]`) || null; }
+
+    _setFirmwareStatus(text) {
+      this._firmwareStatus = text;
+      const node = this._firmwareNode('firmware-status');
+      if (node) node.textContent = text;
+    }
+
+    _setFirmwareOpen(open) {
+      this._firmwareOpen = Boolean(open);
+      const body = this._firmwareNode('firmware-body');
+      if (body) body.hidden = !this._firmwareOpen;
+      const toggle = this.shadowRoot?.querySelector?.('[data-firmware-toggle]');
+      if (toggle) toggle.setAttribute('aria-expanded', String(this._firmwareOpen));
+      const label = this._firmwareNode('firmware-toggle-label');
+      if (label) label.textContent = this._t(this._firmwareOpen ? 'firmware_hide' : 'firmware_show');
+    }
+
+    async _toggleFirmware() {
+      if (this._firmwareOpen) { this._setFirmwareOpen(false); return; }
+      const confirmed = await this._showDialog({
+        title: this._t('firmware_warning_title'),
+        message: this._t('firmware_warning'),
+        confirm: true,
+        confirmLabel: this._t('firmware_open'),
+      });
+      if (!confirmed) return;
+      this._setFirmwareOpen(true);
+      if (!this._firmwareCode) this._loadFirmware();
+    }
+
+    async _loadFirmware() {
+      if (this._firmwareLoading) return;
+      this._firmwareLoading = true;
+      this._setFirmwareStatus(this._t('firmware_loading'));
+      try {
+        const response = await fetch(FIRMWARE_URL, { cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const text = await response.text();
+        if (!/^esphome:/m.test(text)) throw new Error('Unexpected content');
+        this._firmwareCode = text;
+        const area = this._firmwareNode('firmware-code');
+        if (area) area.value = text;
+        this._setFirmwareStatus(this._t('firmware_loaded'));
+      } catch (_error) {
+        this._setFirmwareStatus(this._t('firmware_error'));
+      } finally {
+        this._firmwareLoading = false;
+      }
+    }
+
+    _selectFirmware() {
+      const area = this._firmwareNode('firmware-code');
+      if (!area || !area.value) return false;
+      area.focus({ preventScroll: true });
+      area.select();
+      area.setSelectionRange(0, area.value.length);
+      return true;
+    }
+
+    async _copyFirmware() {
+      if (!this._selectFirmware()) return;
+      const area = this._firmwareNode('firmware-code');
+      let copied = false;
+      try {
+        if (navigator.clipboard?.writeText && window.isSecureContext) {
+          await navigator.clipboard.writeText(area.value);
+          copied = true;
+        }
+      } catch (_error) { copied = false; }
+      if (!copied) {
+        try { copied = document.execCommand('copy'); } catch (_error) { copied = false; }
+      }
+      this._setFirmwareStatus(this._t(copied ? 'firmware_copied' : 'firmware_copy_failed'));
     }
 
     _setActionsOpen(open) {
@@ -4990,7 +5075,7 @@
         ${this._detail('wifi_signal', this._t('wifi'), 0)}${this._detail('esp_temperature', this._t('temperature'), 1)}${this._detail('uptime', this._t('uptime'), 0)}${this._detail('ip_address', this._t('ip'), 0)}${this._detail('ssid', this._t('ssid'), 0)}${this._detail('inverter_events', this._t('inverter_events'), 0)}
       </div><h2 class="subheading">${this._escape(this._t('actions'))}</h2><div class="actions-section" data-role="actions-section"><button type="button" class="actions-toggle" data-actions-toggle aria-expanded="${this._actionsOpen ? 'true' : 'false'}" aria-controls="grid-monitor-actions"><span data-role="actions-toggle-label">${this._escape(this._t(this._actionsOpen ? 'actions_hide' : 'actions_show'))}</span><span class="actions-chevron" aria-hidden="true"></span></button><div class="actions-body" id="grid-monitor-actions" data-role="actions-body" ${this._actionsOpen ? '' : 'hidden'}><p class="history-cleanup-hint">${this._escape(this._t('history_cleanup_hint'))}</p><div class="action-grid">
         ${this._action('reset_energy', this._t('reset_energy'))}${this._action('reset_events', this._t('reset_events'))}${this._action('reset_cost', this._t('reset_cost'))}${this._action('reset_stats', this._t('reset_stats'))}${this._action('restart', this._t('restart'))}${this._historyCleanupActions()}
-      </div></div></div></section>`;
+      </div></div></div>${this._firmwareSection()}</section>`;
     }
 
     _chipArt() {
@@ -5186,7 +5271,7 @@
         if (info) this._showDialog({ title: this._t(info.label), message: this._t(info.description), info: true });
         return;
       }
-      const target = event.target?.closest?.('[data-scroll-top], [data-actions-toggle], [data-tab], [data-period], [data-energy-period], [data-energy-metric], [data-energy-bar], [data-metric], [data-action], [data-number-save], [data-switch], [data-chart-live], [data-chart-zoom], [data-chart-zoom-apply], [data-chart-date-toggle], [data-chart-date-apply], [data-stats-start-apply], [data-stats-start-clear], [data-stats-helper-create], [data-history-delete]');
+      const target = event.target?.closest?.('[data-scroll-top], [data-actions-toggle], [data-firmware-toggle], [data-firmware-select], [data-firmware-copy], [data-firmware-reload], [data-tab], [data-period], [data-energy-period], [data-energy-metric], [data-energy-bar], [data-metric], [data-action], [data-number-save], [data-switch], [data-chart-live], [data-chart-zoom], [data-chart-zoom-apply], [data-chart-date-toggle], [data-chart-date-apply], [data-stats-start-apply], [data-stats-start-clear], [data-stats-helper-create], [data-history-delete]');
       if (!target) return;
       if (target.dataset.scrollTop !== undefined) { this._scrollPageToTop(); return; }
       if (target.dataset.energyBar !== undefined) { this._selectEnergyBar(Number(target.dataset.energyBar)); return; }
@@ -5202,6 +5287,10 @@
         return;
       }
       if (target.dataset.actionsToggle !== undefined) { this._toggleActions(); return; }
+      if (target.dataset.firmwareToggle !== undefined) { this._toggleFirmware(); return; }
+      if (target.dataset.firmwareSelect !== undefined) { this._selectFirmware(); return; }
+      if (target.dataset.firmwareCopy !== undefined) { this._copyFirmware(); return; }
+      if (target.dataset.firmwareReload !== undefined) { this._loadFirmware(); return; }
       if (target.dataset.tab) {
         if (target.dataset.tab === this._activeTab) return;
         if (this._activeTab === 'settings') this._setActionsOpen(false);
@@ -6197,6 +6286,10 @@
         .stats-start-error:empty{display:none}
         .stats-note{margin:10px 4px 0;padding:6px 12px;border-radius:99px;border:1px solid #2f9bff40;background:#0a2038;color:#9fd2ff;font-size:12.5px;text-align:center}
         .period-button.since{white-space:nowrap}
+        .firmware-tools{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+        .firmware-tools .action-button{flex:1 1 150px;min-height:44px}
+        .firmware-status{margin:0 0 8px;min-height:18px;color:#9fb5d1;font-size:13px}
+        .firmware-code{display:block;box-sizing:border-box;width:100%;min-height:320px;max-height:60vh;resize:vertical;padding:12px 14px;border:1px solid #ffffff24;border-radius:14px;background:#07111f;color:#cfe3ff;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre;overflow:auto;-webkit-user-select:text;user-select:text}
         .outage-scope{font-size:12px;font-weight:500;color:#8fa9c7;letter-spacing:0;text-transform:none}
         .shell.eco *,.shell.eco *::before,.shell.eco *::after{animation:none!important;filter:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
         .shell.eco .gauge-fill-glow,.shell.eco .tower-halo,.shell.eco .tower-haze,.shell.eco .chart-glow{display:none}.shell.eco .house-smoke,.shell.eco .house-canopy{animation:none!important}
