@@ -46,7 +46,7 @@ The masonry layout collapses naturally on mobile. Metric cards use two columns o
 
 - The voltage gauge, scale ticks, tower illustration and live marker share one geometry (`GAUGE` in the card), so the marker always sits on the arc. The unfilled part of the arc stays visible at low opacity; the filled part and the marker follow the voltage. Sag/swell uses amber/red, a PZEM timeout amber and an offline ESP grey.
 - Values and units are separated (`500 Вт`); unavailable values use a compact placeholder instead of oversized text.
-- The power chart is measured at the card width, uses a smooth curve, 24-hour axis labels, round axis steps, and shows a value/time tooltip on hover or touch.
+- The power chart is measured at the card width, uses a smooth curve, 24-hour axis labels, round axis steps, and shows a value/time tooltip on hover or touch. A PZEM outage is drawn as a sharp drop to 0; implausible samples leave an empty stretch that the curve does not bridge.
 - The status row uses icon chips, never breaks words mid-word and moves the long ESP power note to its own full-width row.
 - On phones the tabs stack icon above label so all four fit without clipping; the page keeps a single column with two-column tiles.
 - The Parameters tab shows today's voltage range against the configured sag/swell thresholds; the Settings tab uses a real toggle for the two-zone tariff and colour-codes destructive actions.

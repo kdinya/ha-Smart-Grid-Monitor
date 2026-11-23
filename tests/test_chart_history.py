@@ -209,7 +209,8 @@ card._hass = { callApi: async () => [[
 ]] };
 (async () => {
   await card._loadHistory('k');
-  assert.deepEqual(card._history.map((h) => h.value), [250, null, null, 30000, null]);
+  assert.deepEqual(card._history.map((h) => h.value), [250, null, null, 30000, 0]);
+  assert.equal(card._history[4].outage, true, 'unavailable power is a sharp drop to 0, like voltage');
 })().catch((error) => { console.error(error); process.exit(1); });
 """
         result = subprocess.run(
@@ -220,6 +221,103 @@ card._hass = { callApi: async () => [[
         )
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
+
+    def test_power_outage_drops_to_zero_and_implausible_samples_break_the_line(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = {
+  window: { customCards: [] },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+};
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+card._entity = () => 'sensor.grid_monitor_power';
+const parsed = card._parseHistoryResponse([[
+  { state: '1200', last_changed: '2026-11-21T10:00:00Z' },
+  { state: 'unavailable', last_changed: '2026-11-21T10:01:00Z' },
+  { state: '1300', last_changed: '2026-11-21T10:03:00Z' },
+  { state: '75000000', last_changed: '2026-11-21T10:04:00Z' },
+  { state: '900', last_changed: '2026-11-21T10:05:00Z' },
+]], 'power');
+assert.deepEqual(parsed.map((h) => h.value), [1200, 0, 1300, null, 900]);
+assert.deepEqual(parsed.map((h) => Boolean(h.outage)), [false, true, false, false, false]);
+
+// The outage is a visible drop to 0, while the implausible sample leaves an empty stretch instead of a bridged curve.
+const from = Date.parse('2026-11-21T10:00:00Z');
+const to = Date.parse('2026-11-21T10:10:00Z');
+const series = card._bucketHistory(from, to, 10, parsed);
+assert.ok(series.some((point) => point.v === 0), 'PZEM outage is drawn as 0');
+const segments = card._chartSegments(series, 60e3);
+assert.equal(segments.length, 2, 'the empty stretch splits the line into two segments');
+assert.ok(segments[0].at(-1).t <= Date.parse('2026-11-21T10:03:00Z'), 'the first segment ends before the gap');
+assert.ok(segments[1][0].t >= Date.parse('2026-11-21T10:05:00Z'), 'the second segment starts after the gap');
+assert.equal(card._chartSegments([{ t: 0, v: 1 }, { t: 60e3, v: 2 }, { t: 120e3, v: 3 }], 60e3).length, 1, 'adjacent buckets stay one line');
+
+// Average power ignores outage zeros, so a short PZEM loss does not pull the average down.
+card._historyRange = 'hour';
+card._historyBounds = () => ({ start: from, end: to });
+card._statsStart = NaN;
+card._chartData = () => ({ series: [{ t: from, v: 1200 }, { t: from + 60e3, v: 1300 }] });
+card._formatChartStatTimestamp = () => '10:00';
+card._locale = () => 'en-US';
+card._lang = () => 'en';
+card._t = (key) => ({ stat_min: 'Min.', stat_avg: 'Avg.', stat_max: 'Max.' })[key];
+card._escape = (value) => String(value).replaceAll('<', '&lt;');
+const html = card._chartStatsHtml('power', parsed, 'params');
+assert.match(html, /Avg\.<\/span><b>1,133 W/, 'average uses real readings only');
+"""
+        result = subprocess.run(
+            ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_energy_bars_ignore_increases_before_the_visible_window(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const context = {
+  window: { customCards: [] },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+};
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
+const Card = registry.get('grid-monitor-card');
+const card = Object.create(Card.prototype);
+card._locale = () => 'en-US';
+card._state = () => ({ attributes: { unit_of_measurement: 'kWh' } });
+const H = 3600e3;
+const start = Date.parse('2026-11-21T10:00:00Z');
+const end = start + H;
+// 500 kWh of history before the window must not appear in its first bar.
+const history = [
+  { time: new Date(start - 2 * H), value: 0 },
+  { time: new Date(start - H), value: 500 },
+  { time: new Date(start + 10 * 60e3), value: 502 },
+  { time: new Date(start + 30 * 60e3), value: 503 },
+];
+const bars = card._energyHistoryBars(history, { start, end }, 'hour');
+assert.equal(bars.length, 1);
+// The 2 kWh interval started before the window: only its visible 10 of 70 minutes count. The last 1 kWh is fully inside.
+assert.ok(Math.abs(bars[0].value - (2 * 10 / 70 + 1)) < 1e-9, `got ${bars[0].value}`);
+"""
+        result = subprocess.run(
+            ["node", "-e", script, str(ROOT / "grid-monitor-card.js")],
+            capture_output=True,
+            text=True,
+            check=False,
+            env={**os.environ, "TZ": "UTC"},
+        )
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
     def test_selected_time_loads_all_readings_from_states_not_after_selection(self):
         script = r"""
