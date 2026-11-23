@@ -2572,3 +2572,36 @@ assert.equal(xs.size, 11);
 """
         result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False)
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+
+class OutageStatsTests(unittest.TestCase):
+    def test_outage_stats_are_counted_from_history(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), {
+  window: { customCards: [] },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+});
+const card = Object.create(registry.get('grid-monitor-card').prototype);
+const base = Date.UTC(2026, 10, 23, 0, 0);
+const M = 60e3;
+const at = (minutes, state) => ({ state, last_changed: new Date(base + minutes * M).toISOString() });
+const start = base;
+const end = base + 600 * M;
+// on, off 60..90 (30 min), on, off 200..205 (5 min), on, off 500.. still ongoing (100 min until end)
+const response = [[at(0, 'on'), at(60, 'off'), at(90, 'on'), at(200, 'off'), at(205, 'on'), at(500, 'off')]];
+const stats = card._computeOutageStats(response, start, end);
+assert.equal(stats.count, 3);
+assert.equal(stats.last, 5 * 60, 'last completed outage');
+assert.equal(stats.total, (30 + 5 + 100) * 60, 'total includes the ongoing outage');
+// An outage that began before the window is clipped to the window start.
+const clipped = card._computeOutageStats([[at(-30, 'off'), at(30, 'on')]], start, end);
+assert.equal(clipped.total, 30 * 60);
+assert.equal(clipped.count, 1);
+"""
+        result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
