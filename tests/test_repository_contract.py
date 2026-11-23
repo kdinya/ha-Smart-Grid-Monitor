@@ -46,6 +46,7 @@ class RepositoryContractTests(unittest.TestCase):
         firmware = (ROOT / "esphome" / "grid-monitor.yaml").read_text(encoding="utf-8")
         self.assertIn("reboot_timeout: 2min", firmware)
         self.assertIn("power_save_mode: light", firmware)
+        self.assertIn("reboot_timeout: 5min", firmware)
 
     def test_hacs_manifest_is_valid_json(self):
         manifest = json.loads((ROOT / "hacs.json").read_text(encoding="utf-8"))

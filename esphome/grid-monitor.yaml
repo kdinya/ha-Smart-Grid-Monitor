@@ -31,6 +31,8 @@ logger:
 api:
   encryption:
     key: !secret api_key
+  # Якщо жоден клієнт (HA) не підключений 5 хв, ESP перезавантажується.
+  reboot_timeout: 5min
 
 ota:
   - platform: esphome
