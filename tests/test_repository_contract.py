@@ -42,6 +42,11 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("global_preferences->sync();", firmware)
         self.assertEqual(firmware.count("id(flush_outage_counters).execute();"), 2, "flush at outage start and at recovery")
 
+    def test_wifi_reboots_after_two_minutes_without_connection(self):
+        firmware = (ROOT / "esphome" / "grid-monitor.yaml").read_text(encoding="utf-8")
+        self.assertIn("reboot_timeout: 2min", firmware)
+        self.assertIn("power_save_mode: light", firmware)
+
     def test_hacs_manifest_is_valid_json(self):
         manifest = json.loads((ROOT / "hacs.json").read_text(encoding="utf-8"))
         self.assertTrue(manifest)

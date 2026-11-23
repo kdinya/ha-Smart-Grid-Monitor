@@ -41,6 +41,8 @@ wifi:
   password: !secret wifi_password
   fast_connect: true
   power_save_mode: light
+  # Якщо Wi-Fi немає 2 хв (наприклад, роутер після відключення світла вантажиться довше за ESP), ESP перезавантажується.
+  reboot_timeout: 2min
   ap:
     ssid: "Grid-Monitor Fallback"
     password: !secret fallback_password
