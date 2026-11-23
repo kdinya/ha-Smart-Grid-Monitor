@@ -3183,7 +3183,7 @@
       const minimumPoints = isEnergy ? plottedPoints : plottedPoints.filter((point) => point.v > 0);
       const historyPoints = isEnergy ? [] : (Array.isArray(history) ? history : [])
         .filter((item) => !Number.isFinite(this._statsStart) || (item.time && item.time.getTime() >= this._statsStart))
-        .filter((item) => Number.isFinite(item.value));
+        .filter((item) => Number.isFinite(item.value) && !item.outage);
       const fmt = (value) => value.toLocaleString(this._locale(), { maximumFractionDigits: metric.digits });
       const formatMinimum = (value) => {
         if (value === null) return '—';
@@ -3645,7 +3645,7 @@
         const prior = Array.isArray(history) ? history.filter((p) => p.time?.getTime?.() <= tStart && Number.isFinite(p.value)).at(-1) : null;
         if (prior) {
           const steadySeries = [{ t: tStart, v: prior.value }, { t: tEnd, v: prior.value }];
-          return { series: steadySeries, tStart, tEnd, rangeMs };
+          return { series: steadySeries, tStart, tEnd, rangeMs, steady: true };
         }
         return null;
       }
@@ -3687,6 +3687,21 @@
       }
       const step = Math.ceil(target / 4 / 10000) * 10000;
       return { step, count: 4, max: step * 4 };
+    }
+
+    // Splits bucketed points wherever a whole bucket has no data, so a missing stretch stays empty instead of being bridged.
+    _chartSegments(points, bucketMs) {
+      const segments = [];
+      let current = [];
+      points.forEach((point, index) => {
+        if (index > 0 && point.t - points[index - 1].t > bucketMs * 1.5) {
+          segments.push(current);
+          current = [];
+        }
+        current.push(point);
+      });
+      if (current.length) segments.push(current);
+      return segments;
     }
 
     _smoothPath(points, lowest, highest) {
@@ -3792,18 +3807,18 @@
       const height = (narrow ? 200 : 228) + panStripHeight;
       const x0 = narrow ? 56 : 70; const x1 = width - (narrow ? 14 : 20); const y0 = 26;
       const panStripY = height - panStripHeight; const y1 = panStripY - 30;
-      const data = this._chartData(history, metricKey, { range, customRange, bounds, includeCurrent: !isEnergy });
+      let data = this._chartData(history, metricKey, { range, customRange, bounds, includeCurrent: !isEnergy });
       if (!data) {
         if (!isEnergy) this._chartPts = [];
         if (loading && (!history || !history.length)) return `<div class="chart-empty">${this._escape(this._t('loading'))}</div>`;
         if (history && history.length > 0) {
           const nearest = history.reduce((closest, pt) => {
             const ptT = pt.time?.getTime?.() || 0;
-            const dist = Math.min(Math.abs(ptT - tStart), Math.abs(ptT - tEnd));
+            const dist = Math.min(Math.abs(ptT - bounds.start), Math.abs(ptT - bounds.end));
             return !closest || dist < closest.dist ? { pt, dist } : closest;
           }, null);
           if (nearest?.pt && Number.isFinite(nearest.pt.value)) {
-            data = { series: [{ t: tStart, v: nearest.pt.value }, { t: tEnd, v: nearest.pt.value }], tStart, tEnd, rangeMs };
+            data = { series: [{ t: bounds.start, v: nearest.pt.value }, { t: bounds.end, v: nearest.pt.value }], tStart: bounds.start, tEnd: bounds.end, rangeMs: bounds.end - bounds.start, steady: true };
           }
         }
         if (!data) return `<div class="chart-empty">${this._escape(this._t('no_history'))}</div>`;
@@ -3821,15 +3836,25 @@
       const bufferStart = !isEnergy ? Math.min(tStart, histStart) : tStart;
       const bufferEnd = !isEnergy ? Math.max(tEnd, histEnd) : tEnd;
       const hasBuffer = bufferStart < tStart || bufferEnd > tEnd;
+      const bufferCount = Math.min(288, Math.ceil(((bufferEnd - bufferStart) / rangeMs) * (width < 520 ? 48 : 96)));
       const bufferSeries = !isEnergy && hasBuffer
-        ? this._bucketHistory(bufferStart, bufferEnd, Math.min(288, Math.ceil(((bufferEnd - bufferStart) / rangeMs) * (width < 520 ? 48 : 96))), history)
+        ? this._bucketHistory(bufferStart, bufferEnd, bufferCount, history)
         : series;
-      const pathPts = bufferSeries.map((point) => ({
-        x: x0 + ((point.t - tStart) / rangeMs) * (x1 - x0),
-        y: Y(point.v),
-      }));
-      const line = this._smoothPath(pathPts, y0, y1);
-      const area = `${line} L${pathPts[pathPts.length - 1].x.toFixed(1)} ${y1} L${pathPts[0].x.toFixed(1)} ${y1} Z`;
+      const bucketMs = hasBuffer ? (bufferEnd - bufferStart) / bufferCount : rangeMs / (width < 520 ? 48 : 96);
+      const splitAtGaps = !isEnergy && (hasBuffer || !data.steady);
+      const pathSegments = (splitAtGaps ? this._chartSegments(bufferSeries, bucketMs) : [bufferSeries])
+        .filter((segment) => segment.length)
+        .map((segment) => {
+          const segmentPts = segment.map((point) => ({
+            x: x0 + ((point.t - tStart) / rangeMs) * (x1 - x0),
+            y: Y(point.v),
+          }));
+          // A lone bucket between two gaps still gets a short visible stroke instead of disappearing.
+          if (segmentPts.length === 1) segmentPts.push({ x: segmentPts[0].x + 1.5, y: segmentPts[0].y });
+          return segmentPts;
+        });
+      const line = pathSegments.map((segmentPts) => this._smoothPath(segmentPts, y0, y1)).join(' ');
+      const area = pathSegments.map((segmentPts) => `${this._smoothPath(segmentPts, y0, y1)} L${segmentPts.at(-1).x.toFixed(1)} ${y1} L${segmentPts[0].x.toFixed(1)} ${y1} Z`).join(' ');
       const tickValues = scale.ticks || Array.from({ length: scale.count + 1 }, (_, index) => scale.lo + index * scale.step);
       const horizontal = tickValues.map((tickValue, index) => {
         const y = Y(tickValue);
@@ -3937,14 +3962,21 @@
         const current = points[index];
         const delta = current.value - previous.value;
         if (!(delta > 0)) continue;
-        const from = Math.max(bounds.start, previous.time.getTime());
-        const to = Math.min(bounds.end, current.time.getTime());
-        if (to <= from) {
-          const bin = binAt(current.time.getTime());
-          if (bin) bin.value += delta;
+        const intervalStart = previous.time.getTime();
+        const intervalEnd = current.time.getTime();
+        if (intervalEnd <= intervalStart) {
+          if (intervalEnd >= bounds.start && intervalEnd < bounds.end) {
+            const bin = binAt(intervalEnd);
+            if (bin) bin.value += delta;
+          }
           continue;
         }
-        const duration = to - from;
+        // The increase is spread over the whole interval between two samples. Only the part inside the window is kept,
+        // so an interval that began before the window contributes its visible share and never lands in the first bar.
+        const from = Math.max(bounds.start, intervalStart);
+        const to = Math.min(bounds.end, intervalEnd);
+        if (to <= from) continue;
+        const duration = intervalEnd - intervalStart;
         for (const bin of bins) {
           const overlap = Math.max(0, Math.min(to, bin.end) - Math.max(from, bin.start));
           if (overlap > 0) bin.value += delta * (overlap / duration);
@@ -4655,6 +4687,9 @@
         const time = new Date(item.last_changed || item.last_updated);
         // No PZEM data (unavailable/unknown or below the mains threshold) means there was no voltage: draw 0, not a bridge.
         if (metricKey === 'voltage' && !plausible && !(Number.isFinite(value) && value > maxValid)) return { time, value: 0, outage: true };
+        // Power without a reading (PZEM or ESP offline) drops to 0 with sharp steps, never a curve bridged across the outage.
+        // Numeric but implausible samples (negative or above the limit) stay empty so they cannot distort the scale.
+        if (metricKey === 'power' && !Number.isFinite(value)) return { time, value: 0, outage: true };
         return { time, value: plausible ? value : null };
       })
         .filter((item) => Number.isFinite(item.time.getTime()))
