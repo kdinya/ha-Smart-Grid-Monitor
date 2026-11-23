@@ -166,7 +166,7 @@
       today: 'Сьогодні', energy_month: 'Споживання за місяць', energy_total: 'Загальна енергія PZEM', cost_today: 'Вартість сьогодні', cost_month: 'Вартість за місяць', cost_total: 'Загальна розрахована вартість', tariff: 'Поточний тариф', cost_rate: 'Вартість за годину', two_zone: 'Двозонний облік',
       estimated_cost: 'Орієнтовна вартість', current_load: 'Поточне навантаження', night: 'Ніч', device_name: 'Grid Monitor · ESP32-C3', device_description: 'Контролер ESPHome · PZEM-004T', diagnostics: 'Діагностика',
       sag: 'Поріг просідання', swell: 'Поріг перенапруги', nominal: 'Номінальна напруга', tariff_day: 'Денний тариф', tariff_night: 'Нічний тариф', wifi: 'Сигнал Wi‑Fi', temperature: 'Температура ESP32', uptime: 'Час роботи ESP32', ip: 'IP-адреса', ssid: 'Wi‑Fi мережа',
-      events: 'Переривання зв’язку з PZEM', inverter_events: 'Кількість переривань PZEM', current_duration: 'Час без PZEM', last_duration: 'Остання тривалість без PZEM', total_duration: 'Загальний час без PZEM', sag_events: 'Просідання напруги', swell_events: 'Перенапруги', save: 'Зберегти', on: 'Увімкнено', off: 'Вимкнено',
+      outage_scope_today: 'сьогодні', outage_scope_since: 'з', events: 'Переривання зв’язку з PZEM', inverter_events: 'Кількість переривань PZEM', current_duration: 'Час без PZEM', last_duration: 'Остання тривалість без PZEM', total_duration: 'Загальний час без PZEM', sag_events: 'Просідання напруги', swell_events: 'Перенапруги', save: 'Зберегти', on: 'Увімкнено', off: 'Вимкнено',
             editor_title: 'Налаштування Smart Grid Monitor',
       editor_device_select: 'Вибір пристрою ESP32 / Префікс',
       editor_device_hint: 'Показано лише пристрої ESPHome. За потреби введіть власний префікс нижче.',
@@ -234,7 +234,7 @@
       today: 'Today', energy_month: 'Consumption this month', energy_total: 'Total PZEM energy', cost_today: 'Cost today', cost_month: 'Cost this month', cost_total: 'Total calculated cost', tariff: 'Current tariff', cost_rate: 'Cost per hour', two_zone: 'Two-zone tariff',
       estimated_cost: 'Estimated cost', current_load: 'Current load', night: 'Night', device_name: 'Grid Monitor · ESP32-C3', device_description: 'ESPHome controller · PZEM-004T', diagnostics: 'Diagnostics',
       sag: 'Sag threshold', swell: 'Swell threshold', nominal: 'Nominal voltage', tariff_day: 'Day tariff', tariff_night: 'Night tariff', wifi: 'Wi-Fi signal', temperature: 'ESP32 temperature', uptime: 'ESP32 uptime', ip: 'IP address', ssid: 'Wi-Fi network',
-      events: 'PZEM communication outages', inverter_events: 'PZEM outage count', current_duration: 'Current time without PZEM', last_duration: 'Last PZEM outage duration', total_duration: 'Total time without PZEM', sag_events: 'Voltage sags', swell_events: 'Voltage swells', save: 'Save', on: 'On', off: 'Off',
+      outage_scope_today: 'today', outage_scope_since: 'since', events: 'PZEM communication outages', inverter_events: 'PZEM outage count', current_duration: 'Current time without PZEM', last_duration: 'Last PZEM outage duration', total_duration: 'Total time without PZEM', sag_events: 'Voltage sags', swell_events: 'Voltage swells', save: 'Save', on: 'On', off: 'Off',
             editor_title: 'Smart Grid Monitor Settings',
       editor_device_select: 'ESP32 Device / Prefix Selection',
       editor_device_hint: 'Only ESPHome devices are listed. Enter a custom prefix below if needed.',
@@ -1330,6 +1330,7 @@
       this._ensureHistory();
       this._ensureEnergyHistory();
       this._ensureStatsExtremes();
+      this._ensureOutageStats();
     }
 
     // Home Assistant replaces a state object whenever the entity changes, so an unchanged
@@ -1536,6 +1537,8 @@
     }
     _formatted(key, digits = 1) {
       if (LIVE_DISPLAY_KEYS.has(key) && this._effectiveEspStatus() === 'off') return this._t('unavailable');
+      const outage = this._outageDisplay(key);
+      if (outage !== null) return outage;
       const n = this._num(key);
       if (n === null && Number.isFinite(this._statsStart) && STATS_OVERRIDES[key]) return '—';
       if (n === null) {
@@ -2143,6 +2146,7 @@
       this._statsExtremesAt = 0;
       this._statsExtremesToken = '';
       this._statsExtremesCursor = NaN;
+      this._outageStats = null;
       this._statsExtremesRequest += 1;
       this._statsExtremesLoading = false;
       this._clearChartScrub();
@@ -2186,6 +2190,87 @@
       if (this._statsExtremesLoading && this._statsExtremesToken === token) return;
       if (token === this._statsExtremesKey && Date.now() - this._statsExtremesAt < 60000) return;
       this._loadStatsExtremes(token);
+    }
+
+    // PZEM outage statistics come from Home Assistant history, so they survive ESP reboots and reflashing.
+    _outageWindowStart() {
+      if (Number.isFinite(this._statsStart)) return this._statsStart;
+      const midnight = new Date();
+      midnight.setHours(0, 0, 0, 0);
+      return midnight.getTime();
+    }
+
+    _computeOutageStats(response, start, end) {
+      const items = (Array.isArray(response?.[0]) ? response[0] : [])
+        .map((item) => ({ t: new Date(item.last_changed || item.last_updated).getTime(), off: item.state === 'off' }))
+        .filter((item) => Number.isFinite(item.t))
+        .sort((a, b) => a.t - b.t);
+      let count = 0;
+      let total = 0;
+      let last = 0;
+      let outageFrom = null;
+      const close = (to, completed) => {
+        const from = Math.max(outageFrom, start);
+        const duration = Math.max(0, Math.min(to, end) - from);
+        total += duration;
+        if (completed && duration > 0) last = duration;
+        outageFrom = null;
+      };
+      items.forEach((item) => {
+        if (item.off && outageFrom === null) { outageFrom = item.t; count += 1; }
+        else if (!item.off && outageFrom !== null) close(item.t, true);
+      });
+      if (outageFrom !== null) close(end, false);
+      return { count, total: Math.round(total / 1000), last: Math.round(last / 1000) };
+    }
+
+    _outageDisplay(key) {
+      const stats = this._outageStats;
+      if (!stats?.ok) return null;
+      if (key === 'inverter_events') return stats.count.toLocaleString(this._locale());
+      if (key === 'last_inverter_duration') return this._formatDuration(stats.last);
+      if (key === 'total_inverter_time') return this._formatDuration(stats.total);
+      return null;
+    }
+
+    _outageScopeLabel() {
+      return Number.isFinite(this._statsStart) ? `${this._t('outage_scope_since')} ${this._statsStartLabel()}` : this._t('outage_scope_today');
+    }
+
+    _ensureOutageStats() {
+      if (!this._hass || !this._config || this._activeTab !== 'params' || !this._isActive()) return;
+      const entityId = this._entity('mains');
+      if (!entityId || !this._hass.states?.[entityId]) return;
+      const start = this._outageWindowStart();
+      const token = `${Math.round(start)}:${entityId}`;
+      const stats = this._outageStats;
+      if (this._outageLoading) return;
+      if (stats && stats.token === token && Date.now() - stats.at < 60000) return;
+      this._loadOutageStats(token, entityId, start);
+    }
+
+    async _loadOutageStats(token, entityId, start) {
+      const hass = this._hass;
+      if (typeof hass?.callApi !== 'function') return;
+      this._outageLoading = true;
+      const request = (this._outageRequest = (this._outageRequest || 0) + 1);
+      const end = Date.now();
+      try {
+        const path = `history/period/${encodeURIComponent(new Date(start).toISOString())}?filter_entity_id=${encodeURIComponent(entityId)}&end_time=${encodeURIComponent(new Date(end).toISOString())}&minimal_response&no_attributes`;
+        const response = await hass.callApi('GET', path);
+        if (request !== this._outageRequest) return;
+        const hasData = Array.isArray(response?.[0]) && response[0].length > 0;
+        this._outageStats = hasData ? { ...this._computeOutageStats(response, start, end), ok: true, token, at: Date.now() } : { ok: false, token, at: Date.now() };
+      } catch (_error) {
+        if (request === this._outageRequest) this._outageStats = { ok: false, token, at: Date.now() };
+      } finally {
+        if (request === this._outageRequest) {
+          this._outageLoading = false;
+          this._updateValueBindings(new Set(['inverter_events', 'last_inverter_duration', 'total_inverter_time']));
+          const scope = this.shadowRoot?.querySelector('[data-role="outage-scope"]');
+          if (scope) scope.textContent = this._outageStats?.ok ? this._outageScopeLabel() : '';
+        }
+      }
     }
 
     _computeStatsExtremes(response) {
@@ -4605,6 +4690,7 @@
       this._ensureHistory();
       this._ensureEnergyHistory();
       this._ensureStatsExtremes();
+      this._ensureOutageStats();
     }
 
     _refreshChart() {
@@ -4725,7 +4811,7 @@
         ${this._detail('apparent_power', this._t('apparent'), 0, 'bolt')}${this._detail('reactive_power', this._t('reactive'), 0, 'frequency')}${this._detail('phase_angle', this._t('phase'), 1, 'angle')}
         ${this._detail('voltage_deviation', this._t('deviation'), 1, 'deviation')}${this._detail('voltage_average', this._t('average'), 1, 'average')}${this._detail('voltage_status', this._t('voltage_state'), 0, 'shield')}
         ${this._voltageRangeDetail('min', this._t('min_voltage'), 'arrow_down')}${this._voltageRangeDetail('max', this._t('max_voltage'), 'arrow_up')}${this._detail('current_max', this._t(!Number.isFinite(this._statsStart) ? 'max_current' : 'max_current_period'), 2, 'current')}${this._detail('power_peak', this._t(!Number.isFinite(this._statsStart) ? 'peak_power' : 'peak_power_period'), 0, 'peak')}
-      </div><h2 class="subheading">${this._escape(this._t('events'))}</h2><div class="detail-grid">
+      </div><h2 class="subheading">${this._escape(this._t('events'))} <small class="outage-scope" data-role="outage-scope">${this._outageStats?.ok ? this._escape(this._outageScopeLabel()) : ''}</small></h2><div class="detail-grid">
         ${this._detail('inverter_events', this._t('inverter_events'), 0, 'alert')}${this._detail('inverter_current_duration', this._t('current_duration'), 1, 'clock')}${this._detail('last_inverter_duration', this._t('last_duration'), 1, 'clock')}${this._detail('total_inverter_time', this._t('total_duration'), 2, 'sum')}${this._detail('sag_count', this._t('sag_events'), 0, 'sag')}${this._detail('swell_count', this._t('swell_events'), 0, 'swell')}
       </div></section>`;
     }
@@ -6111,6 +6197,7 @@
         .stats-start-error:empty{display:none}
         .stats-note{margin:10px 4px 0;padding:6px 12px;border-radius:99px;border:1px solid #2f9bff40;background:#0a2038;color:#9fd2ff;font-size:12.5px;text-align:center}
         .period-button.since{white-space:nowrap}
+        .outage-scope{font-size:12px;font-weight:500;color:#8fa9c7;letter-spacing:0;text-transform:none}
         .shell.eco *,.shell.eco *::before,.shell.eco *::after{animation:none!important;filter:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
         .shell.eco .gauge-fill-glow,.shell.eco .tower-halo,.shell.eco .tower-haze,.shell.eco .chart-glow{display:none}.shell.eco .house-smoke,.shell.eco .house-canopy{animation:none!important}
         .header>.header-house{flex:none;position:relative;z-index:3;align-self:flex-start;width:0;height:0;max-width:none;margin:0;overflow:visible}
