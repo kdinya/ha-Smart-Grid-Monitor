@@ -207,6 +207,12 @@
       info_reactive_power: 'Реактивна потужність описує обмін енергією між мережею та індуктивними або ємнісними навантаженнями. Вимірюється у варах (вар) і створює додаткове навантаження на мережу.',
       info_phase_angle: 'Кут зсуву фаз між напругою та струмом, у градусах (°). Він пов’язаний із коефіцієнтом потужності; сам по собі не є значенням потужності чи енергії.',
       scroll_to_top: 'На початок сторінки',
+      support_badge: 'Тепла підтримка',
+      support_title: 'Кава для автора? ☕',
+      support_text: 'Якщо ШоПоСвітлу допомагає тобі тримати графік під контролем — пригости автора кавою! Навіть маленька чашечка додає сил розвивати проєкт і робити його ще кориснішим 💛',
+      support_dismiss: 'Може, потім',
+      support_donate: 'Пригостити кавою',
+      support_close: 'Закрити',
     },
     en: {
       title: 'Grid voltage', subtitle: 'PZEM-004T v3.0 · Grid Monitor', online: 'Online', offline: 'Offline', updated: 'Updated',
@@ -275,6 +281,12 @@
       info_reactive_power: 'Reactive power describes energy exchanged between the mains and inductive or capacitive loads. Measured in vars (var), it still adds load to the electrical system.',
       info_phase_angle: 'The phase shift between voltage and current, measured in degrees (°). It is related to power factor; by itself it is not a power or energy value.',
       scroll_to_top: 'Back to top',
+      support_badge: 'Warm support',
+      support_title: 'Coffee for the author? ☕',
+      support_text: 'If ShoPoSvitlu helps you keep your schedule under control — treat the author to coffee! Even a small cup gives energy to keep developing the project and making it even better 💛',
+      support_dismiss: 'Maybe later',
+      support_donate: 'Buy a coffee',
+      support_close: 'Close',
     },
   };
 
@@ -989,6 +1001,12 @@
       this._chartZoomAnimation = null;
       this._chartTouchScrubbing = null;
       this._chartPointerCandidate = null;
+      this._supportCardDismissed = false;
+      try {
+        if (typeof window !== 'undefined' && window.sessionStorage) {
+          this._supportCardDismissed = window.sessionStorage.getItem('sgm_support_dismissed') === '1';
+        }
+      } catch (_error) {}
       this._chartMetric = 'power';
       this._history = [];
       this._historyKey = '';
@@ -1014,6 +1032,7 @@
       this._chartDateDocumentPointerDownHandler = (event) => this._handleChartDateDocumentPointerDown(event);
       this._scrollVisibilityHandler = () => {
         this._updateScrollTopVisibility();
+        this._updateSupportCardVisibility();
         this._handleChartDateDocumentScroll();
       };
       this._chartW = 0;
@@ -1107,6 +1126,7 @@
         this._scrollListenersAttached = true;
       }
       this._updateScrollTopVisibility();
+      this._updateSupportCardVisibility();
       this._scheduleHeartbeatExpiry();
     }
 
@@ -1232,6 +1252,84 @@
         button.hidden = !shouldShow;
         if (shouldShow && this._overlapsVisibleTab(button)) button.hidden = true;
       }
+    }
+
+    _scrollDistanceToBottom() {
+      const scroller = this._pageScroller();
+      if (!scroller) {
+        if (typeof document !== 'undefined' && typeof window !== 'undefined') {
+          const scrollHeight = Math.max(document.documentElement?.scrollHeight || 0, document.body?.scrollHeight || 0);
+          const scrollY = window.scrollY || document.documentElement?.scrollTop || 0;
+          const innerHeight = window.innerHeight || document.documentElement?.clientHeight || 0;
+          return Math.max(0, scrollHeight - (scrollY + innerHeight));
+        }
+        return Infinity;
+      }
+      const isDocument = typeof document !== 'undefined' && (scroller === document.body || scroller === document.documentElement || scroller === document.scrollingElement);
+      if (isDocument && typeof window !== 'undefined') {
+        const scrollHeight = Math.max(document.documentElement?.scrollHeight || 0, document.body?.scrollHeight || 0, scroller.scrollHeight || 0);
+        const scrollY = Math.max(window.scrollY || 0, scroller.scrollTop || 0);
+        const innerHeight = window.innerHeight || document.documentElement?.clientHeight || scroller.clientHeight || 0;
+        return Math.max(0, scrollHeight - (scrollY + innerHeight));
+      }
+      return Math.max(0, (scroller.scrollHeight || 0) - ((scroller.scrollTop || 0) + (scroller.clientHeight || 0)));
+    }
+
+    _updateSupportCardVisibility() {
+      const card = this.shadowRoot?.querySelector?.('[data-support-card]');
+      if (!card) return;
+      if (this._supportCardDismissed) {
+        if (typeof card.hidePopover === 'function') {
+          try { if (card.matches(':popover-open')) card.hidePopover(); } catch (_error) {}
+        }
+        card.hidden = true;
+        return;
+      }
+      let cardDistance = Infinity;
+      try {
+        const rect = this.getBoundingClientRect?.();
+        if (rect && Number.isFinite(rect.bottom)) {
+          const vh = (typeof window !== 'undefined' && window.innerHeight) || (typeof document !== 'undefined' && document.documentElement?.clientHeight) || 0;
+          if (vh > 0) cardDistance = rect.bottom - vh;
+        }
+      } catch (_error) {}
+
+      const pageDistance = this._scrollDistanceToBottom();
+      const distance = Math.min(pageDistance, Math.max(0, cardDistance));
+      const shouldShow = Number.isFinite(distance) && distance < 100 && this._isActive();
+
+      if (typeof card.showPopover === 'function' && typeof card.hidePopover === 'function') {
+        let isOpen = false;
+        try { isOpen = card.matches(':popover-open'); } catch (_error) {}
+        try {
+          if (shouldShow && !isOpen) {
+            card.showPopover();
+            isOpen = true;
+          } else if (!shouldShow && isOpen) {
+            card.hidePopover();
+            isOpen = false;
+          }
+        } catch (_error) {
+          card.hidden = !shouldShow;
+        }
+      } else {
+        card.hidden = !shouldShow;
+      }
+    }
+
+    _supportCardHtml() {
+      return `<aside class="support-card" popover="manual" data-support-card aria-labelledby="support-card-title">
+        <div class="support-head">
+          <span class="support-badge">${this._escape(this._t('support_badge'))}</span>
+          <button type="button" class="support-close" data-support-dismiss aria-label="${this._escape(this._t('support_close'))}" title="${this._escape(this._t('support_close'))}">×</button>
+        </div>
+        <h4 id="support-card-title" class="support-title">${this._escape(this._t('support_title'))}</h4>
+        <p class="support-text">${this._escape(this._t('support_text'))}</p>
+        <div class="support-actions">
+          <button type="button" class="support-btn support-btn-secondary" data-support-dismiss>${this._escape(this._t('support_dismiss'))}</button>
+          <a href="https://send.monobank.ua/jar/e9Z2mHngN" target="_blank" rel="noopener noreferrer" class="support-btn support-btn-primary" data-support-donate>${this._escape(this._t('support_donate'))}</a>
+        </div>
+      </aside>`;
     }
 
     _scrollPageToTop() {
@@ -3149,12 +3247,16 @@
     _resetChartZoomSelection() {
       this._chartZoomConfirmHandle = null;
       if (this._chartZoomWindow) this._chartZoomWindow.dirty = false;
+      this._chartRangeSummaryApplied = false;
+      this._chartRangeSummaryRange = null;
       const button = this.shadowRoot?.querySelector?.('[data-chart-zoom-apply]');
       if (button) button.hidden = true;
       const bounds = this._chartZoomSelectionBounds();
       if (bounds) {
         this._chartZoomWindow = { start: bounds.start, end: bounds.end, dirty: false };
         this._updateChartZoomSelection(null, true);
+      } else {
+        this._chartZoomWindow = null;
       }
       this._updateChartRangeSummary();
     }
@@ -3232,7 +3334,7 @@
       const isExtreme = bounds && Number.isFinite(currentStart) && Number.isFinite(currentEnd)
         ? (currentStart <= bounds.start + 999 && currentEnd >= bounds.end - 999)
         : false;
-      const selected = Boolean(this._chartRangeSummaryApplied || (this._chartZoomWindow?.dirty && !isExtreme));
+      const selected = Boolean(!isExtreme && (this._chartRangeSummaryApplied || this._chartZoomWindow?.dirty));
       return `<section class="chart-range-summary" data-role="chart-range-summary" aria-live="polite" ${selected ? '' : 'hidden'}>
         <div class="chart-range-head">
           <div class="chart-range-title-group">
@@ -3448,11 +3550,11 @@
       let end = null;
       let shouldShow = false;
 
-      if (!isExtreme && Number.isFinite(currentStart) && Number.isFinite(currentEnd) && currentEnd > currentStart) {
+      if (!isExtreme && this._chartZoomWindow?.dirty && Number.isFinite(currentStart) && Number.isFinite(currentEnd) && currentEnd > currentStart) {
         start = currentStart;
         end = currentEnd;
         shouldShow = true;
-      } else if (this._chartRangeSummaryApplied && this._chartRangeSummaryRange) {
+      } else if (!isExtreme && this._chartRangeSummaryApplied && this._chartRangeSummaryRange) {
         start = this._chartRangeSummaryRange.start;
         end = this._chartRangeSummaryRange.end;
         shouldShow = true;
@@ -5651,10 +5753,11 @@
           <div class="view">${activeContent}</div>
         </div>
         <footer class="footer"><span>ESPHome · Grid Monitor</span><span data-value-key="ssid" data-value-digits="0">${this._escape(this._formatted('ssid', 0))}</span></footer>
-      </main><button class="back-to-top" type="button" popover="manual" data-scroll-top aria-label="${this._escape(this._t('scroll_to_top'))}" title="${this._escape(this._t('scroll_to_top'))}">${this._svg('arrow_up')}</button>`;
+      </main>${this._supportCardHtml()}<button class="back-to-top" type="button" popover="manual" data-scroll-top aria-label="${this._escape(this._t('scroll_to_top'))}" title="${this._escape(this._t('scroll_to_top'))}">${this._svg('arrow_up')}</button>`;
       this._hasRendered = true;
       this._renderedLanguage = this._lang();
       this._updateScrollTopVisibility();
+      this._updateSupportCardVisibility();
       this._updateChartZoomConfirmButton();
       this._queueChartMeasure();
     }
@@ -5689,13 +5792,30 @@
           else if (event.key === 'End') state.end = bounds.end;
           else state.end = Math.min(bounds.end, Math.max(state.start + 1000, state.end + (event.key === 'ArrowRight' ? step : -step)));
         }
-        state.dirty = true;
+        const isExtreme = (state.start <= bounds.start + 999 && state.end >= bounds.end - 999);
+        if (isExtreme) {
+          state.dirty = false;
+          this._chartRangeSummaryApplied = false;
+          this._chartRangeSummaryRange = null;
+        } else {
+          state.dirty = true;
+        }
         this._chartZoomWindow = state;
-        this._chartZoomConfirmHandle = handle.dataset.chartZoomHandle;
+        this._chartZoomConfirmHandle = state.dirty ? handle.dataset.chartZoomHandle : null;
         this._updateChartZoomSelection();
         this._updateChartZoomConfirmButton();
+        this._updateChartRangeSummary();
         event.preventDefault?.();
         return;
+      }
+      if (event.key === 'Escape') {
+        const supportCard = this.shadowRoot?.querySelector?.('[data-support-card]');
+        if (supportCard && (!supportCard.hidden || (typeof supportCard.matches === 'function' && supportCard.matches(':popover-open')))) {
+          this._supportCardDismissed = true;
+          this._updateSupportCardVisibility();
+          event.preventDefault?.();
+          return;
+        }
       }
       if (event.key !== 'Enter' && event.key !== ' ') return;
       const target = event.target?.closest?.('[data-energy-bar]');
@@ -5723,9 +5843,21 @@
         if (info) this._showDialog({ title: this._t(info.label), message: this._t(info.description), info: true });
         return;
       }
-      const target = event.target?.closest?.('[data-scroll-top], [data-actions-toggle], [data-firmware-toggle], [data-firmware-select], [data-firmware-copy], [data-firmware-reload], [data-tab], [data-period], [data-energy-period], [data-energy-metric], [data-energy-bar], [data-metric], [data-action], [data-number-save], [data-switch], [data-chart-live], [data-chart-zoom], [data-chart-zoom-apply], [data-chart-date-toggle], [data-chart-date-apply], [data-stats-start-apply], [data-stats-start-clear], [data-stats-helper-create], [data-history-delete]');
+      const target = event.target?.closest?.('[data-scroll-top], [data-support-dismiss], [data-support-donate], [data-actions-toggle], [data-firmware-toggle], [data-firmware-select], [data-firmware-copy], [data-firmware-reload], [data-tab], [data-period], [data-energy-period], [data-energy-metric], [data-energy-bar], [data-metric], [data-action], [data-number-save], [data-switch], [data-chart-live], [data-chart-zoom], [data-chart-zoom-apply], [data-chart-date-toggle], [data-chart-date-apply], [data-stats-start-apply], [data-stats-start-clear], [data-stats-helper-create], [data-history-delete]');
       if (!target) return;
       if (target.dataset.scrollTop !== undefined) { this._scrollPageToTop(); return; }
+      if (target.dataset.supportDismiss !== undefined) {
+        this._supportCardDismissed = true;
+        try { if (typeof window !== 'undefined' && window.sessionStorage) window.sessionStorage.setItem('sgm_support_dismissed', '1'); } catch (_e) {}
+        this._updateSupportCardVisibility();
+        return;
+      }
+      if (target.dataset.supportDonate !== undefined) {
+        this._supportCardDismissed = true;
+        try { if (typeof window !== 'undefined' && window.sessionStorage) window.sessionStorage.setItem('sgm_support_dismissed', '1'); } catch (_e) {}
+        this._updateSupportCardVisibility();
+        return;
+      }
       if (target.dataset.energyBar !== undefined) { this._selectEnergyBar(Number(target.dataset.energyBar)); return; }
       if (target.dataset.chartDateToggle !== undefined) {
         const panel = this.shadowRoot.getElementById(target.getAttribute('aria-controls'));
@@ -5765,6 +5897,8 @@
         const view = this.shadowRoot.querySelector('.view');
         if (view) view.innerHTML = this._activeContent();
         this._queueChartMeasure();
+        this._updateScrollTopVisibility();
+        this._updateSupportCardVisibility();
         this._ensureHistory();
         this._ensureEnergyHistory();
         return;
@@ -6253,6 +6387,26 @@
         .back-to-top{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));z-index:10000;width:54px;height:54px;display:grid;place-items:center;border:1px solid #75d5ff9c;border-radius:50%;background:linear-gradient(145deg,#0da8f4,#0759b7);color:#fff;box-shadow:0 8px 24px #0009,0 0 20px #079fff55;cursor:pointer;transition:transform .18s,box-shadow .18s}.back-to-top:hover{transform:translateY(-3px);box-shadow:0 11px 28px #000a,0 0 24px #079fff88}.back-to-top .icon{width:27px;height:27px}.back-to-top[hidden]{display:none}
         .back-to-top{inset:auto max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) auto;margin:0}.back-to-top:not(:popover-open){display:none}
         .back-to-top:popover-open{display:grid}
+        .support-card{position:fixed;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:9999;width:min(340px,calc(100vw - 32px));padding:16px;border:1px solid #32b7ff4d;border-radius:18px;background:radial-gradient(ellipse at 50% 0%,#153c60,#0a1728 75%);color:#f3f7ff;box-shadow:0 16px 40px rgba(0,0,0,.65),0 0 20px rgba(10,140,255,.15),inset 0 1px 0 rgba(255,255,255,.15);font-family:inherit;box-sizing:border-box;animation:support-fade-in .25s ease-out}
+        .support-card{inset:auto auto max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));margin:0}
+        .support-card:not(:popover-open){display:none}
+        .support-card:popover-open{display:block}
+        .support-card[hidden]{display:none!important}
+        @keyframes support-fade-in{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+        .support-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+        .support-badge{display:inline-flex;align-items:center;padding:3px 9px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-radius:999px;background:rgba(10,140,255,.16);color:#72c5ff;border:1px solid rgba(114,197,255,.35)}
+        .support-close{border:0;background:transparent;color:#8fb2dc;font-size:20px;line-height:1;padding:4px 8px;margin:-4px -6px 0 0;cursor:pointer;border-radius:8px;transition:color .15s,background .15s}
+        .support-close:hover{color:#fff;background:rgba(255,255,255,.08)}
+        .support-title{margin:0 0 6px;font-size:16px;font-weight:800;color:#eaf5ff;line-height:1.3}
+        .support-text{margin:0 0 14px;font-size:13px;line-height:1.5;color:#b7cde6}
+        .support-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end}
+        .support-btn{min-height:34px;padding:6px 13px;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;transition:transform .15s,background .15s,box-shadow .15s,border-color .15s}
+        .support-btn:hover{transform:translateY(-1px)}
+        .support-btn-secondary{background:#112338;color:#9bc0e7;border:1px solid #23456b}
+        .support-btn-secondary:hover{background:#183350;color:#d6e8fa;border-color:#356294}
+        .support-btn-primary{background:linear-gradient(135deg,#0a8cff,#005ecb);color:#fff;border:1px solid #75d5ff;box-shadow:0 4px 14px rgba(10,140,255,.4)}
+        .support-btn-primary:hover{box-shadow:0 6px 18px rgba(10,140,255,.6)}
+        @media(max-width:440px){.support-card{max-width:calc(100vw - 86px)}.support-btn{font-size:12px;padding:5px 10px}}
         .app-dialog h2{margin:0;color:#bdeaff;font-size:20px;line-height:1.3}.app-dialog p{margin:12px 0 22px;color:#c6d7ea;font-size:15px;line-height:1.55;white-space:pre-line;overflow-wrap:anywhere}
         .dialog-actions{display:flex;justify-content:center;gap:10px}.dialog-button{min-width:118px;min-height:44px;padding:10px 16px;border:1px solid transparent;border-radius:12px;font:inherit;font-weight:700;cursor:pointer;transition:transform .16s,box-shadow .16s,background .16s}.dialog-button:hover{transform:translateY(-1px)}.dialog-button:focus-visible{outline:2px solid #bcecff;outline-offset:3px}.dialog-button.primary{border-color:#36afff;background:linear-gradient(120deg,#0da8f4,#0867cb);color:#fff;box-shadow:0 6px 18px #008eff45}.dialog-button.secondary{border-color:#58718c;background:#182a3f;color:#d7e6f6}.dialog-button.secondary:hover{background:#213b58}
         @media(max-width:480px){.app-dialog{padding:20px 16px;border-radius:18px}.dialog-actions{flex-direction:column-reverse}.dialog-button{width:100%}}

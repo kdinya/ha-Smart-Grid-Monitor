@@ -2858,6 +2858,11 @@ card._chartZoomWindow = { start: 1000, end: 5000, dirty: true };
 const htmlExtreme = card._chartRangeSummaryHtml();
 assert.ok(htmlExtreme.includes('hidden'), 'hidden when handles are at extreme positions');
 
+// Test that extreme handle positions hide summary even if previously applied
+card._chartRangeSummaryApplied = true;
+const htmlExtremeApplied = card._chartRangeSummaryHtml();
+assert.ok(htmlExtremeApplied.includes('hidden'), 'hidden when handles are at extreme positions even if previously applied');
+
 // Test that _resetChartZoomSelectionAndSetDay resets to day
 let refreshedPeriod = null;
 card._setHistoryPeriod = (p) => { refreshedPeriod = p; };
