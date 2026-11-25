@@ -3021,7 +3021,15 @@
       const state = this._chartZoomWindow || { start: drag.bounds.start, end: drag.bounds.end, dirty: false };
       if (drag.handle === 'start') state.start = Math.max(drag.bounds.start, Math.min(state.end - 1000, mapped));
       else state.end = Math.min(drag.bounds.end, Math.max(state.start + 1000, mapped));
-      state.dirty = true;
+      const bounds = drag.bounds;
+      const isExtreme = (state.start <= bounds.start + 999 && state.end >= bounds.end - 999);
+      if (isExtreme) {
+        state.dirty = false;
+        this._chartRangeSummaryApplied = false;
+        this._chartRangeSummaryRange = null;
+      } else {
+        state.dirty = true;
+      }
       this._chartZoomWindow = state;
       this._updateChartZoomSelection(drag, forceLabels);
       this._updateChartRangeSummary();
@@ -3032,6 +3040,8 @@
       const start = Math.max(bounds?.start ?? 0, Number(this._chartZoomWindow?.start));
       const end = Math.min(bounds?.end ?? 0, Number(this._chartZoomWindow?.end));
       if (!bounds || !Number.isFinite(start) || !Number.isFinite(end) || end - start < 1000) return;
+      this._chartRangeSummaryApplied = true;
+      this._chartRangeSummaryRange = { start, end };
       const chart = this.shadowRoot?.querySelector?.('[data-role="chart-plot"] svg.chart');
       const dataGroup = chart?.querySelector?.('[data-role="chart-data"]');
       const oldRange = bounds.end - bounds.start;
@@ -3041,9 +3051,12 @@
       const scale = oldRange / nextRange;
       const tx = x0 * (1 - scale) + ((bounds.start - start) / nextRange) * (x1 - x0);
       const transform = `matrix(${scale.toFixed(5)}, 0, 0, 1, ${tx.toFixed(2)}, 0)`;
-      this._resetChartZoomSelection();
+      this._chartZoomConfirmHandle = null;
+      const button = this.shadowRoot?.querySelector?.('[data-chart-zoom-apply]');
+      if (button) button.hidden = true;
       if (typeof dataGroup?.animate !== 'function') {
         this._setCustomChartRange(start, end, 'params', false, true);
+        this._updateChartRangeSummary();
         return;
       }
       try {
@@ -3062,6 +3075,7 @@
         };
         animation.oncancel = () => {
           if (this._chartZoomAnimation === animation) this._chartZoomAnimation = null;
+          this._commitChartZoomRange(start, end);
         };
       } catch (_error) {
         this._chartZoomAnimation = null;
@@ -3087,6 +3101,10 @@
       this._clearChartScrub();
       this._updateChartDateRangeControls();
       this._closeChartDateRangePopover();
+      this._chartZoomConfirmHandle = null;
+      const button = this.shadowRoot?.querySelector?.('[data-chart-zoom-apply]');
+      if (button) button.hidden = true;
+      this._chartZoomWindow = { start, end, dirty: false };
       if (this._chartFullRenderPending || this._chartRefreshPending || this._energyChartRefreshPending) {
         this._flushDeferredChartUpdates();
       } else {
@@ -3094,6 +3112,38 @@
         this._ensureHistory();
         this._ensureVoltageHistory();
       }
+      this._updateChartRangeSummary();
+    }
+
+    _resetChartZoomSelectionAndSetDay() {
+      this._chartRangeSummaryApplied = false;
+      this._chartRangeSummaryRange = null;
+      this._setHistoryPeriod('day');
+    }
+
+    _setHistoryPeriod(period) {
+      this._chartRangeSummaryApplied = false;
+      this._chartRangeSummaryRange = null;
+      this._resetChartZoomSelection();
+      this._clearChartScrub();
+      this._historyRequest += 1;
+      this._historyLoading = false;
+      this._voltageHistoryRequest += 1;
+      this._voltageHistoryLoading = false;
+      this._historyRange = period;
+      this._historyCustomRange = null;
+      this._historyKey = '';
+      this._history = [];
+      this._voltageHistoryKey = '';
+      this._voltageHistory = [];
+      this.shadowRoot?.querySelectorAll?.('[data-period]')?.forEach?.((button) => {
+        const active = button.dataset.period === this._historyRange;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+      });
+      this._updateChartDateRangeControls();
+      this._refreshChart();
+      this._ensureHistory();
     }
 
     _resetChartZoomSelection() {
@@ -3176,7 +3226,13 @@
         : this._chartReadingsError || !hasValue ? this._t('chart_readings_unavailable') : '';
     }
     _chartRangeSummaryHtml() {
-      const selected = Boolean(this._chartZoomWindow?.dirty);
+      const bounds = this._chartZoomSelectionBounds?.();
+      const currentStart = Number(this._chartZoomWindow?.start);
+      const currentEnd = Number(this._chartZoomWindow?.end);
+      const isExtreme = bounds && Number.isFinite(currentStart) && Number.isFinite(currentEnd)
+        ? (currentStart <= bounds.start + 999 && currentEnd >= bounds.end - 999)
+        : false;
+      const selected = Boolean(this._chartRangeSummaryApplied || (this._chartZoomWindow?.dirty && !isExtreme));
       return `<section class="chart-range-summary" data-role="chart-range-summary" aria-live="polite" ${selected ? '' : 'hidden'}>
         <div class="chart-range-head">
           <div class="chart-range-title-group">
@@ -3185,7 +3241,6 @@
             <span class="chart-range-badge" data-role="range-duration"></span>
           </div>
           <div class="chart-range-actions">
-            <button type="button" class="action-button chart-range-button" data-chart-range-apply>${this._escape(this._t('chart_range_apply'))}</button>
             <button type="button" class="action-button chart-range-button" data-chart-range-reset>${this._escape(this._t('chart_range_reset'))}</button>
           </div>
         </div>
@@ -3381,13 +3436,30 @@
     _updateChartRangeSummary() {
       const panel = this.shadowRoot?.querySelector?.('[data-role="chart-range-summary"]');
       if (!panel) return;
-      const selected = Boolean(this._chartZoomWindow?.dirty);
-      panel.hidden = !selected;
-      if (!selected) return;
 
-      const start = Number(this._chartZoomWindow?.start);
-      const end = Number(this._chartZoomWindow?.end);
-      if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return;
+      const bounds = this._chartZoomSelectionBounds();
+      const currentStart = Number(this._chartZoomWindow?.start);
+      const currentEnd = Number(this._chartZoomWindow?.end);
+      const isExtreme = bounds && Number.isFinite(currentStart) && Number.isFinite(currentEnd)
+        ? (currentStart <= bounds.start + 999 && currentEnd >= bounds.end - 999)
+        : false;
+
+      let start = null;
+      let end = null;
+      let shouldShow = false;
+
+      if (!isExtreme && Number.isFinite(currentStart) && Number.isFinite(currentEnd) && currentEnd > currentStart) {
+        start = currentStart;
+        end = currentEnd;
+        shouldShow = true;
+      } else if (this._chartRangeSummaryApplied && this._chartRangeSummaryRange) {
+        start = this._chartRangeSummaryRange.start;
+        end = this._chartRangeSummaryRange.end;
+        shouldShow = true;
+      }
+
+      panel.hidden = !shouldShow;
+      if (!shouldShow || !Number.isFinite(start) || !Number.isFinite(end) || end <= start) return;
 
       const params = this._calculateRangeParameters(start, end);
       if (!params) return;
@@ -4725,7 +4797,10 @@
     }
 
     _queueChartReadings(timestamp, immediate = false) {
-      if (this._chartReadingsTimer !== null) window.clearTimeout(this._chartReadingsTimer);
+      if (this._chartReadingsTimer !== null) {
+        if (typeof window !== 'undefined' && typeof window.clearTimeout === 'function') window.clearTimeout(this._chartReadingsTimer);
+        else if (typeof clearTimeout === 'function') clearTimeout(this._chartReadingsTimer);
+      }
       this._chartReadingsPendingTime = timestamp;
       this._chartReadingsTimer = window.setTimeout(() => {
         this._chartReadingsTimer = null;
@@ -5716,8 +5791,8 @@
         else this._updateChartCurrent();
         return;
       }
-      if (target.hasAttribute?.('data-chart-zoom-apply') || target.dataset.chartRangeApply !== undefined) { this._applyChartZoomSelection(); return; }
-      if (target.dataset.chartRangeReset !== undefined) { this._resetChartZoomSelection(); return; }
+      if (target.hasAttribute?.('data-chart-zoom-apply')) { this._applyChartZoomSelection(); return; }
+      if (target.dataset.chartRangeReset !== undefined) { this._resetChartZoomSelectionAndSetDay(); return; }
       if (target.dataset.chartZoom) { this._zoomChart(target.dataset.chartZoom); return; }
       if (target.dataset.chartDateApply !== undefined) { this._applyChartDateRange(target.dataset.chartScope || 'params'); return; }
       if (target.dataset.statsStartApply !== undefined) { this._applyStatsStartInput(); return; }
@@ -5766,27 +5841,8 @@
         return;
       }
       if (target.dataset.period) {
-        if (this._historyRange === target.dataset.period) return;
-        this._resetChartZoomSelection();
-        this._clearChartScrub();
-        this._historyRequest += 1;
-        this._historyLoading = false;
-        this._voltageHistoryRequest += 1;
-        this._voltageHistoryLoading = false;
-        this._historyRange = target.dataset.period;
-        this._historyCustomRange = null;
-        this._historyKey = '';
-        this._history = [];
-        this._voltageHistoryKey = '';
-        this._voltageHistory = [];
-        this.shadowRoot.querySelectorAll('[data-period]').forEach((button) => {
-          const active = button.dataset.period === this._historyRange;
-          button.classList.toggle('active', active);
-          button.setAttribute('aria-pressed', String(active));
-        });
-        this._updateChartDateRangeControls();
-        this._refreshChart();
-        this._ensureHistory();
+        if (this._historyRange === target.dataset.period && !this._historyCustomRange) return;
+        this._setHistoryPeriod(target.dataset.period);
         return;
       }
       if (target.dataset.action) this._call(target.dataset.action);
