@@ -2836,14 +2836,35 @@ assert.ok(htmlClean.includes('hidden'), 'hidden when dirty is false');
 card._chartZoomWindow.dirty = true;
 const htmlDirty = card._chartRangeSummaryHtml();
 assert.ok(!htmlDirty.includes('hidden'), 'visible when dirty is true');
-assert.ok(htmlDirty.includes('data-chart-range-apply'));
-assert.ok(htmlDirty.includes('data-chart-range-reset'));
+assert.ok(!htmlDirty.includes('data-chart-range-apply'), 'zoom button removed from summary');
+assert.ok(htmlDirty.includes('data-chart-range-reset'), 'reset button present in summary');
 assert.ok(htmlDirty.includes('data-role="range-card-power"'));
 assert.ok(htmlDirty.includes('data-role="range-card-voltage"'));
 assert.ok(htmlDirty.includes('data-role="range-card-energy"'));
 assert.ok(htmlDirty.includes('data-role="range-card-cost"'));
 assert.ok(htmlDirty.includes('data-role="range-card-current"'));
 assert.ok(htmlDirty.includes('data-role="range-card-outages"'));
+
+// Test that when summary is applied, it remains visible even if dirty is false
+card._chartZoomWindow.dirty = false;
+card._chartRangeSummaryApplied = true;
+const htmlApplied = card._chartRangeSummaryHtml();
+assert.ok(!htmlApplied.includes('hidden'), 'applied summary remains visible');
+
+// Test that extreme handle positions hide the summary
+card._chartRangeSummaryApplied = false;
+card._chartZoomSelectionBounds = () => ({ start: 1000, end: 5000 });
+card._chartZoomWindow = { start: 1000, end: 5000, dirty: true };
+const htmlExtreme = card._chartRangeSummaryHtml();
+assert.ok(htmlExtreme.includes('hidden'), 'hidden when handles are at extreme positions');
+
+// Test that _resetChartZoomSelectionAndSetDay resets to day
+let refreshedPeriod = null;
+card._setHistoryPeriod = (p) => { refreshedPeriod = p; };
+card._resetChartZoomSelection = () => {};
+card._resetChartZoomSelectionAndSetDay();
+assert.equal(refreshedPeriod, 'day', 'reset selection switches chart to day mode');
+assert.equal(card._chartRangeSummaryApplied, false, 'clears applied summary');
 '''
         result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False)
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
