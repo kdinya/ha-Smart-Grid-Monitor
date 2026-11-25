@@ -53,6 +53,8 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("raw.githubusercontent.com/kdinya/ha-Smart-Grid-Monitor/main/esphome/grid-monitor.yaml", card)
         self.assertTrue((ROOT / "esphome" / "grid-monitor.yaml").is_file())
         self.assertIn("data-firmware-toggle", card)
+        self.assertIn("data-firmware-download", card)
+        self.assertIn("_downloadFirmware", card)
         self.assertIn("readonly", card)
 
     def test_hacs_manifest_is_valid_json(self):

@@ -158,7 +158,7 @@
       history_purge_done: 'Запит на очищення історії Recorder для {count} сутностей виконано.', history_stats_done: 'Статистику Home Assistant для {count} сенсорів видалено.',
       history_delete_error: 'Не вдалося видалити дані. Переконайтеся, що ви ввійшли як адміністратор, Recorder доступний і резервну копію створено.', history_delete_empty: 'Не знайдено сутностей цієї картки, для яких можна видалити дані.',
       stats_error: 'Вкажіть коректні дату й час у минулому.', stats_note: 'Мін/макс від', power_range_period: 'Діапазон потужності за період', max_current_period: 'Максимальний струм за період', peak_power_period: 'Пікова потужність за період', stat_min: 'Мін.', stat_avg: 'Сер.', stat_max: 'Макс.', hour: 'Год', day: 'День', week: 'Тиждень', month: 'Місяць', loading: 'Завантаження історії…', no_history: 'Історія поки недоступна',
-      chart_select_time: 'Повзунком вибирайте час на графіку', chart_zoom_selection: 'Перетягніть мітки на графіку', chart_zoom_apply: 'Застосувати', chart_zoom_start: 'Початок', chart_zoom_end: 'Кінець', chart_date_range: 'Вибрати період', chart_from: 'Від', chart_to: 'До', chart_apply: 'Показати', chart_calendar_previous: 'Попередній місяць', chart_calendar_next: 'Наступний місяць', chart_date_error: 'Перевірте дати: кінець має бути пізніше початку й не в майбутньому', chart_zoom_in: 'Збільшити масштаб', chart_zoom_out: 'Зменшити масштаб', chart_readings: 'Дані на вибраний час', chart_readings_loading: 'Завантаження вимірювань…', chart_readings_unavailable: 'Історія вимірювань недоступна', chart_live: 'Зараз', active_power: 'Активна потужність',
+      chart_select_time: 'Повзунком вибирайте час на графіку', chart_zoom_selection: 'Перетягніть мітки на графіку', chart_zoom_apply: 'Застосувати', chart_zoom_start: 'Початок', chart_zoom_end: 'Кінець', chart_date_range: 'Вибрати період', chart_from: 'Від', chart_to: 'До', chart_apply: 'Показати', chart_calendar_previous: 'Попередній місяць', chart_calendar_next: 'Наступний місяць', chart_date_error: 'Перевірте дати: кінець має бути пізніше початку й не в майбутньому', chart_zoom_in: 'Збільшити масштаб', chart_zoom_out: 'Зменшити масштаб', chart_readings: 'Дані на вибраний час', chart_readings_loading: 'Завантаження вимірювань…', chart_readings_unavailable: 'Історія вимірювань недоступна', chart_range_title: 'Аналіз вибраного проміжку', chart_range_duration: 'Тривалість', chart_range_active_power: 'Активна потужність', chart_range_voltage: 'Напруга', chart_range_energy: 'Спожита енергія', chart_range_cost: 'Орієнтовна вартість', chart_range_current: 'Орієнтовний струм', chart_range_apparent_reactive: 'Повна / реактивна', chart_range_pf: 'Коефіцієнт потужності', chart_range_outages: 'Перебої в мережі', chart_range_no_outages: 'Без перебоїв (100% аптайм)', chart_range_outage_events: 'відключень', chart_range_outage_time: 'Час без напруги', chart_range_apply: 'Масштабувати графік', chart_range_reset: 'Скинути виділення', chart_range_deviation: 'від номіналу', firmware_download: 'Завантажити .yaml', firmware_downloaded: 'Файл grid-monitor.yaml завантажено', firmware_download_failed: 'Помилка завантаження файлу', chart_live: 'Зараз', active_power: 'Активна потужність',
       mains: 'Зв’язок з PZEM', has_voltage: 'Дані доступні', no_voltage: 'Дані недоступні', source: 'Живлення ESP', from_mains: 'Мережа (не підтверджено)', from_inverter: 'Джерело невідоме', pzem_link: 'Зв’язок з PZEM', active: 'Онлайн', inactive: 'Офлайн', today_consumption: 'Споживання сьогодні',
       esp_power_connection: 'Схема живлення ESP', esp_power_shared: 'Від мережі разом із модулем', esp_power_after_avr: 'Після АВР', esp_power_independent: 'Незалежне живлення', esp_power_avr_note: 'ESP може живитися від інвертора', pzem_grid_note: 'PZEM вимірює мережу в усіх режимах',
       params_title: 'Електричні параметри', range_title: 'Діапазон напруги на графіку', range_now: 'Зараз', energy_title: 'Енергія та вартість', settings_title: 'Налаштування та діагностика',
@@ -226,7 +226,7 @@
       history_purge_done: 'Recorder history cleanup was requested for {count} entities.', history_stats_done: 'Home Assistant statistics were deleted for {count} sensors.',
       history_delete_error: 'Could not delete the data. Make sure you are signed in as an administrator, Recorder is available, and a backup exists.', history_delete_empty: 'No entities used by this card were found to clean up.',
       stats_error: 'Enter a valid date and time in the past.', stats_note: 'Min/max since', power_range_period: 'Power range for the period', max_current_period: 'Peak current for the period', peak_power_period: 'Peak power for the period', stat_min: 'Min', stat_avg: 'Avg', stat_max: 'Max', hour: 'Hour', day: 'Day', week: 'Week', month: 'Month', loading: 'Loading history…', no_history: 'History is not available yet',
-      chart_select_time: 'Select a time on the chart', chart_zoom_selection: 'Drag the handles on the chart', chart_zoom_apply: 'Apply', chart_zoom_start: 'Start', chart_zoom_end: 'End', chart_date_range: 'Select period', chart_from: 'From', chart_to: 'To', chart_apply: 'Show', chart_calendar_previous: 'Previous month', chart_calendar_next: 'Next month', chart_date_error: 'Check dates: the end must be after the start and not in the future', chart_zoom_in: 'Zoom in', chart_zoom_out: 'Zoom out', chart_readings: 'Readings at selected time', chart_readings_loading: 'Loading readings…', chart_readings_unavailable: 'Measurement history is unavailable', chart_live: 'Now', active_power: 'Active power',
+      chart_select_time: 'Select a time on the chart', chart_zoom_selection: 'Drag the handles on the chart', chart_zoom_apply: 'Apply', chart_zoom_start: 'Start', chart_zoom_end: 'End', chart_date_range: 'Select period', chart_from: 'From', chart_to: 'To', chart_apply: 'Show', chart_calendar_previous: 'Previous month', chart_calendar_next: 'Next month', chart_date_error: 'Check dates: the end must be after the start and not in the future', chart_zoom_in: 'Zoom in', chart_zoom_out: 'Zoom out', chart_readings: 'Readings at selected time', chart_readings_loading: 'Loading readings…', chart_readings_unavailable: 'Measurement history is unavailable', chart_range_title: 'Selected interval analysis', chart_range_duration: 'Duration', chart_range_active_power: 'Active power', chart_range_voltage: 'Voltage', chart_range_energy: 'Energy consumed', chart_range_cost: 'Estimated cost', chart_range_current: 'Estimated current', chart_range_apparent_reactive: 'Apparent / reactive', chart_range_pf: 'Power factor', chart_range_outages: 'Grid outages', chart_range_no_outages: 'No outages (100% uptime)', chart_range_outage_events: 'outages', chart_range_outage_time: 'Outage time', chart_range_apply: 'Zoom to selection', chart_range_reset: 'Clear selection', chart_range_deviation: 'from nominal', firmware_download: 'Download .yaml', firmware_downloaded: 'File grid-monitor.yaml downloaded', firmware_download_failed: 'Failed to download file', chart_live: 'Now', active_power: 'Active power',
       mains: 'PZEM connection', has_voltage: 'Data available', no_voltage: 'Data unavailable', source: 'ESP power source', from_mains: 'Mains (not confirmed)', from_inverter: 'Source unknown', pzem_link: 'PZEM connection', active: 'Online', inactive: 'Offline', today_consumption: 'Consumption today',
       esp_power_connection: 'ESP power arrangement', esp_power_shared: 'Mains shared with the module', esp_power_after_avr: 'After AVR', esp_power_independent: 'Independent power', esp_power_avr_note: 'ESP may be powered by the inverter', pzem_grid_note: 'PZEM measures mains in every mode',
       params_title: 'Electrical parameters', range_title: 'Voltage range on chart', range_now: 'Now', energy_title: 'Energy and cost', settings_title: 'Settings and diagnostics',
@@ -1858,7 +1858,7 @@
       const buttons = labels.map((period) => `<button class="period-button ${this._historyRange === period ? 'active' : ''}" data-period="${period}" aria-pressed="${this._historyRange === period}">${this._escape(this._t(period))}</button>`).join('');
       const metricButtons = ['power', 'voltage'].map((metric) => `<button class="period-button ${this._chartMetric === metric ? 'active' : ''}" data-metric="${metric}" aria-pressed="${this._chartMetric === metric}">${this._escape(this._t(metric))}</button>`).join('');
       const chartSvg = this._chartSvg();
-      return `<section class="card chart-card detailed-chart"><div class="chart-head"><h2><span class="chart-icon">${this._svg('chart')}</span>${this._escape(this._t('chart_title'))}</h2><div class="periods chart-metric-periods" role="group" aria-label="${this._escape(this._t('chart_title'))}">${metricButtons}</div><div class="periods chart-range-periods" role="group" aria-label="${this._escape(this._t('hour'))}">${buttons}${this._chartDateRangeHtml()}</div></div><div class="chart-stats" data-role="chart-stats">${this._chartStatsHtml()}</div><div class="chart-plot" data-role="chart-plot">${chartSvg}${this._chartZoomActionsHtml()}</div>${this._chartScrubberHtml()}${this._chartReadingsHtml()}</section>`;
+      return `<section class="card chart-card detailed-chart"><div class="chart-head"><h2><span class="chart-icon">${this._svg('chart')}</span>${this._escape(this._t('chart_title'))}</h2><div class="periods chart-metric-periods" role="group" aria-label="${this._escape(this._t('chart_title'))}">${metricButtons}</div><div class="periods chart-range-periods" role="group" aria-label="${this._escape(this._t('hour'))}">${buttons}${this._chartDateRangeHtml()}</div></div><div class="chart-stats" data-role="chart-stats">${this._chartStatsHtml()}</div><div class="chart-plot" data-role="chart-plot">${chartSvg}${this._chartZoomActionsHtml()}</div>${this._chartScrubberHtml()}${this._chartReadingsHtml()}${this._chartRangeSummaryHtml()}</section>`;
     }
 
     _readStatsStart() {
@@ -1997,7 +1997,7 @@
 
     _firmwareSection() {
       const open = this._firmwareOpen === true;
-      return `<h2 class="subheading">${this._escape(this._t('firmware_title'))}</h2><div class="actions-section" data-role="firmware-section"><button type="button" class="actions-toggle" data-firmware-toggle aria-expanded="${open ? 'true' : 'false'}" aria-controls="grid-monitor-firmware"><span data-role="firmware-toggle-label">${this._escape(this._t(open ? 'firmware_hide' : 'firmware_show'))}</span><span class="actions-chevron" aria-hidden="true"></span></button><div class="actions-body" id="grid-monitor-firmware" data-role="firmware-body" ${open ? '' : 'hidden'}><p class="history-cleanup-hint">${this._escape(this._t('firmware_hint'))}</p><div class="firmware-tools"><button type="button" class="action-button" data-firmware-select>${this._escape(this._t('firmware_select'))}</button><button type="button" class="action-button" data-firmware-copy>${this._escape(this._t('firmware_copy'))}</button><button type="button" class="action-button" data-firmware-reload>${this._escape(this._t('firmware_reload'))}</button></div><p class="firmware-status" data-role="firmware-status" aria-live="polite">${this._escape(this._firmwareStatus || '')}</p><textarea class="firmware-code" data-role="firmware-code" readonly spellcheck="false" wrap="off" aria-label="${this._escape(this._t('firmware_label'))}">${this._escape(this._firmwareCode || '')}</textarea></div></div>`;
+      return `<h2 class="subheading">${this._escape(this._t('firmware_title'))}</h2><div class="actions-section" data-role="firmware-section"><button type="button" class="actions-toggle" data-firmware-toggle aria-expanded="${open ? 'true' : 'false'}" aria-controls="grid-monitor-firmware"><span data-role="firmware-toggle-label">${this._escape(this._t(open ? 'firmware_hide' : 'firmware_show'))}</span><span class="actions-chevron" aria-hidden="true"></span></button><div class="actions-body" id="grid-monitor-firmware" data-role="firmware-body" ${open ? '' : 'hidden'}><p class="history-cleanup-hint">${this._escape(this._t('firmware_hint'))}</p><div class="firmware-tools"><button type="button" class="action-button" data-firmware-select>${this._escape(this._t('firmware_select'))}</button><button type="button" class="action-button" data-firmware-copy>${this._escape(this._t('firmware_copy'))}</button><button type="button" class="action-button" data-firmware-download>${this._escape(this._t('firmware_download'))}</button><button type="button" class="action-button" data-firmware-reload>${this._escape(this._t('firmware_reload'))}</button></div><p class="firmware-status" data-role="firmware-status" aria-live="polite">${this._escape(this._firmwareStatus || '')}</p><textarea class="firmware-code" data-role="firmware-code" readonly spellcheck="false" wrap="off" aria-label="${this._escape(this._t('firmware_label'))}">${this._escape(this._firmwareCode || '')}</textarea></div></div>`;
     }
 
     _firmwareNode(role) { return this.shadowRoot?.querySelector?.(`[data-role="${role}"]`) || null; }
@@ -2074,6 +2074,27 @@
         try { copied = document.execCommand('copy'); } catch (_error) { copied = false; }
       }
       this._setFirmwareStatus(this._t(copied ? 'firmware_copied' : 'firmware_copy_failed'));
+    }
+    _downloadFirmware() {
+      const code = this._firmwareCode || this._firmwareNode('firmware-code')?.value;
+      if (!code) {
+        this._setFirmwareStatus(this._t('firmware_error'));
+        return;
+      }
+      try {
+        const blob = new Blob([code], { type: 'text/yaml;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'grid-monitor.yaml';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        this._setFirmwareStatus(this._t('firmware_downloaded'));
+      } catch (_error) {
+        this._setFirmwareStatus(this._t('firmware_download_failed'));
+      }
     }
 
     _setActionsOpen(open) {
@@ -3003,6 +3024,7 @@
       state.dirty = true;
       this._chartZoomWindow = state;
       this._updateChartZoomSelection(drag, forceLabels);
+      this._updateChartRangeSummary();
     }
 
     _applyChartZoomSelection() {
@@ -3079,6 +3101,12 @@
       if (this._chartZoomWindow) this._chartZoomWindow.dirty = false;
       const button = this.shadowRoot?.querySelector?.('[data-chart-zoom-apply]');
       if (button) button.hidden = true;
+      const bounds = this._chartZoomSelectionBounds();
+      if (bounds) {
+        this._chartZoomWindow = { start: bounds.start, end: bounds.end, dirty: false };
+        this._updateChartZoomSelection(null, true);
+      }
+      this._updateChartRangeSummary();
     }
 
     _chartScrubberHtml() {
@@ -3146,6 +3174,318 @@
       status.textContent = loading || this._chartReadingsAt !== this._scrubTime && !this._chartReadingsError
         ? this._t('chart_readings_loading')
         : this._chartReadingsError || !hasValue ? this._t('chart_readings_unavailable') : '';
+    }
+    _chartRangeSummaryHtml() {
+      const selected = Boolean(this._chartZoomWindow?.dirty);
+      return `<section class="chart-range-summary" data-role="chart-range-summary" aria-live="polite" ${selected ? '' : 'hidden'}>
+        <div class="chart-range-head">
+          <div class="chart-range-title-group">
+            <h3>${this._escape(this._t('chart_range_title'))}</h3>
+            <span class="chart-range-badge" data-role="range-time"></span>
+            <span class="chart-range-badge" data-role="range-duration"></span>
+          </div>
+          <div class="chart-range-actions">
+            <button type="button" class="action-button chart-range-button" data-chart-range-apply>${this._escape(this._t('chart_range_apply'))}</button>
+            <button type="button" class="action-button chart-range-button" data-chart-range-reset>${this._escape(this._t('chart_range_reset'))}</button>
+          </div>
+        </div>
+        <div class="chart-reading-grid chart-range-grid">
+          <div class="chart-reading" data-role="range-card-power">
+            <span>${this._escape(this._t('chart_range_active_power'))}</span>
+            <strong data-role="range-power-avg">—</strong>
+            <small data-role="range-power-extremes">—</small>
+          </div>
+          <div class="chart-reading" data-role="range-card-voltage">
+            <span>${this._escape(this._t('chart_range_voltage'))}</span>
+            <strong data-role="range-voltage-avg">—</strong>
+            <small data-role="range-voltage-extremes">—</small>
+          </div>
+          <div class="chart-reading" data-role="range-card-energy">
+            <span>${this._escape(this._t('chart_range_energy'))}</span>
+            <strong data-role="range-energy">—</strong>
+            <small data-role="range-energy-sub">—</small>
+          </div>
+          <div class="chart-reading" data-role="range-card-cost">
+            <span>${this._escape(this._t('chart_range_cost'))}</span>
+            <strong data-role="range-cost">—</strong>
+            <small data-role="range-cost-sub">—</small>
+          </div>
+          <div class="chart-reading" data-role="range-card-current">
+            <span>${this._escape(this._t('chart_range_current'))}</span>
+            <strong data-role="range-current">—</strong>
+            <small data-role="range-apparent-reactive">—</small>
+          </div>
+          <div class="chart-reading" data-role="range-card-outages">
+            <span>${this._escape(this._t('chart_range_outages'))}</span>
+            <strong data-role="range-outages">—</strong>
+            <small data-role="range-outages-sub">—</small>
+          </div>
+        </div>
+      </section>`;
+    }
+
+    _calculateRangeParameters(start, end) {
+      if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
+      const durationMs = end - start;
+
+      const rawPower = (this._chartMetric || 'power') === 'power' ? this._history : (this._powerHistory || []);
+      const powerPts = (rawPower || []).map((p) => ({
+        t: p.time instanceof Date ? p.time.getTime() : Number(p.time),
+        v: p.value,
+        outage: Boolean(p.outage)
+      })).filter((p) => Number.isFinite(p.t)).sort((a, b) => a.t - b.t);
+
+      const rawVoltage = (this._chartMetric || 'power') === 'voltage' ? this._history : (this._voltageHistory || []);
+      const voltPts = (rawVoltage || []).map((p) => ({
+        t: p.time instanceof Date ? p.time.getTime() : Number(p.time),
+        v: p.value,
+        outage: Boolean(p.outage)
+      })).filter((p) => Number.isFinite(p.t)).sort((a, b) => a.t - b.t);
+
+      const nominalV = Number(this._state('voltage_nominal')?.state) || 230;
+      const dayTariff = Number(this._state('tariff_day')?.state || this._state('tariff')?.state) || 4.32;
+      const nightTariff = Number(this._state('tariff_night')?.state) || (dayTariff / 2);
+      const twoZone = this._state('two_zone_tariff')?.state === 'on';
+      const livePf = Number(this._state('power_factor')?.state);
+      const pf = Number.isFinite(livePf) && livePf > 0.05 && livePf <= 1.0 ? livePf : 0.98;
+
+      const pBefore = powerPts.filter((p) => p.t <= start);
+      const pPrior = pBefore.length ? pBefore[pBefore.length - 1] : null;
+      const pWithin = powerPts.filter((p) => p.t > start && p.t <= end);
+
+      const pIntervals = [];
+      let currT = start;
+      let currVal = pPrior ? pPrior.v : (pWithin.length ? pWithin[0].v : null);
+      let currOutage = pPrior ? pPrior.outage : false;
+
+      for (const pt of pWithin) {
+        if (pt.t > currT) {
+          pIntervals.push({ t0: currT, t1: pt.t, dt: pt.t - currT, v: currVal, outage: currOutage });
+        }
+        currT = pt.t;
+        currVal = pt.v;
+        currOutage = pt.outage;
+      }
+      if (currT < end) {
+        pIntervals.push({ t0: currT, t1: end, dt: end - currT, v: currVal, outage: currOutage });
+      }
+
+      let totalEnergyKwh = 0;
+      let totalCost = 0;
+      let activePowerWeighted = 0;
+      let activePowerDuration = 0;
+      let minPower = null;
+      let peakPower = null;
+
+      for (const iv of pIntervals) {
+        const val = iv.v;
+        const dt = iv.dt;
+        const isOutage = iv.outage || val === null || val <= 0;
+        if (!isOutage && Number.isFinite(val) && val > 0) {
+          const eKwh = (val * dt) / 3.6e9;
+          totalEnergyKwh += eKwh;
+          activePowerWeighted += val * dt;
+          activePowerDuration += dt;
+          if (minPower === null || val < minPower) minPower = val;
+          if (peakPower === null || val > peakPower) peakPower = val;
+
+          const midT = new Date((iv.t0 + iv.t1) / 2);
+          const hour = midT.getHours();
+          const rate = (twoZone && (hour >= 23 || hour < 7)) ? nightTariff : dayTariff;
+          totalCost += eKwh * rate;
+        }
+      }
+
+      const avgPower = activePowerDuration > 0 ? (activePowerWeighted / activePowerDuration) : 0;
+
+      const vBefore = voltPts.filter((p) => p.t <= start);
+      const vPrior = vBefore.length ? vBefore[vBefore.length - 1] : null;
+      const vWithin = voltPts.filter((p) => p.t > start && p.t <= end);
+
+      const vIntervals = [];
+      let vCurrT = start;
+      let vCurrVal = vPrior ? vPrior.v : (vWithin.length ? vWithin[0].v : null);
+      let vCurrOutage = vPrior ? vPrior.outage : false;
+
+      for (const pt of vWithin) {
+        if (pt.t > vCurrT) {
+          vIntervals.push({ t0: vCurrT, t1: pt.t, dt: pt.t - vCurrT, v: vCurrVal, outage: vCurrOutage });
+        }
+        vCurrT = pt.t;
+        vCurrVal = pt.v;
+        vCurrOutage = pt.outage;
+      }
+      if (vCurrT < end) {
+        vIntervals.push({ t0: vCurrT, t1: end, dt: end - vCurrT, v: vCurrVal, outage: vCurrOutage });
+      }
+
+      let voltageWeighted = 0;
+      let voltageDuration = 0;
+      let minVoltage = null;
+      let maxVoltage = null;
+      let outageCount = 0;
+      let outageDurationMs = 0;
+      let inOutage = false;
+
+      for (const iv of vIntervals) {
+        const val = iv.v;
+        const dt = iv.dt;
+        const isOut = iv.outage || val === null || (Number.isFinite(val) && val < 50);
+        if (isOut) {
+          outageDurationMs += dt;
+          if (!inOutage) {
+            outageCount += 1;
+            inOutage = true;
+          }
+        } else {
+          inOutage = false;
+          if (Number.isFinite(val) && val >= 50) {
+            voltageWeighted += val * dt;
+            voltageDuration += dt;
+            if (minVoltage === null || val < minVoltage) minVoltage = val;
+            if (maxVoltage === null || val > maxVoltage) maxVoltage = val;
+          }
+        }
+      }
+
+      const avgVoltage = voltageDuration > 0 ? (voltageWeighted / voltageDuration) : nominalV;
+      const voltageDeviation = nominalV > 0 ? ((avgVoltage - nominalV) / nominalV * 100) : 0;
+
+      const avgCurrent = avgVoltage > 0 ? (avgPower / (avgVoltage * pf)) : 0;
+      const peakCurrent = (peakPower && nominalV > 0) ? (peakPower / (nominalV * pf)) : 0;
+      const apparentPower = avgPower > 0 ? (avgPower / pf) : 0;
+      const reactivePower = Math.sqrt(Math.max(0, (apparentPower * apparentPower) - (avgPower * avgPower)));
+
+      return {
+        duration_ms: durationMs,
+        active_duration_ms: activePowerDuration,
+        avg_power: avgPower,
+        min_power: minPower ?? 0,
+        peak_power: peakPower ?? 0,
+        total_energy_kwh: totalEnergyKwh,
+        total_cost: totalCost,
+        avg_voltage: avgVoltage,
+        min_voltage: minVoltage ?? (voltPts.length ? 0 : nominalV),
+        max_voltage: maxVoltage ?? (voltPts.length ? 0 : nominalV),
+        voltage_deviation: voltageDeviation,
+        avg_current: avgCurrent,
+        peak_current: peakCurrent,
+        apparent_power: apparentPower,
+        reactive_power: reactivePower,
+        pf,
+        outage_count: outageCount,
+        outage_duration_ms: outageDurationMs,
+      };
+    }
+
+    _updateChartRangeSummary() {
+      const panel = this.shadowRoot?.querySelector?.('[data-role="chart-range-summary"]');
+      if (!panel) return;
+      const selected = Boolean(this._chartZoomWindow?.dirty);
+      panel.hidden = !selected;
+      if (!selected) return;
+
+      const start = Number(this._chartZoomWindow?.start);
+      const end = Number(this._chartZoomWindow?.end);
+      if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return;
+
+      const params = this._calculateRangeParameters(start, end);
+      if (!params) return;
+
+      const locale = this._locale();
+      const formatTime = (ts) => {
+        const d = new Date(ts);
+        const dateStr = d.toLocaleDateString(locale, { day: '2-digit', month: '2-digit' });
+        const timeStr = d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+        return `${dateStr} ${timeStr}`;
+      };
+
+      const timeEl = panel.querySelector('[data-role="range-time"]');
+      if (timeEl) timeEl.textContent = `${formatTime(start)} – ${formatTime(end)}`;
+
+      const durEl = panel.querySelector('[data-role="range-duration"]');
+      if (durEl) durEl.textContent = `${this._t('chart_range_duration')}: ${this._formatDuration(Math.round(params.duration_ms / 1000))}`;
+
+      // 1. Power
+      const pAvgEl = panel.querySelector('[data-role="range-power-avg"]');
+      if (pAvgEl) {
+        pAvgEl.textContent = params.avg_power >= 1000
+          ? `${(params.avg_power / 1000).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${this._unit('power_kw') || (this._lang() === 'uk' ? 'кВт' : 'kW')}`
+          : `${Math.round(params.avg_power).toLocaleString(locale)} ${this._unit('power') || (this._lang() === 'uk' ? 'Вт' : 'W')}`;
+      }
+      const pExtrEl = panel.querySelector('[data-role="range-power-extremes"]');
+      if (pExtrEl) {
+        const minStr = params.min_power >= 1000 ? `${(params.min_power / 1000).toFixed(2)} ${this._lang() === 'uk' ? 'кВт' : 'kW'}` : `${Math.round(params.min_power)} ${this._lang() === 'uk' ? 'Вт' : 'W'}`;
+        const maxStr = params.peak_power >= 1000 ? `${(params.peak_power / 1000).toFixed(2)} ${this._lang() === 'uk' ? 'кВт' : 'kW'}` : `${Math.round(params.peak_power)} ${this._lang() === 'uk' ? 'Вт' : 'W'}`;
+        pExtrEl.textContent = `${this._t('stat_min')}: ${minStr} · ${this._t('stat_max')}: ${maxStr}`;
+      }
+
+      // 2. Voltage
+      const vAvgEl = panel.querySelector('[data-role="range-voltage-avg"]');
+      if (vAvgEl) {
+        vAvgEl.textContent = `${params.avg_voltage.toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} ${this._unit('voltage') || (this._lang() === 'uk' ? 'В' : 'V')}`;
+      }
+      const vExtrEl = panel.querySelector('[data-role="range-voltage-extremes"]');
+      if (vExtrEl) {
+        const sign = params.voltage_deviation > 0 ? '+' : '';
+        const devStr = `${sign}${params.voltage_deviation.toFixed(1)}%`;
+        vExtrEl.textContent = `${this._t('stat_min')}: ${params.min_voltage.toFixed(1)} · ${this._t('stat_max')}: ${params.max_voltage.toFixed(1)} (${devStr} ${this._t('chart_range_deviation')})`;
+      }
+
+      // 3. Energy
+      const eEl = panel.querySelector('[data-role="range-energy"]');
+      if (eEl) {
+        eEl.textContent = `${params.total_energy_kwh.toLocaleString(locale, { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${this._unit('energy') || (this._lang() === 'uk' ? 'кВт·год' : 'kWh')}`;
+      }
+      const eSubEl = panel.querySelector('[data-role="range-energy-sub"]');
+      if (eSubEl) {
+        const wh = Math.round(params.total_energy_kwh * 1000);
+        eSubEl.textContent = `${wh.toLocaleString(locale)} ${this._lang() === 'uk' ? 'Вт·год' : 'Wh'}`;
+      }
+
+      // 4. Cost
+      const cEl = panel.querySelector('[data-role="range-cost"]');
+      if (cEl) {
+        const cur = this._unit('cost_today') || (this._lang() === 'uk' ? 'грн' : 'UAH');
+        cEl.textContent = `${params.total_cost.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${cur}`;
+      }
+      const cSubEl = panel.querySelector('[data-role="range-cost-sub"]');
+      if (cSubEl) {
+        const cur = this._unit('cost_today') || (this._lang() === 'uk' ? 'грн' : 'UAH');
+        const activeHours = params.active_duration_ms > 0 ? (params.active_duration_ms / 3600000) : 0;
+        const costPerHour = activeHours > 0 ? (params.total_cost / activeHours) : 0;
+        cSubEl.textContent = `~${costPerHour.toFixed(2)} ${cur}/${this._lang() === 'uk' ? 'год' : 'h'}`;
+      }
+
+      // 5. Current & Apparent/Reactive
+      const iEl = panel.querySelector('[data-role="range-current"]');
+      if (iEl) {
+        iEl.textContent = `${params.avg_current.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${this._unit('current') || (this._lang() === 'uk' ? 'А' : 'A')}`;
+      }
+      const arEl = panel.querySelector('[data-role="range-apparent-reactive"]');
+      if (arEl) {
+        const sUnit = this._lang() === 'uk' ? 'кВА' : 'kVA';
+        const sStr = params.apparent_power >= 1000 ? `${(params.apparent_power / 1000).toFixed(2)} ${sUnit}` : `${Math.round(params.apparent_power)} ${this._lang() === 'uk' ? 'ВА' : 'VA'}`;
+        const qUnit = this._lang() === 'uk' ? 'квар' : 'kvar';
+        const qStr = params.reactive_power >= 1000 ? `${(params.reactive_power / 1000).toFixed(2)} ${qUnit}` : `${Math.round(params.reactive_power)} ${this._lang() === 'uk' ? 'вар' : 'var'}`;
+        arEl.textContent = `S: ${sStr} · Q: ${qStr} · cos φ: ${params.pf.toFixed(2)}`;
+      }
+
+      // 6. Outages
+      const outEl = panel.querySelector('[data-role="range-outages"]');
+      const outSubEl = panel.querySelector('[data-role="range-outages-sub"]');
+      if (outEl) {
+        if (params.outage_count === 0) {
+          outEl.textContent = this._t('chart_range_no_outages');
+          if (outSubEl) outSubEl.textContent = '100% uptime';
+        } else {
+          outEl.textContent = `${params.outage_count} ${this._t('chart_range_outage_events')}`;
+          if (outSubEl) {
+            const outPct = params.duration_ms > 0 ? ((params.outage_duration_ms / params.duration_ms) * 100).toFixed(1) : '0';
+            outSubEl.textContent = `${this._t('chart_range_outage_time')}: ${this._formatDuration(Math.round(params.outage_duration_ms / 1000))} (${outPct}%)`;
+          }
+        }
+      }
     }
 
     _formatChartStatTimestamp(timestamp, range = this._historyRange, customRange = this._historyCustomRange) {
@@ -3498,6 +3838,7 @@
         this._chartZoomConfirmHandle = this._chartZoomWindow?.dirty ? zoomDrag.handle : null;
         this._updateChartZoomConfirmButton();
         try { zoomDrag.plot.releasePointerCapture(event.pointerId); } catch (_error) {}
+        this._updateChartRangeSummary();
         this._flushDeferredChartUpdates();
         return;
       }
@@ -4156,6 +4497,7 @@
       this._renderChartPoint(point);
       this._updateChartScrubber();
       this._updateChartReadings();
+      this._updateChartRangeSummary();
       if (changed && this._chartReadingsAt !== point.t) this._queueChartReadings(point.t);
     }
 
@@ -5326,6 +5668,7 @@
       if (target.dataset.firmwareSelect !== undefined) { this._selectFirmware(); return; }
       if (target.dataset.firmwareCopy !== undefined) { this._copyFirmware(); return; }
       if (target.dataset.firmwareReload !== undefined) { this._loadFirmware(); return; }
+      if (target.dataset.firmwareDownload !== undefined) { this._downloadFirmware(); return; }
       if (target.dataset.tab) {
         if (target.dataset.tab === this._activeTab) return;
         if (this._activeTab === 'settings') this._setActionsOpen(false);
@@ -5373,7 +5716,8 @@
         else this._updateChartCurrent();
         return;
       }
-      if (target.hasAttribute?.('data-chart-zoom-apply')) { this._applyChartZoomSelection(); return; }
+      if (target.hasAttribute?.('data-chart-zoom-apply') || target.dataset.chartRangeApply !== undefined) { this._applyChartZoomSelection(); return; }
+      if (target.dataset.chartRangeReset !== undefined) { this._resetChartZoomSelection(); return; }
       if (target.dataset.chartZoom) { this._zoomChart(target.dataset.chartZoom); return; }
       if (target.dataset.chartDateApply !== undefined) { this._applyChartDateRange(target.dataset.chartScope || 'params'); return; }
       if (target.dataset.statsStartApply !== undefined) { this._applyStatsStartInput(); return; }
@@ -6063,6 +6407,15 @@
         .chart-readings-head h3{margin:0;color:#eff7ff;font-size:16px}
         .chart-readings-head>span{color:#b7c9df;font-size:13px}
         .chart-readings-head .chart-readings-status{margin-left:auto;color:#9fb5d1}
+        .chart-range-summary{margin-top:10px;padding-top:12px;border-top:1px solid #29415c}
+        .chart-range-summary[hidden]{display:none}
+        .chart-range-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+        .chart-range-title-group{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+        .chart-range-title-group h3{margin:0;color:#eff7ff;font-size:15px;font-weight:600}
+        .chart-range-badge{padding:2px 7px;border-radius:6px;background:#13243a;border:1px solid #2b4562;color:#72d6ec;font-size:12px;font-family:inherit}
+        .chart-range-actions{display:flex;align-items:center;gap:6px;margin-left:auto}
+        .chart-range-button{padding:4px 10px;font-size:12px;line-height:1.2;cursor:pointer}
+        .chart-range-grid .chart-reading small{display:block;margin-top:4px;color:#7da5c9;font-size:11px;line-height:1.25}
         .chart-reading-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
         .chart-reading{min-width:0;padding:11px 12px;border-radius:14px;background:#13243a;border:1px solid #2b4562}
         .chart-reading span{display:block;color:#9fb5d1;font-size:12px;line-height:1.3}

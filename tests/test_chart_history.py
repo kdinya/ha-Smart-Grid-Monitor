@@ -2703,3 +2703,147 @@ assert.equal(clipped.count, 1);
 """
         result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False)
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+
+class ChartRangeSummaryTests(unittest.TestCase):
+    def test_calculate_range_parameters_energy_cost_and_electrical_metrics(self):
+        script = r'''
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), {
+  window: { customCards: [] },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+});
+const card = Object.create(registry.get('grid-monitor-card').prototype);
+card._state = (key) => {
+  if (key === 'voltage_nominal') return { state: '230' };
+  if (key === 'tariff_day') return { state: '4.32' };
+  if (key === 'tariff_night') return { state: '2.16' };
+  if (key === 'two_zone_tariff') return { state: 'on' };
+  if (key === 'power_factor') return { state: '0.98' };
+  return null;
+};
+card._chartMetric = 'power';
+
+// 2-hour interval: 10:00 to 12:00 UTC (daytime tariff)
+const start = 1763892000000; // 10:00:00
+const end = start + 7200000;  // 12:00:00 (2 hours)
+card._history = [
+  { time: new Date(start - 60000), value: 2000, outage: false },
+  { time: new Date(start + 3600000), value: 1000, outage: false },
+];
+card._voltageHistory = [
+  { time: new Date(start - 60000), value: 235, outage: false },
+  { time: new Date(start + 3600000), value: 225, outage: false },
+];
+
+const res = card._calculateRangeParameters(start, end);
+assert.ok(res, 'parameters calculated');
+assert.equal(res.duration_ms, 7200000);
+// 1 hour at 2000 W = 2.0 kWh, 1 hour at 1000 W = 1.0 kWh -> Total = 3.0 kWh
+assert.ok(Math.abs(res.total_energy_kwh - 3.0) < 1e-4, `Expected 3.0 kWh, got ${res.total_energy_kwh}`);
+// 3.0 kWh * 4.32 UAH = 12.96 UAH
+assert.ok(Math.abs(res.total_cost - 12.96) < 1e-3, `Expected 12.96 UAH, got ${res.total_cost}`);
+// Average power = (2000 * 3600 + 1000 * 3600) / 7200 = 1500 W
+assert.equal(res.avg_power, 1500);
+assert.equal(res.min_power, 1000);
+assert.equal(res.peak_power, 2000);
+// Average voltage = (235 * 3600 + 225 * 3600) / 7200 = 230 V
+assert.equal(res.avg_voltage, 230);
+assert.equal(res.min_voltage, 225);
+assert.equal(res.max_voltage, 235);
+assert.equal(res.voltage_deviation, 0); // 230 nominal vs 230 avg
+assert.equal(res.outage_count, 0);
+assert.equal(res.outage_duration_ms, 0);
+'''
+        result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_range_parameters_handles_night_tariff_and_outages(self):
+        script = r'''
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), {
+  window: { customCards: [] },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+});
+const card = Object.create(registry.get('grid-monitor-card').prototype);
+card._state = (key) => {
+  if (key === 'voltage_nominal') return { state: '230' };
+  if (key === 'tariff_day') return { state: '4.00' };
+  if (key === 'tariff_night') return { state: '2.00' };
+  if (key === 'two_zone_tariff') return { state: 'on' };
+  if (key === 'power_factor') return { state: '1.0' };
+  return null;
+};
+card._chartMetric = 'power';
+
+// Set time at night: 02:00 to 03:00 (1 hour)
+const dNight = new Date();
+dNight.setHours(2, 0, 0, 0);
+const start = dNight.getTime();
+const end = start + 3600000;
+
+// Power: 30 min at 2000W, then 30 min outage (voltage 0, power 0)
+card._history = [
+  { time: new Date(start), value: 2000, outage: false },
+  { time: new Date(start + 1800000), value: 0, outage: true },
+];
+card._voltageHistory = [
+  { time: new Date(start), value: 230, outage: false },
+  { time: new Date(start + 1800000), value: 0, outage: true },
+];
+
+const res = card._calculateRangeParameters(start, end);
+assert.ok(res);
+// 30 min at 2000W = 1.0 kWh
+assert.ok(Math.abs(res.total_energy_kwh - 1.0) < 1e-4);
+// Night rate is 2.00 UAH/kWh -> Cost = 2.00 UAH
+assert.ok(Math.abs(res.total_cost - 2.00) < 1e-3);
+// Outage is 1 event of 30 min (1800000 ms)
+assert.equal(res.outage_count, 1);
+assert.equal(res.outage_duration_ms, 1800000);
+'''
+        result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_chart_range_summary_ui_and_reset(self):
+        script = r'''
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), {
+  window: { customCards: [] },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+});
+const card = Object.create(registry.get('grid-monitor-card').prototype);
+card._t = (k) => k;
+card._escape = (s) => s;
+card._chartZoomWindow = { start: 1000, end: 5000, dirty: false };
+
+const htmlClean = card._chartRangeSummaryHtml();
+assert.ok(htmlClean.includes('data-role="chart-range-summary"'));
+assert.ok(htmlClean.includes('hidden'), 'hidden when dirty is false');
+
+card._chartZoomWindow.dirty = true;
+const htmlDirty = card._chartRangeSummaryHtml();
+assert.ok(!htmlDirty.includes('hidden'), 'visible when dirty is true');
+assert.ok(htmlDirty.includes('data-chart-range-apply'));
+assert.ok(htmlDirty.includes('data-chart-range-reset'));
+assert.ok(htmlDirty.includes('data-role="range-card-power"'));
+assert.ok(htmlDirty.includes('data-role="range-card-voltage"'));
+assert.ok(htmlDirty.includes('data-role="range-card-energy"'));
+assert.ok(htmlDirty.includes('data-role="range-card-cost"'));
+assert.ok(htmlDirty.includes('data-role="range-card-current"'));
+assert.ok(htmlDirty.includes('data-role="range-card-outages"'));
+'''
+        result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
