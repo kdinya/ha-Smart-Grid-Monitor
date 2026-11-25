@@ -2858,16 +2858,19 @@ card._chartZoomWindow = { start: 1000, end: 5000, dirty: true };
 const htmlExtreme = card._chartRangeSummaryHtml();
 assert.ok(htmlExtreme.includes('hidden'), 'hidden when handles are at extreme positions');
 
-// Test that extreme handle positions hide summary even if previously applied
+// After applying a zoom the handles sit at the extremes of the new view, yet the summary stays
 card._chartRangeSummaryApplied = true;
 const htmlExtremeApplied = card._chartRangeSummaryHtml();
-assert.ok(htmlExtremeApplied.includes('hidden'), 'hidden when handles are at extreme positions even if previously applied');
+assert.ok(!htmlExtremeApplied.includes('hidden'), 'applied summary stays visible with handles at the new view extremes');
 
 // Test that _resetChartZoomSelectionAndSetDay resets to day
 let refreshedPeriod = null;
 card._setHistoryPeriod = (p) => { refreshedPeriod = p; };
 card._resetChartZoomSelection = () => {};
+let cancelled = false;
+card._chartZoomAnimation = { cancel() { cancelled = true; } };
 card._resetChartZoomSelectionAndSetDay();
+assert.ok(cancelled, 'pending zoom animation is cancelled on reset');
 assert.equal(refreshedPeriod, 'day', 'reset selection switches chart to day mode');
 assert.equal(card._chartRangeSummaryApplied, false, 'clears applied summary');
 '''

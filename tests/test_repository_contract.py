@@ -661,7 +661,8 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn('_resetChartZoomSelectionAndSetDay()', card)
         self.assertIn("this._setHistoryPeriod('day')", card)
         self.assertIn('const isExtreme = bounds && Number.isFinite(currentStart) && Number.isFinite(currentEnd)', card)
-        self.assertIn('const selected = Boolean(!isExtreme && (this._chartRangeSummaryApplied || this._chartZoomWindow?.dirty));', card)
+        self.assertIn('const selected = Boolean((!isExtreme && this._chartZoomWindow?.dirty) || this._chartRangeSummaryApplied);', card)
+        self.assertIn('[data-chart-zoom-apply], [data-chart-range-reset], [data-chart-date-toggle]', card)
 
 if __name__ == "__main__":
     unittest.main()

@@ -3205,13 +3205,24 @@
       this._updateChartRangeSummary();
     }
 
+    _cancelChartZoomAnimation() {
+      const animation = this._chartZoomAnimation;
+      if (!animation) return;
+      this._chartZoomAnimation = null;
+      animation.onfinish = null;
+      animation.oncancel = null;
+      try { animation.cancel(); } catch (_error) {}
+    }
+
     _resetChartZoomSelectionAndSetDay() {
+      this._cancelChartZoomAnimation();
       this._chartRangeSummaryApplied = false;
       this._chartRangeSummaryRange = null;
       this._setHistoryPeriod('day');
     }
 
     _setHistoryPeriod(period) {
+      this._cancelChartZoomAnimation();
       this._chartRangeSummaryApplied = false;
       this._chartRangeSummaryRange = null;
       this._resetChartZoomSelection();
@@ -3326,7 +3337,7 @@
       const isExtreme = bounds && Number.isFinite(currentStart) && Number.isFinite(currentEnd)
         ? (currentStart <= bounds.start + 999 && currentEnd >= bounds.end - 999)
         : false;
-      const selected = Boolean(!isExtreme && (this._chartRangeSummaryApplied || this._chartZoomWindow?.dirty));
+      const selected = Boolean((!isExtreme && this._chartZoomWindow?.dirty) || this._chartRangeSummaryApplied);
       return `<section class="chart-range-summary" data-role="chart-range-summary" aria-live="polite" ${selected ? '' : 'hidden'}>
         <div class="chart-range-head">
           <div class="chart-range-title-group">
@@ -3546,7 +3557,7 @@
         start = currentStart;
         end = currentEnd;
         shouldShow = true;
-      } else if (!isExtreme && this._chartRangeSummaryApplied && this._chartRangeSummaryRange) {
+      } else if (this._chartRangeSummaryApplied && this._chartRangeSummaryRange) {
         start = this._chartRangeSummaryRange.start;
         end = this._chartRangeSummaryRange.end;
         shouldShow = true;
@@ -5835,7 +5846,7 @@
         if (info) this._showDialog({ title: this._t(info.label), message: this._t(info.description), info: true });
         return;
       }
-      const target = event.target?.closest?.('[data-scroll-top], [data-support-open], [data-support-dismiss], [data-support-donate], [data-actions-toggle], [data-firmware-toggle], [data-firmware-select], [data-firmware-copy], [data-firmware-reload], [data-tab], [data-period], [data-energy-period], [data-energy-metric], [data-energy-bar], [data-metric], [data-action], [data-number-save], [data-switch], [data-chart-live], [data-chart-zoom], [data-chart-zoom-apply], [data-chart-date-toggle], [data-chart-date-apply], [data-stats-start-apply], [data-stats-start-clear], [data-stats-helper-create], [data-history-delete]');
+      const target = event.target?.closest?.('[data-scroll-top], [data-support-open], [data-support-dismiss], [data-support-donate], [data-actions-toggle], [data-firmware-toggle], [data-firmware-select], [data-firmware-copy], [data-firmware-reload], [data-tab], [data-period], [data-energy-period], [data-energy-metric], [data-energy-bar], [data-metric], [data-action], [data-number-save], [data-switch], [data-chart-live], [data-chart-zoom], [data-chart-zoom-apply], [data-chart-range-reset], [data-chart-date-toggle], [data-chart-date-apply], [data-stats-start-apply], [data-stats-start-clear], [data-stats-helper-create], [data-history-delete]');
       if (!target) return;
       if (target.dataset.scrollTop !== undefined) { this._scrollPageToTop(); return; }
       if (target.dataset.supportOpen !== undefined) {
