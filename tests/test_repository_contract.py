@@ -669,5 +669,13 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn('const selected = Boolean((!isExtreme && this._chartZoomWindow?.dirty) || this._chartRangeSummaryApplied);', card)
         self.assertIn('[data-chart-zoom-apply], [data-chart-range-reset], [data-chart-date-toggle]', card)
 
+    def test_metric_switch_keeps_zoomed_range_and_summary(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        handler = card.split("if (target.dataset.metric) {", 1)[1].split("if (target.dataset.energyMetric) {", 1)[0]
+        self.assertNotIn("_resetChartZoomSelection()", handler)
+        self.assertNotIn("_chartRangeSummaryApplied = false", handler)
+        self.assertNotIn("_historyCustomRange = null", handler)
+
+
 if __name__ == "__main__":
     unittest.main()

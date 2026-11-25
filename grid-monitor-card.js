@@ -5948,7 +5948,7 @@
       if (target.dataset.historyDelete !== undefined) { this._deletePanelHistory(target.dataset.historyDelete); return; }
       if (target.dataset.metric) {
         if (this._chartMetric === target.dataset.metric) return;
-        this._resetChartZoomSelection();
+        // Keep the zoomed interval, the handle selection and the range summary when switching between power and voltage.
         this._clearChartScrub();
         this._historyRequest += 1;
         this._historyLoading = false;
