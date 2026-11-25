@@ -633,5 +633,31 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("width:264px;transform:translateX(20px) scale(1.1818)", card)
         self.assertIn("width:174px;transform:translateX(20px) scale(1.1818)", card)
 
+    def test_support_coffee_card_contract_and_localization(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        self.assertIn('data-support-card', card)
+        self.assertIn('data-support-dismiss', card)
+        self.assertIn('data-support-donate', card)
+        self.assertIn('https://send.monobank.ua/jar/e9Z2mHngN', card)
+        self.assertIn('.support-card{position:fixed;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));', card)
+        self.assertIn('distance < 100', card)
+        self.assertIn('support_badge:', card)
+        self.assertIn('Тепла підтримка', card)
+        self.assertIn('Кава для автора? ☕', card)
+        self.assertIn('Якщо ШоПоСвітлу допомагає тобі тримати графік під контролем', card)
+        self.assertIn('Може, потім', card)
+        self.assertIn('Пригостити кавою', card)
+        self.assertIn('Warm support', card)
+        self.assertIn('Coffee for the author? ☕', card)
+        self.assertIn('Buy a coffee', card)
+
+    def test_chart_range_summary_extreme_handles_and_reset(self):
+        card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        self.assertIn('data-chart-range-reset', card)
+        self.assertIn('_resetChartZoomSelectionAndSetDay()', card)
+        self.assertIn("this._setHistoryPeriod('day')", card)
+        self.assertIn('const isExtreme = bounds && Number.isFinite(currentStart) && Number.isFinite(currentEnd)', card)
+        self.assertIn('const selected = Boolean(!isExtreme && (this._chartRangeSummaryApplied || this._chartZoomWindow?.dirty));', card)
+
 if __name__ == "__main__":
     unittest.main()
