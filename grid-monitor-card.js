@@ -1001,12 +1001,7 @@
       this._chartZoomAnimation = null;
       this._chartTouchScrubbing = null;
       this._chartPointerCandidate = null;
-      this._supportCardDismissed = false;
-      try {
-        if (typeof window !== 'undefined' && window.sessionStorage) {
-          this._supportCardDismissed = window.sessionStorage.getItem('sgm_support_dismissed') === '1';
-        }
-      } catch (_error) {}
+      this._supportCardOpen = false;
       this._chartMetric = 'power';
       this._history = [];
       this._historyKey = '';
@@ -1030,6 +1025,7 @@
       this._scrollListenersAttached = false;
       this._chartDateDocumentListenersAttached = false;
       this._chartDateDocumentPointerDownHandler = (event) => this._handleChartDateDocumentPointerDown(event);
+      this._supportDocumentPointerDownHandler = (event) => this._handleSupportDocumentPointerDown(event);
       this._scrollVisibilityHandler = () => {
         this._updateScrollTopVisibility();
         this._updateSupportCardVisibility();
@@ -1114,6 +1110,7 @@
       }
       if (typeof document !== 'undefined' && !this._chartDateDocumentListenersAttached) {
         document.addEventListener('pointerdown', this._chartDateDocumentPointerDownHandler, true);
+        document.addEventListener('pointerdown', this._supportDocumentPointerDownHandler, true);
         this._chartDateDocumentListenersAttached = true;
       }
       if (typeof document !== 'undefined' && !this._visibilityHandler) {
@@ -1139,6 +1136,7 @@
       this._visibilityHandler = null;
       if (this._chartDateDocumentListenersAttached && typeof document !== 'undefined') {
         document.removeEventListener('pointerdown', this._chartDateDocumentPointerDownHandler, true);
+        document.removeEventListener('pointerdown', this._supportDocumentPointerDownHandler, true);
         this._chartDateDocumentListenersAttached = false;
       }
       this._closeChartDateRangePopover();
@@ -1275,16 +1273,18 @@
       return Math.max(0, (scroller.scrollHeight || 0) - ((scroller.scrollTop || 0) + (scroller.clientHeight || 0)));
     }
 
+    _handleSupportDocumentPointerDown(event) {
+      if (!this._supportCardOpen) return;
+      const card = this.shadowRoot?.querySelector?.('[data-support-card]');
+      const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
+      if (card && path.includes(card)) return;
+      this._supportCardOpen = false;
+      this._updateSupportCardVisibility();
+    }
     _updateSupportCardVisibility() {
       const card = this.shadowRoot?.querySelector?.('[data-support-card]');
-      if (!card) return;
-      if (this._supportCardDismissed) {
-        if (typeof card.hidePopover === 'function') {
-          try { if (card.matches(':popover-open')) card.hidePopover(); } catch (_error) {}
-        }
-        card.hidden = true;
-        return;
-      }
+      const trigger = this.shadowRoot?.querySelector?.('[data-support-open]');
+      if (!card || !trigger) return;
       let cardDistance = Infinity;
       try {
         const rect = this.getBoundingClientRect?.();
@@ -1293,32 +1293,25 @@
           if (vh > 0) cardDistance = rect.bottom - vh;
         }
       } catch (_error) {}
-
       const pageDistance = this._scrollDistanceToBottom();
       const distance = Math.min(pageDistance, Math.max(0, cardDistance));
-      const shouldShow = Number.isFinite(distance) && distance < 100 && this._isActive();
-
+      const nearBottom = Number.isFinite(distance) && distance < 100 && this._isActive();
+      if (!nearBottom) this._supportCardOpen = false;
+      const showCard = nearBottom && this._supportCardOpen;
+      const showTrigger = nearBottom && !this._supportCardOpen;
+      trigger.hidden = !showTrigger;
       if (typeof card.showPopover === 'function' && typeof card.hidePopover === 'function') {
-        let isOpen = false;
-        try { isOpen = card.matches(':popover-open'); } catch (_error) {}
         try {
-          if (shouldShow && !isOpen) {
-            card.showPopover();
-            isOpen = true;
-          } else if (!shouldShow && isOpen) {
-            card.hidePopover();
-            isOpen = false;
-          }
-        } catch (_error) {
-          card.hidden = !shouldShow;
-        }
+          const isOpen = card.matches(':popover-open');
+          if (showCard && !isOpen) card.showPopover();
+          else if (!showCard && isOpen) card.hidePopover();
+        } catch (_error) { card.hidden = !showCard; }
       } else {
-        card.hidden = !shouldShow;
+        card.hidden = !showCard;
       }
     }
-
     _supportCardHtml() {
-      return `<aside class="support-card" popover="manual" data-support-card aria-labelledby="support-card-title">
+      return `<button type="button" class="support-trigger" data-support-open hidden aria-controls="support-card-title">${this._escape(this._t('support_badge'))}</button><aside class="support-card" popover="manual" data-support-card aria-labelledby="support-card-title" hidden>
         <div class="support-head">
           <span class="support-badge">${this._escape(this._t('support_badge'))}</span>
           <button type="button" class="support-close" data-support-dismiss aria-label="${this._escape(this._t('support_close'))}" title="${this._escape(this._t('support_close'))}">×</button>
@@ -1331,7 +1324,6 @@
         </div>
       </aside>`;
     }
-
     _scrollPageToTop() {
       const scroller = this._pageScroller();
       if (!scroller) return;
@@ -5811,7 +5803,7 @@
       if (event.key === 'Escape') {
         const supportCard = this.shadowRoot?.querySelector?.('[data-support-card]');
         if (supportCard && (!supportCard.hidden || (typeof supportCard.matches === 'function' && supportCard.matches(':popover-open')))) {
-          this._supportCardDismissed = true;
+          this._supportCardOpen = false;
           this._updateSupportCardVisibility();
           event.preventDefault?.();
           return;
@@ -5843,18 +5835,16 @@
         if (info) this._showDialog({ title: this._t(info.label), message: this._t(info.description), info: true });
         return;
       }
-      const target = event.target?.closest?.('[data-scroll-top], [data-support-dismiss], [data-support-donate], [data-actions-toggle], [data-firmware-toggle], [data-firmware-select], [data-firmware-copy], [data-firmware-reload], [data-tab], [data-period], [data-energy-period], [data-energy-metric], [data-energy-bar], [data-metric], [data-action], [data-number-save], [data-switch], [data-chart-live], [data-chart-zoom], [data-chart-zoom-apply], [data-chart-date-toggle], [data-chart-date-apply], [data-stats-start-apply], [data-stats-start-clear], [data-stats-helper-create], [data-history-delete]');
+      const target = event.target?.closest?.('[data-scroll-top], [data-support-open], [data-support-dismiss], [data-support-donate], [data-actions-toggle], [data-firmware-toggle], [data-firmware-select], [data-firmware-copy], [data-firmware-reload], [data-tab], [data-period], [data-energy-period], [data-energy-metric], [data-energy-bar], [data-metric], [data-action], [data-number-save], [data-switch], [data-chart-live], [data-chart-zoom], [data-chart-zoom-apply], [data-chart-date-toggle], [data-chart-date-apply], [data-stats-start-apply], [data-stats-start-clear], [data-stats-helper-create], [data-history-delete]');
       if (!target) return;
       if (target.dataset.scrollTop !== undefined) { this._scrollPageToTop(); return; }
-      if (target.dataset.supportDismiss !== undefined) {
-        this._supportCardDismissed = true;
-        try { if (typeof window !== 'undefined' && window.sessionStorage) window.sessionStorage.setItem('sgm_support_dismissed', '1'); } catch (_e) {}
+      if (target.dataset.supportOpen !== undefined) {
+        this._supportCardOpen = true;
         this._updateSupportCardVisibility();
         return;
       }
-      if (target.dataset.supportDonate !== undefined) {
-        this._supportCardDismissed = true;
-        try { if (typeof window !== 'undefined' && window.sessionStorage) window.sessionStorage.setItem('sgm_support_dismissed', '1'); } catch (_e) {}
+      if (target.dataset.supportDismiss !== undefined || target.dataset.supportDonate !== undefined) {
+        this._supportCardOpen = false;
         this._updateSupportCardVisibility();
         return;
       }
@@ -6387,6 +6377,7 @@
         .back-to-top{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));z-index:10000;width:54px;height:54px;display:grid;place-items:center;border:1px solid #75d5ff9c;border-radius:50%;background:linear-gradient(145deg,#0da8f4,#0759b7);color:#fff;box-shadow:0 8px 24px #0009,0 0 20px #079fff55;cursor:pointer;transition:transform .18s,box-shadow .18s}.back-to-top:hover{transform:translateY(-3px);box-shadow:0 11px 28px #000a,0 0 24px #079fff88}.back-to-top .icon{width:27px;height:27px}.back-to-top[hidden]{display:none}
         .back-to-top{inset:auto max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) auto;margin:0}.back-to-top:not(:popover-open){display:none}
         .back-to-top:popover-open{display:grid}
+        .support-trigger{position:fixed;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:9998;min-height:42px;padding:9px 14px;border:1px solid #54bdff80;border-radius:14px;background:linear-gradient(135deg,#12385b,#0b2038);color:#dff5ff;font:700 13px/1.2 inherit;box-shadow:0 8px 24px #0008,0 0 18px #079fff2b;cursor:pointer;transition:transform .18s,box-shadow .18s}.support-trigger:hover{transform:translateY(-2px);box-shadow:0 11px 28px #000a,0 0 22px #079fff55}.support-trigger[hidden]{display:none!important}
         .support-card{position:fixed;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:9999;width:min(340px,calc(100vw - 32px));padding:16px;border:1px solid #32b7ff4d;border-radius:18px;background:radial-gradient(ellipse at 50% 0%,#153c60,#0a1728 75%);color:#f3f7ff;box-shadow:0 16px 40px rgba(0,0,0,.65),0 0 20px rgba(10,140,255,.15),inset 0 1px 0 rgba(255,255,255,.15);font-family:inherit;box-sizing:border-box;animation:support-fade-in .25s ease-out}
         .support-card{inset:auto auto max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));margin:0}
         .support-card:not(:popover-open){display:none}

@@ -635,9 +635,13 @@ class RepositoryContractTests(unittest.TestCase):
 
     def test_support_coffee_card_contract_and_localization(self):
         card = (ROOT / "grid-monitor-card.js").read_text(encoding="utf-8")
+        self.assertIn('data-support-open', card)
         self.assertIn('data-support-card', card)
         self.assertIn('data-support-dismiss', card)
         self.assertIn('data-support-donate', card)
+        self.assertIn('this._supportCardOpen = false', card)
+        self.assertIn('_handleSupportDocumentPointerDown(event)', card)
+        self.assertNotIn('sgm_support_dismissed', card)
         self.assertIn('https://send.monobank.ua/jar/e9Z2mHngN', card)
         self.assertIn('.support-card{position:fixed;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));', card)
         self.assertIn('distance < 100', card)
