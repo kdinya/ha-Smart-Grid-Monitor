@@ -1281,6 +1281,25 @@
       this._supportCardOpen = false;
       this._updateSupportCardVisibility();
     }
+    _setSupportElementVisible(element, visible) {
+      if (!element) return;
+      if (typeof element.showPopover === 'function' && typeof element.hidePopover === 'function') {
+        try {
+          let isOpen = false;
+          try { isOpen = element.matches(':popover-open'); } catch (_error) { isOpen = false; }
+          if (visible) {
+            element.hidden = false;
+            if (!isOpen) element.showPopover();
+          } else {
+            if (isOpen) element.hidePopover();
+            element.hidden = true;
+          }
+          return;
+        } catch (_error) { /* fall back to the hidden attribute */ }
+      }
+      element.hidden = !visible;
+    }
+
     _updateSupportCardVisibility() {
       const card = this.shadowRoot?.querySelector?.('[data-support-card]');
       const trigger = this.shadowRoot?.querySelector?.('[data-support-open]');
@@ -1295,23 +1314,16 @@
       } catch (_error) {}
       const pageDistance = this._scrollDistanceToBottom();
       const distance = Math.min(pageDistance, Math.max(0, cardDistance));
-      const nearBottom = Number.isFinite(distance) && distance < 100 && this._isActive();
+      const nearBottom = Number.isFinite(distance) && distance < 150 && this._isActive();
       if (!nearBottom) this._supportCardOpen = false;
       const showCard = nearBottom && this._supportCardOpen;
       const showTrigger = nearBottom && !this._supportCardOpen;
-      trigger.hidden = !showTrigger;
-      if (typeof card.showPopover === 'function' && typeof card.hidePopover === 'function') {
-        try {
-          const isOpen = card.matches(':popover-open');
-          if (showCard && !isOpen) card.showPopover();
-          else if (!showCard && isOpen) card.hidePopover();
-        } catch (_error) { card.hidden = !showCard; }
-      } else {
-        card.hidden = !showCard;
-      }
+      this._setSupportElementVisible(trigger, showTrigger);
+      this._setSupportElementVisible(card, showCard);
     }
+
     _supportCardHtml() {
-      return `<button type="button" class="support-trigger" data-support-open hidden aria-controls="support-card-title">${this._escape(this._t('support_badge'))}</button><aside class="support-card" popover="manual" data-support-card aria-labelledby="support-card-title" hidden>
+      return `<button type="button" class="support-trigger" popover="manual" data-support-open hidden aria-controls="support-card-title" aria-label="${this._escape(this._t('support_badge'))}"><svg class="support-cup" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path class="steam" d="M22 20c-3-3-3-6 0-9m10 9c-3-3-3-6 0-9m10 9c-3-3-3-6 0-9" fill="none" stroke="#ffe2b8" stroke-width="2.6" stroke-linecap="round" opacity=".85"/><path d="M13 27h34v11c0 9-7 16-17 16s-17-7-17-16z" fill="#ffd9a0"/><path d="M13 27h34v6H13z" fill="#fff0d2"/><path d="M47 30h3.5a6.5 6.5 0 0 1 0 13H46.5" fill="none" stroke="#ffd9a0" stroke-width="4" stroke-linecap="round"/><path d="M30 50.5c-5.5-3.6-8-6.2-8-9.2a4.3 4.3 0 0 1 8-2.2 4.3 4.3 0 0 1 8 2.2c0 3-2.5 5.6-8 9.2z" fill="#ff7a59"/><ellipse cx="30" cy="58.5" rx="19" ry="3.2" fill="#ffb86b" opacity=".9"/></svg></button><aside class="support-card" popover="manual" data-support-card aria-labelledby="support-card-title" hidden>
         <div class="support-head">
           <span class="support-badge">${this._escape(this._t('support_badge'))}</span>
           <button type="button" class="support-close" data-support-dismiss aria-label="${this._escape(this._t('support_close'))}" title="${this._escape(this._t('support_close'))}">×</button>
@@ -6388,7 +6400,7 @@
         .back-to-top{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));z-index:10000;width:54px;height:54px;display:grid;place-items:center;border:1px solid #75d5ff9c;border-radius:50%;background:linear-gradient(145deg,#0da8f4,#0759b7);color:#fff;box-shadow:0 8px 24px #0009,0 0 20px #079fff55;cursor:pointer;transition:transform .18s,box-shadow .18s}.back-to-top:hover{transform:translateY(-3px);box-shadow:0 11px 28px #000a,0 0 24px #079fff88}.back-to-top .icon{width:27px;height:27px}.back-to-top[hidden]{display:none}
         .back-to-top{inset:auto max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) auto;margin:0}.back-to-top:not(:popover-open){display:none}
         .back-to-top:popover-open{display:grid}
-        .support-trigger{position:fixed;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:9998;min-height:42px;padding:9px 14px;border:1px solid #54bdff80;border-radius:14px;background:linear-gradient(135deg,#12385b,#0b2038);color:#dff5ff;font:700 13px/1.2 inherit;box-shadow:0 8px 24px #0008,0 0 18px #079fff2b;cursor:pointer;transition:transform .18s,box-shadow .18s}.support-trigger:hover{transform:translateY(-2px);box-shadow:0 11px 28px #000a,0 0 22px #079fff55}.support-trigger[hidden]{display:none!important}
+        .support-trigger{position:fixed;inset:auto auto max(14px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));margin:0;z-index:9998;width:58px;height:58px;padding:0;border:0;background:none;box-shadow:none;overflow:visible;cursor:pointer;display:grid;place-items:center;-webkit-tap-highlight-color:transparent;transition:transform .18s}.support-trigger .support-cup{width:52px;height:52px;filter:drop-shadow(0 4px 8px #0009) drop-shadow(0 0 10px #ffb86b55)}.support-trigger .steam{animation:support-steam 2.6s ease-in-out infinite}.support-trigger:hover,.support-trigger:focus-visible{transform:translateY(-3px) rotate(-6deg)}.support-trigger:focus-visible{outline:2px solid #8ce1ff;outline-offset:2px;border-radius:14px}.support-trigger:not(:popover-open){display:none}.support-trigger[hidden]{display:none!important}@keyframes support-steam{0%,100%{opacity:.35;transform:translateY(1px)}50%{opacity:.95;transform:translateY(-2px)}}@media(prefers-reduced-motion:reduce){.support-trigger .steam{animation:none}}
         .support-card{position:fixed;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:9999;width:min(340px,calc(100vw - 32px));padding:16px;border:1px solid #32b7ff4d;border-radius:18px;background:radial-gradient(ellipse at 50% 0%,#153c60,#0a1728 75%);color:#f3f7ff;box-shadow:0 16px 40px rgba(0,0,0,.65),0 0 20px rgba(10,140,255,.15),inset 0 1px 0 rgba(255,255,255,.15);font-family:inherit;box-sizing:border-box;animation:support-fade-in .25s ease-out}
         .support-card{inset:auto auto max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));margin:0}
         .support-card:not(:popover-open){display:none}
@@ -6487,7 +6499,7 @@
         .banner strong{font-size:clamp(16px,1.9cqw,22px);font-weight:750}
         .house-art{width:min(39%,285px);max-width:285px;margin:-46px -34px -46px auto}
 
-        .footer{margin-top:16px;font-size:12px;color:#5f7f9f}
+        .footer{margin-top:16px;padding-left:58px;font-size:12px;color:#5f7f9f}
 
         @container (min-width:960px){
           .home-view .main-right>.tabs-side{padding:8px;gap:6px}
