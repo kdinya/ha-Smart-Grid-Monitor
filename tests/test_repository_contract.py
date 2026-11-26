@@ -36,6 +36,13 @@ def _walk(value):
 
 
 class RepositoryContractTests(unittest.TestCase):
+    def test_esphome_energy_daily_rollover_protection(self):
+        yaml_text = (ROOT / "esphome/grid-monitor.yaml").read_text(encoding="utf-8")
+        self.assertIn("id: g_day", yaml_text)
+        self.assertIn("id: g_month", yaml_text)
+        self.assertIn("t.day_of_month != id(g_day)", yaml_text)
+        self.assertIn("id(e_today) = 0.0", yaml_text)
+
     def test_outage_counters_are_flushed_to_flash_on_every_event(self):
         firmware = (ROOT / "esphome" / "grid-monitor.yaml").read_text(encoding="utf-8")
         self.assertIn("id: flush_outage_counters", firmware)

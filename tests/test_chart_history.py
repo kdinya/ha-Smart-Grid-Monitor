@@ -2876,3 +2876,85 @@ assert.equal(card._chartRangeSummaryApplied, false, 'clears applied summary');
 '''
         result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False)
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+class TodayEnergySyncTests(unittest.TestCase):
+    def test_today_energy_and_cost_blocks_use_chart_history_to_avoid_yesterday_sum(self):
+        script = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), {
+  window: { customCards: [] },
+  HTMLElement: class HTMLElement {},
+  customElements: { define: (name, value) => registry.set(name, value) },
+});
+
+const CardClass = registry.get('grid-monitor-card');
+const card = Object.create(CardClass.prototype);
+card._locale = () => 'uk-UA';
+card._lang = () => 'uk';
+card._effectiveEspStatus = () => 'on';
+card._statsStart = null;
+
+// Raw states in Home Assistant where ESP failed to reset daily counters:
+// sensor.grid_monitor_energy_today contains 5.0 kWh (yesterday) + 2.0 kWh (today) = 7.0 kWh
+// sensor.grid_monitor_cost_today contains 20.0 UAH (yesterday) + 8.64 UAH (today) = 28.64 UAH
+const rawStates = {
+  energy_today: '7.0',
+  cost_today: '28.64',
+  energy_total: '107.0',
+  cost_total: '450.0',
+};
+card._raw = (key) => rawStates[key] ?? null;
+
+// Initially, without _energyHistory, _num falls back to raw sensor
+assert.equal(card._num('energy_today'), 7.0);
+assert.equal(card._num('cost_today'), 28.64);
+
+// Now simulate _energyHistory parsed from cumulative PZEM totals covering yesterday and today
+const H = 3600e3;
+const now = new Date();
+const midnight = new Date(now);
+midnight.setHours(0, 0, 0, 0);
+const mTime = midnight.getTime();
+
+// Total cumulative energy:
+// Yesterday: was 100 at noon, reached 105 at midnight (5 kWh yesterday)
+// Today: reached 107 at now (2 kWh today)
+const energyHistory = [
+  { time: new Date(mTime - 12 * H), value: 100.0 },
+  { time: new Date(mTime), value: 105.0 },
+  { time: new Date(mTime + 3 * H), value: 106.0 },
+  { time: new Date(now), value: 107.0 },
+];
+
+// Cost cumulative:
+// Yesterday: was 421.36 at noon, reached 441.36 at midnight (20 UAH yesterday)
+// Today: reached 450.0 at now (8.64 UAH today)
+const costHistory = [
+  { time: new Date(mTime - 12 * H), value: 421.36 },
+  { time: new Date(mTime), value: 441.36 },
+  { time: new Date(mTime + 3 * H), value: 445.68 },
+  { time: new Date(now), value: 450.0 },
+];
+
+card._energyHistory = {
+  energy_total: energyHistory,
+  cost_total: costHistory,
+};
+
+// _todayEnergyFromHistory must return ONLY today's consumption
+const todayEnergy = card._todayEnergyFromHistory('energy_total');
+assert.ok(Math.abs(todayEnergy - 2.0) < 1e-6, `expected 2.0 kWh for today, got ${todayEnergy}`);
+
+const todayCost = card._todayEnergyFromHistory('cost_total');
+assert.ok(Math.abs(todayCost - 8.64) < 1e-4, `expected 8.64 UAH for today, got ${todayCost}`);
+
+// _num('energy_today') and _num('cost_today') must now return today's consumption from history,
+// ignoring the inflated raw state (7.0 kWh and 28.64 UAH)
+assert.equal(Math.round(card._num('energy_today') * 100) / 100, 2.0);
+assert.equal(Math.round(card._num('cost_today') * 100) / 100, 8.64);
+"""
+        result = subprocess.run(["node", "-e", script, str(ROOT / "grid-monitor-card.js")], capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
