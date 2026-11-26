@@ -130,13 +130,11 @@ views:
         columns: 2
         square: false
         cards:
-          - type: statistic
+          - type: tile
             entity: sensor.grid_monitor_energy_today
             name: Споживання сьогодні
-            period:
-              calendar:
-                period: day
-            stat_type: change
+            icon: mdi:lightning-bolt-circle
+            color: blue
           - type: tile
             entity: sensor.grid_monitor_cost_today
             name: Вартість сьогодні
