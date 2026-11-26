@@ -437,6 +437,15 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn(".metric-value.empty{", card)
         self.assertIn(".voltage-value.empty{", card)
 
+    def test_dashboard_energy_today_uses_direct_tile(self):
+        dashboard = yaml.load(
+            (ROOT / "home-assistant/lovelace/grid-monitor-dashboard.yaml").read_text(encoding="utf-8"),
+            Loader=ESPHomeSafeLoader,
+        )
+        tiles = [node for node in _walk(dashboard) if node.get("entity") == "sensor.grid_monitor_energy_today"]
+        self.assertTrue(tiles, "Expected energy_today tile card in dashboard")
+        self.assertEqual(tiles[0].get("type"), "tile")
+
     def test_dashboard_shows_explicit_voltage_status_not_stale_alarm(self):
         dashboard = yaml.load(
             (ROOT / "home-assistant/lovelace/grid-monitor-dashboard.yaml").read_text(encoding="utf-8"),
