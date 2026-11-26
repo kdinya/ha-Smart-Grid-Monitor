@@ -2419,44 +2419,65 @@ def run_clarity(body):
     )
 
 
-class LongRangeClarityTests(unittest.TestCase):
-    def test_long_voltage_ranges_draw_one_averaged_point_per_clean_bucket(self):
-        result = run_clarity(r"""
-// Noisy voltage around 230 V for four hours, sampled every minute.
+class VoltageAxisDetailTests(unittest.TestCase):
+    def run_axis(self, body):
+        return subprocess.run(
+            ["node", "-e", PRELUDE_CLARITY + body, str(ROOT / "grid-monitor-card.js")],
+            capture_output=True,
+            text=True,
+            check=False,
+            env={**os.environ, "TZ": "UTC"},
+        )
+
+    def test_voltage_axis_hugs_the_curve_so_small_swings_use_the_full_height(self):
+        result = self.run_axis(r"""
+const series = (values) => values.map((v, index) => ({ t: index, v }));
+const scale = card._chartScale(series([229, 231, 233, 230, 232]), 'voltage');
+assert.ok(scale.max - scale.lo <= 8, `axis span ${scale.max - scale.lo} stays tight around 229-233 V`);
+assert.ok(scale.lo <= 229 && scale.max >= 233, 'axis covers every plotted value');
+assert.equal(scale.count, (scale.max - scale.lo) / scale.step);
+assert.ok(scale.count >= 2 && scale.count <= 4);
+// A wider swing picks a coarser step but still covers the data.
+const wide = card._chartScale(series([205, 245, 230]), 'voltage');
+assert.ok(wide.lo <= 205 && wide.max >= 245 && wide.count <= 4);
+""")
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_outage_zeros_and_rare_deep_dips_do_not_squash_the_curve(self):
+        result = self.run_axis(r"""
+const base = [];
+for (let i = 0; i < 100; i += 1) base.push(229 + (i % 5));   // 229..233 V
+const clean = card._chartScale(base.map((v, index) => ({ t: index, v })), 'voltage');
+const withOutage = card._chartScale([0, 0, 0, ...base, 0].map((v, index) => ({ t: index, v })), 'voltage');
+assert.equal(withOutage.lo, clean.lo);
+assert.equal(withOutage.max, clean.max);
+// Two isolated deep dips out of ~100 points must not stretch the axis down to 120 V.
+const withDips = card._chartScale([120, ...base, 118].map((v, index) => ({ t: index, v })), 'voltage');
+assert.ok(withDips.max - withDips.lo <= 8, `axis span ${withDips.max - withDips.lo} ignores rare dips`);
+// Sustained low voltage is real data and does widen the axis.
+const sustained = [];
+for (let i = 0; i < 100; i += 1) sustained.push(i < 40 ? 190 : 230);
+const wide = card._chartScale(sustained.map((v, index) => ({ t: index, v })), 'voltage');
+assert.ok(wide.lo <= 190 && wide.max >= 230);
+// Only outages: plain 0-based axis.
+const only = card._chartScale([0, 0].map((v, index) => ({ t: index, v })), 'voltage');
+assert.equal(only.lo, 0);
+""")
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_every_bucket_extreme_is_drawn_again_for_long_voltage_ranges(self):
+        result = self.run_axis(r"""
 const history = [];
 for (let minute = 0; minute < 240; minute += 1) history.push(at(minute, 230 + (minute % 2 ? 3 : -3)));
 const start = history[0].time.getTime();
-const end = start + 240 * 60e3;
-const detailed = card._bucketHistory(start, end, 8, history);
-const smooth = card._bucketHistory(start, end, 8, history, { smooth: true });
-assert.ok(detailed.length > smooth.length, 'detailed keeps extremes of every bucket');
-assert.equal(smooth.length, 8, 'one point per bucket');
-smooth.forEach((point) => assert.ok(Math.abs(point.v - 230) < 0.2, `bucket mean is the trend, got ${point.v}`));
-assert.equal(card._chartSmooth('voltage', 4 * 3600e3), true);
-assert.equal(card._chartSmooth('voltage', 3600e3), false, 'the hour view keeps its detail');
-assert.equal(card._chartSmooth('power', 24 * 3600e3), false, 'power keeps spikes');
+const points = card._bucketHistory(start, start + 240 * 60e3, 8, history);
+assert.ok(points.length > 8, 'bucket extremes are kept, no averaging');
+assert.ok(points.some((point) => point.v === 227) && points.some((point) => point.v === 233));
 """)
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
-    def test_long_voltage_ranges_keep_outages_as_sharp_steps_without_pulling_the_average_down(self):
-        result = run_clarity(r"""
-const history = [];
-for (let minute = 0; minute < 60; minute += 1) history.push(at(minute, 230));
-history.push(at(60, 0, { outage: true }));
-history.push(at(80, 231));
-for (let minute = 81; minute < 120; minute += 1) history.push(at(minute, 231));
-const start = history[0].time.getTime();
-const end = start + 120 * 60e3;
-const series = card._bucketHistory(start, end, 4, history, { smooth: true });
-const drop = series.filter((point) => point.v === 0);
-assert.ok(drop.length >= 1, 'the outage is still drawn at 0');
-const stepTime = start + 60 * 60e3;
-assert.ok(series.some((point) => point.t === stepTime && point.v === 230) && series.some((point) => point.t === stepTime && point.v === 0), 'vertical drop at the outage start');
-const clean = series.filter((point) => point.v > 0);
-clean.forEach((point) => assert.ok(point.v >= 230 && point.v <= 231, `no point is pulled down by the outage: ${point.v}`));
-""")
-        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
 
+class LongRangeClarityTests(unittest.TestCase):
     def test_voltage_minimum_and_average_ignore_outage_zeros_and_keep_true_extremes(self):
         result = run_clarity(r"""
 card._chartMetric = 'voltage';

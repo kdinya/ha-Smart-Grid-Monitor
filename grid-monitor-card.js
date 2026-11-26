@@ -896,8 +896,6 @@
 
   const DEFAULT_KEYS = Object.keys(DEFAULTS);
   const STATS_REFRESH_OVERLAP_MS = 120e3;
-  // Beyond this range the voltage curve is drawn as one averaged point per bucket instead of every extreme.
-  const VOLTAGE_SMOOTH_MIN_RANGE_MS = 90 * 60e3;
 
   let CARD_SEQUENCE = 0;
 
@@ -3445,8 +3443,6 @@
       }
     }
 
-    _chartSmooth(metricKey, rangeMs) { return metricKey === 'voltage' && rangeMs > VOLTAGE_SMOOTH_MIN_RANGE_MS; }
-
     // Real voltage samples only: outage zeros are not measurements and must not count as a minimum or lower the average.
     _realVoltagePoints(history, bounds) {
       const lowest = CHART_METRICS.voltage.plausible[0];
@@ -3471,7 +3467,7 @@
       const bounds = options.bounds || this._historyBounds(range, Date.now(), customRange);
       const { start: tStart, end: tEnd } = bounds;
       const rangeMs = tEnd - tStart;
-      const series = this._bucketHistory(tStart, tEnd, width < 520 ? 48 : 96, history, { smooth: this._chartSmooth(metricKey, rangeMs) });
+      const series = this._bucketHistory(tStart, tEnd, width < 520 ? 48 : 96, history);
       if (!series.length) {
         const prior = Array.isArray(history) ? history.filter((p) => p.time?.getTime?.() <= tStart && Number.isFinite(p.value)).at(-1) : null;
         if (prior) {
@@ -3496,16 +3492,18 @@
 
     _chartScale(series, metricKey = this._chartMetric || 'power') {
       if (metricKey === 'voltage') {
-        // Outage zeros are drawn on the bottom edge; the axis fits only real voltage so small swings stay visible.
-        const real = series.map((point) => point.v).filter((value) => value >= CHART_METRICS.voltage.plausible[0]);
+        // The axis hugs the bulk of real voltage so the curve uses the full height. Outage zeros and rare deep dips are
+        // drawn on the edge instead of squashing everything else; statistics still use the true extremes.
+        const real = series.map((point) => point.v).filter((value) => Number.isFinite(value) && value >= CHART_METRICS.voltage.plausible[0]).sort((a, b) => a - b);
         if (!real.length) return { lo: 0, ...this._niceScale(Math.max(...series.map((point) => point.v), 0)) };
-        const low = Math.min(...real); const high = Math.max(...real);
-        for (const step of [5, 10, 20, 25, 50]) {
-          const lo = Math.floor((low - 2) / step) * step;
-          const hi = Math.max(Math.ceil((high + 2) / step) * step, lo + step);
+        const trim = real.length >= 40 ? Math.floor(real.length * 0.025) : 0;
+        const low = real[trim]; const high = real[real.length - 1 - trim];
+        for (const step of [2, 5, 10, 20, 25, 50, 100]) {
+          const lo = Math.floor((low - 1) / step) * step;
+          const hi = Math.max(Math.ceil((high + 1) / step) * step, lo + step * 2);
           if ((hi - lo) / step <= 4) return { lo, max: hi, step, count: (hi - lo) / step };
         }
-        const step = 50; const lo = Math.floor((low - 2) / step) * step;
+        const step = 100; const lo = Math.floor((low - 1) / step) * step;
         return { lo, max: lo + 4 * step, step, count: 4 };
       }
       return { lo: 0, ...this._niceScale(Math.max(...series.map((point) => point.v), 0)) };
@@ -3536,10 +3534,10 @@
       return d;
     }
 
-    _bucketHistory(start, end, count, sourceHistory = this._history, options = {}) {
+    _bucketHistory(start, end, count, sourceHistory = this._history) {
       if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || count < 1) return [];
       const bucketMs = (end - start) / count;
-      const buckets = Array.from({ length: count }, () => ({ weighted: 0, duration: 0, first: null, last: null, min: null, minPositive: null, max: null, edges: [], real: 0 }));
+      const buckets = Array.from({ length: count }, () => ({ weighted: 0, duration: 0, first: null, last: null, min: null, minPositive: null, max: null, edges: [] }));
       const history = Array.isArray(sourceHistory) ? sourceHistory : [];
 
       for (let index = 0; index < history.length; index += 1) {
@@ -3565,7 +3563,6 @@
             const sample = { t: Math.max(intervalStart, bucketStart), v: point.value, order: index };
             bucket.weighted += point.value * overlap;
             bucket.duration += overlap;
-            if (options.smooth && !point.outage && point.value > 0) bucket.real += overlap;
             if (!bucket.first) bucket.first = sample;
             bucket.last = sample;
             if (!bucket.min || sample.v < bucket.min.v) bucket.min = sample;
@@ -3580,8 +3577,6 @@
       return buckets.flatMap((bucket, index) => {
         if (!bucket.duration) return [];
         if (bucket.min.v === bucket.max.v && !bucket.edges.length) return [{ t: start + (index + 0.5) * bucketMs, v: bucket.weighted / bucket.duration }];
-        // Long ranges: a bucket without any outage is one averaged point, so the curve shows the trend instead of noise.
-        if (options.smooth && !bucket.edges.length && bucket.real === bucket.duration) return [{ t: start + (index + 0.5) * bucketMs, v: bucket.weighted / bucket.duration }];
         const seen = new Set();
         return [bucket.first, bucket.min, bucket.minPositive, bucket.max, bucket.last, ...bucket.edges]
           .filter(Boolean)
@@ -3657,7 +3652,7 @@
       const bufferEnd = !isEnergy ? Math.max(tEnd, histEnd) : tEnd;
       const hasBuffer = bufferStart < tStart || bufferEnd > tEnd;
       const bufferSeries = !isEnergy && hasBuffer
-        ? this._bucketHistory(bufferStart, bufferEnd, Math.min(288, Math.ceil(((bufferEnd - bufferStart) / rangeMs) * (width < 520 ? 48 : 96))), history, { smooth: this._chartSmooth(metricKey, rangeMs) })
+        ? this._bucketHistory(bufferStart, bufferEnd, Math.min(288, Math.ceil(((bufferEnd - bufferStart) / rangeMs) * (width < 520 ? 48 : 96))), history)
         : series;
       const pathPts = bufferSeries.map((point) => ({
         x: x0 + ((point.t - tStart) / rangeMs) * (x1 - x0),
