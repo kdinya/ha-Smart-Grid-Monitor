@@ -1603,6 +1603,14 @@
         const value = this._statsExtremes?.[metric]?.[bound];
         return Number.isFinite(value) ? value : null;
       }
+      if (key === 'energy_today') {
+        const historyValue = this._todayEnergyFromHistory('energy_total');
+        if (Number.isFinite(historyValue)) return historyValue;
+      }
+      if (key === 'cost_today') {
+        const historyValue = this._todayEnergyFromHistory('cost_total');
+        if (Number.isFinite(historyValue)) return historyValue;
+      }
       const raw = this._raw(key);
       if (raw === null || raw === 'unknown' || raw === 'unavailable') return null;
       const n = Number(raw);
@@ -4521,6 +4529,27 @@
       return bins;
     }
 
+    _todayEnergyFromHistory(metricKey = 'energy_total') {
+      const history = this._energyHistory?.[metricKey];
+      if (!Array.isArray(history) || history.length < 2) return null;
+      const now = Date.now();
+      const midnight = new Date(now);
+      midnight.setHours(0, 0, 0, 0);
+      let mTime = midnight.getTime();
+      if (Number.isFinite(this._statsStart)) {
+        mTime = Math.max(mTime, this._statsStart);
+      }
+      const bounds = { start: mTime, end: now };
+      if (bounds.end <= bounds.start) return 0;
+      const bars = this._energyHistoryBars(history, bounds, 'day');
+      if (!bars.length) return null;
+      let total = 0;
+      for (const bar of bars) {
+        if (Number.isFinite(bar.value) && bar.value > 0) total += bar.value;
+      }
+      return total;
+    }
+
     _energyTelemetryUnavailable() {
       const status = this._displayStatus?.();
       if (!status || status.pzemOnline || !(status.pzemOffline || status.waitingForPzem || status.esp === 'off')) return null;
@@ -5160,6 +5189,7 @@
           this._energyHistoryAt[metricKey] = Date.now();
           this._energyHistoryLoading[metricKey] = false;
           this._refreshEnergyCharts();
+          this._updateValueBindings(new Set(['energy_today', 'cost_today']));
         }
       }
     }
@@ -6237,6 +6267,9 @@
 
     _updateEnergy(changed) {
       if (changed.has('two_zone')) this._updateEnergyTwoZone();
+      if (changed.has('energy_total') || changed.has('cost_total') || changed.has('energy_today') || changed.has('cost_today')) {
+        this._updateValueBindings(new Set(['energy_today', 'cost_today']));
+      }
     }
 
     _showDialog({ title, message, confirm = false, info = false, confirmLabel = '' }) {

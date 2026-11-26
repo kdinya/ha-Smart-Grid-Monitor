@@ -87,6 +87,8 @@ globals:
   - {id: cost_today, type: float, restore_value: yes, initial_value: '0.0'}
   - {id: cost_month, type: float, restore_value: yes, initial_value: '0.0'}
   - {id: cost_total, type: float, restore_value: yes, initial_value: '0.0'}
+  - {id: g_day, type: int, restore_value: yes, initial_value: '-1'}
+  - {id: g_month, type: int, restore_value: yes, initial_value: '-1'}
   # лічильники подій
   - {id: sag_count, type: int, restore_value: yes, initial_value: '0'}
   - {id: swell_count, type: int, restore_value: yes, initial_value: '0'}
@@ -305,9 +307,22 @@ sensor:
               float last = id(e_last);
               if (last >= 0 && e >= last && (e - last) < 100.0) {
                 float d = e - last;
+                auto t = id(esp_clock).now();
+                if (t.is_valid()) {
+                  if (id(g_day) != -1 && t.day_of_month != id(g_day)) {
+                    id(reset_daily_stats).execute();
+                    id(e_today) = 0.0f;
+                    id(cost_today) = 0.0f;
+                    if (id(g_month) != -1 && t.month != id(g_month)) {
+                      id(e_month) = 0.0f;
+                      id(cost_month) = 0.0f;
+                    }
+                  }
+                  id(g_day) = t.day_of_month;
+                  id(g_month) = t.month;
+                }
                 float price = id(th_tariff_day).state;
                 if (id(sw_two_zone).state) {
-                  auto t = id(esp_clock).now();
                   if (t.is_valid() && (t.hour >= 23 || t.hour < 7)) price = id(th_tariff_night).state;
                 }
                 id(e_today) += d;
@@ -793,6 +808,11 @@ time:
           - script.execute: reset_daily_stats
           - lambda: |-
               id(e_today) = 0.0; id(cost_today) = 0.0;
-              if (id(esp_clock).now().day_of_month == 1) {
-                id(e_month) = 0.0; id(cost_month) = 0.0;
+              auto t = id(esp_clock).now();
+              if (t.is_valid()) {
+                id(g_day) = t.day_of_month;
+                id(g_month) = t.month;
+                if (t.day_of_month == 1) {
+                  id(e_month) = 0.0; id(cost_month) = 0.0;
+                }
               }
